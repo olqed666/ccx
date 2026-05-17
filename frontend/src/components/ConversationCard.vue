@@ -513,10 +513,16 @@ async function copyRawUserId() {
 
 .next-channel-chip {
   font-weight: 700;
+  animation: ccx-breathe 2s ease-in-out infinite;
 }
 .next-channel-chip :deep(.v-chip__content),
 .next-channel-chip :deep(.v-chip__append) {
   color: #fff !important;
+}
+
+@keyframes ccx-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
 }
 
 .font-weight-mono {
