@@ -1912,7 +1912,7 @@ const isEditing = computed(() => dialogMode.value === 'edit')
 const hasDisabledKeysAvailable = computed(() => visibleDisabledKeys.value.length > 0)
 const hasConfigurableKeys = computed(() => form.apiKeys.length > 0 || (isEditing.value && hasDisabledKeysAvailable.value))
 
-const commonSupportedModelFilters = ['claude-*', 'gpt-5*', 'grok-4*', 'gemini-3*', '!*image*']
+const commonSupportedModelFilters = ['claude-*', 'gpt-5*', 'gpt-image-2', 'grok-4*', 'gemini-3*', '!*image*']
 
 const selectedSupportedModelSet = computed(() => new Set(form.supportedModels))
 const supportedModelsError = ref('')
