@@ -532,6 +532,45 @@ ENABLE_RESPONSE_LOGS=false
 LOG_LEVEL=debug  # 可能泄露敏感信息
 ```
 
+## 日志与自动轮转 FAQ
+
+### Q1: 系统是否有自带的日志轮转机制？
+
+是的，CCX 后端自带了开箱即用的日志轮转和自动归档功能。
+如果未在环境变量中显式配置，系统将采用以下默认规划（定义在 `internal/logger/logger.go:43` 的 `DefaultConfig` 中）：
+
+- **日志目录 (`LogDir`)**: `logs` （项目根目录下的 `logs/` 文件夹）
+- **日志文件名 (`LogFile`)**: `app.log`
+- **单文件最大大小 (`MaxSize`)**: `100 MB`（日志单文件达到 100MB 时触发轮换）
+- **最大保留备份数 (`MaxBackups`)**: `10` 个（最多保留 10 个历史旧日志文件）
+- **最大保留天数 (`MaxAge`)**: `30` 天（仅保留最近 30 天的日志文件）
+- **是否压缩 (`Compress`)**: `true`（历史日志在轮转时会自动进行 `gzip` 压缩以极大程度地节省磁盘空间）
+
+### Q2: 既然内置了自动轮转，我还需要配置系统的 `logrotate` 或手动清理吗？
+
+不需要。只要启动了服务，内置的日志框架就会对 `logs/app.log` 状态进行自维护。只有在有特定的多进程共享、操作系统集中审计、或需要将日志发送到第三方分析系统时，才需要考虑外部 `logrotate` 等外部工具介入。通常情况下，内置的 100MB 轮换和自动 gzip 压缩已经能彻底避免磁盘耗尽的隐患。
+
+### Q3: 如何在 `.env` 中定制这些日志和轮转相关的参数？
+
+你可以在后端 `.env` 配置文件中声明以下自定义变量来覆盖默认的配置：
+
+```env
+# 基础日志开关与级别
+LOG_LEVEL=info                         # 日志级别: debug | info | warn | error
+ENABLE_REQUEST_LOGS=true               # 是否记录请求日志
+ENABLE_RESPONSE_LOGS=false             # 是否记录响应日志
+QUIET_POLLING_LOGS=true                # 静默轮询日志
+
+# 轮转与存储定制
+LOG_DIR=logs                           # 自定义日志存储目录 (默认 logs)
+LOG_FILE=app.log                       # 自定义日志文件名 (默认 app.log)
+LOG_MAX_SIZE=100                       # 单个日志文件最大大小 (MB) (默认 100)
+LOG_MAX_BACKUPS=10                     # 保留的旧日志文件最大数量 (默认 10)
+LOG_MAX_AGE=30                         # 保留的旧日志文件最大天数 (默认 30)
+LOG_COMPRESS=true                      # 是否压缩旧日志文件 (默认 true)
+LOG_TO_CONSOLE=true                    # 是否同时输出到控制台 (默认 true)
+```
+
 ## 故障排除
 
 ### 问题：前端无法连接后端
