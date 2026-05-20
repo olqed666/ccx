@@ -1971,6 +1971,7 @@ func isInsufficientBalanceCode(code string) bool {
 		"INSUFFICIENT_QUOTA",   // 通用额度不足
 		"USAGE_LIMIT_EXCEEDED", // 当日/周期额度耗尽
 		"DAILY_LIMIT_EXCEEDED", // 当日额度耗尽
+		"SUBSCRIPTION_NOT_FOUND", // 订阅不存在/未激活
 	}
 	for _, c := range knownCodes {
 		if strings.EqualFold(code, c) {

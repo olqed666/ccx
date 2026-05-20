@@ -695,6 +695,24 @@ data: {"type":"error","error":{"message":"permission denied for this resource"}}
 			wantReason:  "permission_error",
 			wantMessage: "permission denied for this resource",
 		},
+		{
+			name: "subscription not found code",
+			event: `event: error
+data: {"type":"error","error":{"code":"SUBSCRIPTION_NOT_FOUND","message":"No active subscription found for this group"}}
+
+`,
+			wantReason:  "insufficient_balance",
+			wantMessage: "No active subscription found for this group",
+		},
+		{
+			name: "subscription not found message",
+			event: `event: error
+data: {"type":"error","error":{"message":"No active subscription found for this group"}}
+
+`,
+			wantReason:  "insufficient_balance",
+			wantMessage: "No active subscription found for this group",
+		},
 	}
 
 	for _, tt := range tests {

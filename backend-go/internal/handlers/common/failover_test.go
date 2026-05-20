@@ -530,6 +530,7 @@ func TestIsInsufficientBalanceMessage_HighConfidenceVariants(t *testing.T) {
 		{name: "chinese balance exhausted", msg: "账户余额已用尽，请充值", want: true},
 		{name: "chinese quota used up", msg: "账户额度已用完", want: true},
 		{name: "chinese quota exhausted", msg: "当前额度耗尽", want: true},
+		{name: "english subscription not found", msg: "No active subscription found for this group", want: true},
 		{name: "negative billing setup", msg: "billing not enabled for this account", want: false},
 	}
 
@@ -710,6 +711,26 @@ func TestShouldBlacklistKey_BalanceMessages(t *testing.T) {
 				ShouldBlacklist: true,
 				Reason:          "permission_error",
 				Message:         "permission denied",
+			},
+		},
+		{
+			name:       "403 subscription not found code should blacklist as insufficient balance",
+			statusCode: 403,
+			body:       `{"code":"SUBSCRIPTION_NOT_FOUND","message":"No active subscription found for this group"}`,
+			want: BlacklistResult{
+				ShouldBlacklist: true,
+				Reason:          "insufficient_balance",
+				Message:         "No active subscription found for this group",
+			},
+		},
+		{
+			name:       "403 subscription not found message should blacklist as insufficient balance",
+			statusCode: 403,
+			body:       `{"message":"No active subscription found for this group"}`,
+			want: BlacklistResult{
+				ShouldBlacklist: true,
+				Reason:          "insufficient_balance",
+				Message:         "No active subscription found for this group",
 			},
 		},
 	}

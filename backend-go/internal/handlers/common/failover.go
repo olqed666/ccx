@@ -812,6 +812,7 @@ func isInsufficientBalanceMessage(msg string) bool {
 		"daily limit exceeded",
 		"daily usage limit exceeded",
 		"tokenstatusexhausted",
+		"no active subscription found",
 		"余额不足",
 		"余额已用尽",
 		"额度不足",
