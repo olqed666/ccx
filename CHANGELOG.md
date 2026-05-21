@@ -3,8 +3,8 @@
 ### 修复
 
 - **MiMo Messages 渠道流式响应只输出 thinking 的问题**：
-  - 停止为缺少真实思考内容的历史 assistant 消息注入 `"(no prior reasoning recorded)"` 占位 `thinking` 块，避免 MiMo 将正式回答续写进假 thinking block，导致下游没有 text content block。
-  - 清理历史请求中旧版本已经注入的占位 `thinking` 块，并保留真实 thinking 回传；若历史 assistant 仅剩占位 thinking，则转为中性非空 text，避免空 content 或轮次丢失触发上游校验问题。
+  - 停止为缺少真实思考内容的历史 assistant 消息注入 `"(no prior reasoning recorded)"` 占位 `thinking` 块，改为补顶层 `reasoning_content` 占位，避免 MiMo 将正式回答续写进假 thinking block，导致下游没有 text content block。
+  - 将历史真实 `thinking` 块转换为 MiMo 要求的 `reasoning_content` 字段回传，并移除历史请求中旧版本已经注入的占位 `thinking` 块；若历史 assistant 仅剩占位 thinking，则转为中性非空 text，避免空 content 或轮次丢失触发上游校验问题。
   - 流式预检测改为只有正式 text 或工具语义内容才视为有效响应；thinking-only 流会被判定为空响应并触发重试/失败，避免静默返回 200。
 
 ## [v2.7.9] - 2026-05-20
