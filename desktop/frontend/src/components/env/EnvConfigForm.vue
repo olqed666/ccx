@@ -50,7 +50,7 @@ const envGroups: EnvGroup[] = [
     title: '服务器配置',
     description: 'Desktop 会在启动时注入部分运行参数；这里仍完整覆盖 .env.example。',
     fields: [
-      { key: 'PORT', label: '服务端口', type: 'number', defaultValue: '3688', min: 1, max: 65535, description: 'Desktop 启动器可能会覆盖为当前分配端口。' },
+      { key: 'PORT', label: '服务端口', type: 'number', defaultValue: '3688', min: 1, max: 65535, description: '启动时优先使用此端口，被占用时自动递增分配。' },
       { key: 'ENV', label: '运行环境', type: 'select', defaultValue: 'production', options: [{ label: 'production', value: 'production' }, { label: 'development', value: 'development' }], description: 'production 为推荐值。' },
     ],
   },

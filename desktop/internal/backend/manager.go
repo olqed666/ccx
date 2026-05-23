@@ -155,6 +155,14 @@ func (m *Manager) doStart(ctx context.Context) error {
 		return err
 	}
 
+	// 优先使用 .env 中用户配置的端口
+	envPath := filepath.Join(m.dataDir, ".env")
+	if preferredPort, err := readPortFromEnvFile(envPath); err == nil && preferredPort > 0 {
+		m.mu.Lock()
+		m.port = preferredPort
+		m.mu.Unlock()
+	}
+
 	port, err := m.selectPort(ctx)
 	if err != nil {
 		m.recordStartError(err)
@@ -585,6 +593,30 @@ func readProxyAccessKey(path string) (string, error) {
 		return strings.Trim(value, `"'`), nil
 	}
 	return "", nil
+}
+
+func readPortFromEnvFile(path string) (int, error) {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") || !strings.HasPrefix(line, "PORT=") {
+			continue
+		}
+		value := strings.TrimSpace(strings.TrimPrefix(line, "PORT="))
+		value = strings.Trim(value, `"'`)
+		port, err := strconv.Atoi(value)
+		if err != nil || port < 1 || port > 65535 {
+			return 0, fmt.Errorf("无效端口号: %s", value)
+		}
+		return port, nil
+	}
+	return 0, nil
 }
 
 func appendEnvValue(path string, key string, value string) error {

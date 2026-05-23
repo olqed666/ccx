@@ -265,6 +265,72 @@ func TestReadProxyAccessKey(t *testing.T) {
 	})
 }
 
+func TestReadPortFromEnvFile(t *testing.T) {
+	t.Run("normal", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+		os.WriteFile(path, []byte("PROXY_ACCESS_KEY=key\nPORT=3699\nENV=production\n"), 0o644)
+		port, err := readPortFromEnvFile(path)
+		if err != nil {
+			t.Fatalf("readPortFromEnvFile failed: %v", err)
+		}
+		if port != 3699 {
+			t.Errorf("port = %d, want 3699", port)
+		}
+	})
+
+	t.Run("quoted value", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+		os.WriteFile(path, []byte(`PORT="8080"`), 0o644)
+		port, err := readPortFromEnvFile(path)
+		if err != nil {
+			t.Fatalf("readPortFromEnvFile failed: %v", err)
+		}
+		if port != 8080 {
+			t.Errorf("port = %d, want 8080", port)
+		}
+	})
+
+	t.Run("missing file", func(t *testing.T) {
+		port, err := readPortFromEnvFile("/nonexistent/.env")
+		if err != nil {
+			t.Fatalf("should not error for missing file: %v", err)
+		}
+		if port != 0 {
+			t.Errorf("port = %d, want 0", port)
+		}
+	})
+
+	t.Run("no PORT entry", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+		os.WriteFile(path, []byte("ENV=production\n"), 0o644)
+		port, err := readPortFromEnvFile(path)
+		if err != nil {
+			t.Fatalf("readPortFromEnvFile failed: %v", err)
+		}
+		if port != 0 {
+			t.Errorf("port = %d, want 0", port)
+		}
+	})
+
+	t.Run("invalid port", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+		os.WriteFile(path, []byte("PORT=abc\n"), 0o644)
+		_, err := readPortFromEnvFile(path)
+		if err == nil {
+			t.Error("expected error for invalid port")
+		}
+	})
+
+	t.Run("out of range port", func(t *testing.T) {
+		path := filepath.Join(t.TempDir(), ".env")
+		os.WriteFile(path, []byte("PORT=99999\n"), 0o644)
+		_, err := readPortFromEnvFile(path)
+		if err == nil {
+			t.Error("expected error for out of range port")
+		}
+	})
+}
+
 func TestSetEnv(t *testing.T) {
 	t.Run("replace existing", func(t *testing.T) {
 		env := []string{"PATH=/usr/bin", "PORT=3000", "HOME=/home/user"}
