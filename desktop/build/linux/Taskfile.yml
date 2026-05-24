@@ -74,8 +74,8 @@ tasks:
         CCX_GO_SRC=""
         if [ -f "../../../bin/ccx-go" ]; then
           CCX_GO_SRC="../../../bin/ccx-go"
-        elif [ -f "../../../../dist/ccx-go" ]; then
-          CCX_GO_SRC="../../../../dist/ccx-go"
+        elif [ -f "../../../dist/ccx-go" ]; then
+          CCX_GO_SRC="../../../dist/ccx-go"
         fi
         if [ -n "$CCX_GO_SRC" ]; then
           cp "$CCX_GO_SRC" ccx-go

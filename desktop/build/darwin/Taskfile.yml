@@ -87,8 +87,8 @@ tasks:
         CCX_GO_SRC=""
         if [ -f "{{.BIN_DIR}}/ccx-go" ]; then
           CCX_GO_SRC="{{.BIN_DIR}}/ccx-go"
-        elif [ -f "../../dist/ccx-go" ]; then
-          CCX_GO_SRC="../../dist/ccx-go"
+        elif [ -f "../dist/ccx-go" ]; then
+          CCX_GO_SRC="../dist/ccx-go"
         fi
         if [ -n "$CCX_GO_SRC" ]; then
           cp "$CCX_GO_SRC" {{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS/
