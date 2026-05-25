@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### 其他
+
+- **补充 Responses 单渠道对话追踪回归测试** - 为 Responses 单渠道成功请求新增 handler 级测试，验证请求会写入 `ConversationTracker` 并生成驾驶舱对话记录，防止 `/conversations` 再次为空。
+
 ## [v2.8.2] - 2026-05-25
 
 ### 新增

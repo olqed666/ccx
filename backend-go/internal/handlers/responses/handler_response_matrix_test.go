@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/BenedictKing/ccx/internal/config"
+	"github.com/BenedictKing/ccx/internal/conversation"
 	"github.com/BenedictKing/ccx/internal/metrics"
 	"github.com/BenedictKing/ccx/internal/scheduler"
 	"github.com/BenedictKing/ccx/internal/session"
@@ -38,6 +39,10 @@ func setupResponsesTestConfigManager(t *testing.T, upstream []config.UpstreamCon
 }
 
 func newResponsesTestRouter(t *testing.T, upstream config.UpstreamConfig, sessionManager *session.SessionManager) *gin.Engine {
+	return newResponsesTestRouterWithConversationTracker(t, upstream, sessionManager, nil)
+}
+
+func newResponsesTestRouterWithConversationTracker(t *testing.T, upstream config.UpstreamConfig, sessionManager *session.SessionManager, tracker *conversation.ConversationTracker) *gin.Engine {
 	t.Helper()
 	gin.SetMode(gin.TestMode)
 	cfgManager := setupResponsesTestConfigManager(t, []config.UpstreamConfig{upstream})
@@ -51,6 +56,9 @@ func newResponsesTestRouter(t *testing.T, upstream config.UpstreamConfig, sessio
 		session.NewTraceAffinityManager(),
 		nil,
 	)
+	if tracker != nil {
+		channelScheduler.SetConversationComponents(tracker, nil)
+	}
 	envCfg := &config.EnvConfig{
 		ProxyAccessKey:     "secret-key",
 		MaxRequestBodySize: 1024 * 1024,
@@ -248,5 +256,55 @@ func TestResponsesHandler_NonStreamMatrix_FunctionCall(t *testing.T) {
 				t.Fatalf("expected tool/function name %q in response body, got %s", tt.expectName, w.Body.String())
 			}
 		})
+	}
+}
+
+func TestResponsesHandler_SingleChannelTracksConversation(t *testing.T) {
+	sessionManager := session.NewSessionManager(time.Hour, 100, 100000)
+	tracker := conversation.NewConversationTracker(time.Hour, 2*time.Hour)
+	t.Cleanup(func() { tracker.Stop() })
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"id":"resp_single","model":"gpt-5","status":"completed","output":[{"type":"message","role":"assistant","content":[{"type":"output_text","text":"hi"}]}],"usage":{"input_tokens":1,"output_tokens":1,"total_tokens":2}}`))
+	}))
+	defer upstream.Close()
+
+	router := newResponsesTestRouterWithConversationTracker(t, config.UpstreamConfig{
+		Name:        "single-channel",
+		BaseURL:     upstream.URL,
+		APIKeys:     []string{"sk-test"},
+		ServiceType: "responses",
+		Status:      "active",
+	}, sessionManager, tracker)
+
+	w := performResponsesHandlerRequest(t, router, `{"model":"gpt-5","input":"hello cockpit","user":"user-single-channel"}`)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	convs := tracker.GetActiveConversations(string(scheduler.ChannelKindResponses))
+	if len(convs) != 1 {
+		t.Fatalf("expected 1 responses conversation, got %d", len(convs))
+	}
+	conv := convs[0]
+	if conv.RawUserID != "user-single-channel" {
+		t.Fatalf("RawUserID = %q, want user-single-channel", conv.RawUserID)
+	}
+	if conv.LastModel != "gpt-5" {
+		t.Fatalf("LastModel = %q, want gpt-5", conv.LastModel)
+	}
+	if conv.CurrentChannel != 0 {
+		t.Fatalf("CurrentChannel = %d, want 0", conv.CurrentChannel)
+	}
+	if conv.ChannelName != "single-channel" {
+		t.Fatalf("ChannelName = %q, want single-channel", conv.ChannelName)
+	}
+	if conv.RequestCount != 1 {
+		t.Fatalf("RequestCount = %d, want 1", conv.RequestCount)
+	}
+	if conv.FallbackTitle != "hello cockpit" {
+		t.Fatalf("FallbackTitle = %q, want hello cockpit", conv.FallbackTitle)
 	}
 }
