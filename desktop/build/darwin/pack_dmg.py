@@ -74,8 +74,7 @@ def _make_background_image(dest: Path, app_icon: Path, volume_name: str = "CCX D
     from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
     if not app_icon.exists():
-        project_root = Path(__file__).resolve().parent.parent.parent.parent
-        app_icon = project_root / "build" / "appicon.png"
+        app_icon = Path(__file__).resolve().parent.parent / "appicon.png"
 
     width, height = 600, 400
     img = Image.new("RGBA", (width, height), (0, 0, 0, 0))

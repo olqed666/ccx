@@ -158,7 +158,7 @@ tasks:
       DMG_OUTPUT: '{{.BIN_DIR}}/CCX-Desktop-{{.VERSION}}-darwin-{{.ARCH | default ARCH}}.dmg'
     cmds:
       - mv "{{.BIN_DIR}}/{{.APP_NAME}}.app" "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app" || true
-      - python3 build/darwin/pack_dmg.py --dmg "{{.DMG_OUTPUT}}" --app "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app" --volume-name "{{.DISPLAY_APP_NAME}}" --volume-icon build/darwin/icons.icns --background build/appicon.png --window-size "{{.DMG_WINDOW_SIZE}}" --app-icon-size {{.DMG_APP_ICON_SIZE}} --applications-icon-size {{.DMG_APPLICATIONS_ICON_SIZE}} --app-position "{{.DMG_APP_POSITION}}" --applications-position "{{.DMG_APPLICATIONS_POSITION}}"
+      - python3 build/darwin/pack_dmg.py --dmg "{{.DMG_OUTPUT}}" --app "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app" --volume-name "{{.DISPLAY_APP_NAME}}" --volume-icon build/darwin/icons.icns --window-size "{{.DMG_WINDOW_SIZE}}" --app-icon-size {{.DMG_APP_ICON_SIZE}} --applications-icon-size {{.DMG_APPLICATIONS_ICON_SIZE}} --app-position "{{.DMG_APP_POSITION}}" --applications-position "{{.DMG_APPLICATIONS_POSITION}}"
       - rm -rf "{{.BIN_DIR}}/{{.DISPLAY_APP_NAME}}.app"
 
   run:
