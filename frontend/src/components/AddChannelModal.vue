@@ -266,6 +266,26 @@
                     >
                       gpt-5.2 / gpt-5.2-codex
                     </v-btn>
+                    <v-btn
+                      v-if="showMessagesOpenAIChannelPresets"
+                      size="small"
+                      variant="tonal"
+                      color="secondary"
+                      prepend-icon="mdi-lightning-bolt"
+                      @click="applyClaudeChannelPreset('mimo')"
+                    >
+                      MiMo
+                    </v-btn>
+                    <v-btn
+                      v-if="showMessagesOpenAIChannelPresets"
+                      size="small"
+                      variant="tonal"
+                      color="secondary"
+                      prepend-icon="mdi-lightning-bolt"
+                      @click="applyClaudeChannelPreset('deepseek')"
+                    >
+                      DeepSeek
+                    </v-btn>
                   </div>
 
                   <div v-if="showClaudeChannelPresets" class="d-flex align-center flex-wrap ga-2 mb-4">
@@ -1587,8 +1607,12 @@ const supportsChatRoleNormalization = computed(() => {
 })
 
 const showModelMappingPresets = computed(() => {
-  if (props.channelType === 'responses' && form.serviceType === 'responses') return false
-  return (props.channelType === 'messages' || props.channelType === 'responses') && (form.serviceType === 'openai' || form.serviceType === 'responses')
+  // gpt-5.x 预设只配置 opus/sonnet/haiku 重定向，限定在 Messages 入口展示。
+  return props.channelType === 'messages' && (form.serviceType === 'openai' || form.serviceType === 'responses')
+})
+
+const showMessagesOpenAIChannelPresets = computed(() => {
+  return props.channelType === 'messages' && (form.serviceType === 'openai' || form.serviceType === 'responses')
 })
 const modelNameCollator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' })
 
@@ -1672,10 +1696,10 @@ const applyModelMappingPreset = (preset: keyof typeof modelMappingPresets) => {
   }
 }
 
-// Claude 协议上游渠道一键预设（MiMo / DeepSeek）
+// opus/sonnet/haiku 模型别名的一键预设（MiMo / DeepSeek）
 const showClaudeChannelPresets = computed(() => {
-  if (form.serviceType !== 'claude') return false
-  return props.channelType === 'messages' || props.channelType === 'chat' || props.channelType === 'responses'
+  return form.serviceType === 'claude'
+    && (props.channelType === 'messages' || props.channelType === 'chat' || props.channelType === 'responses')
 })
 
 const claudeChannelPresets: Record<
@@ -1737,7 +1761,7 @@ const applyClaudeChannelPreset = (preset: keyof typeof claudeChannelPresets) => 
 
 // Codex Responses 转 OpenAI 兼容上游的一键预设（MiMo / DeepSeek）
 const showCodexResponsesChannelPresets = computed(() => {
-  return props.channelType === 'responses' && form.serviceType === 'openai'
+  return props.channelType === 'responses' && supportsOpenAIAdvancedOptions.value
 })
 
 const codexResponsesChannelPresets: Record<
