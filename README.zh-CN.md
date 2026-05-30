@@ -82,7 +82,7 @@ CCX 对外提供一个统一后端入口：
 
 ### 方式一：直接运行二进制
 
-1. 从 [Releases](https://github.com/BenedictKing/ccx/releases/latest) 下载最新可执行文件；Windows 普通用户可优先使用 Microsoft Store 版本（上架后提供），Store 负责签名与更新
+1. 从 [Releases](https://github.com/BenedictKing/ccx/releases/latest) 下载最新可执行文件；Windows 用户推荐在 Microsoft Store 中搜索 **CCX Desktop** 安装，Store 负责签名与更新；macOS 用户也可使用 `brew tap BenedictKing/ccx && brew install --cask ccx-desktop` 安装
 2. 在可执行文件同目录创建 `.env`：
 
 ```bash

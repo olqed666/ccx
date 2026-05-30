@@ -78,7 +78,7 @@ If you prefer a desktop experience, start with [CCX Desktop](docs/en/guide/deskt
 
 ### Option 1: Binary
 
-1. Download the latest binary from [Releases](https://github.com/BenedictKing/ccx/releases/latest). Windows users can prefer the Microsoft Store build once published; Store handles signing and updates.
+1. Download the latest binary from [Releases](https://github.com/BenedictKing/ccx/releases/latest). Windows users can search for **CCX Desktop** in the Microsoft Store; Store handles signing and updates. macOS users can also use `brew tap BenedictKing/ccx && brew install --cask ccx-desktop`.
 2. Create a `.env` file next to the binary:
 
 ```bash

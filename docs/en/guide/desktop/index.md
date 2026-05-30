@@ -10,9 +10,16 @@ Recommended user path:
 
 ### Download
 
-Windows users are recommended to prefer the Microsoft Store build when available. The Store handles signing and auto updates.
+Windows users are recommended to search for **CCX Desktop** in the Microsoft Store to install. The Store handles signing and auto updates.
 
-If you are a developer or cannot use the Store, download the platform package from [GitHub Releases](https://github.com/BenedictKing/ccx/releases):
+macOS users can also install via Homebrew:
+
+```bash
+brew tap BenedictKing/ccx
+brew install --cask ccx-desktop
+```
+
+If you are a developer or cannot use the Store / Homebrew, download the platform package from [GitHub Releases](https://github.com/BenedictKing/ccx/releases):
 
 | Platform | File name pattern |
 |----------|------------------|
@@ -40,7 +47,7 @@ shasum -a 256 -c CCX-Desktop-*.sha256
 
 #### Windows
 
-1. Prefer the Microsoft Store installer if available.
+1. Search for **CCX Desktop** in the Microsoft Store to install. Signing and updates are handled by the Store.
 2. If you use the GitHub installer, run the `-setup.exe` file and follow the setup wizard.
 3. If SmartScreen appears, choose **More info → Run anyway**.
 
@@ -216,7 +223,7 @@ The GitHub installer build supports in-app auto updates:
 
 - One automatic check 5 seconds after launch
 - Additional checks every 30 minutes
-- Manual check from the sidebar version area
+- Manual check by **clicking the version number** in the sidebar
 
 The Microsoft Store build does not use the GitHub updater. The sidebar and tray indicate that updates are handled by the Store.
 
