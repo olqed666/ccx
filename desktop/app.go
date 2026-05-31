@@ -569,9 +569,6 @@ func (s *DesktopService) OpenWebUIInBrowser() error {
 	if err != nil {
 		return err
 	}
-	query := webURL.Query()
-	query.Set("ccx_desktop", "1")
-	webURL.RawQuery = query.Encode()
 	return browser.OpenURL(webURL.String())
 }
 
