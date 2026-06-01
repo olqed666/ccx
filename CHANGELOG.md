@@ -2,6 +2,11 @@
 
 ### 新增
 
+- **渠道级请求超时配置** - 后端渠道配置新增 `requestTimeoutMs`，非流式上游请求优先使用渠道超时，未设置或为 0 时继承全局 `REQUEST_TIMEOUT`；五类渠道新增/更新路径均校验负数并支持清空回退。
+- **Web UI 渠道请求超时表单** - 渠道编辑表单新增“请求超时 (ms)”输入项，支持编辑态清空恢复继承全局，并在复制渠道、payload 序列化、差异检测和多语言文案中同步该字段。
+
+### 新增
+
 - **桌面端 Codex Agent 配置双模式** - Codex 支持两种 CCX 模式：快捷模式（OpenAI provider + CCX 代理，不迁移会话、不支持插件）和插件模式（CCX 原生 provider + `requires_openai_auth = true`，支持插件但切换需会话迁移提示）。UI 下拉框拆分为两个选项，互切时显示会话迁移警告。
 - **Codex 配置改用快捷/插件模式开关** - 桌面端 Codex 配置入口统一改为快捷模式/插件模式开关，明确不同接入路径。
 - **Codex provider 块统一使用 `env_key`** - 将 `[model_providers.xxx]` 块中的 `temp_env_key` 统一替换为官方文档字段 `env_key`。

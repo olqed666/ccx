@@ -2,6 +2,7 @@ package common
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -10,7 +11,9 @@ import (
 	"net/http/httptrace"
 	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/BenedictKing/ccx/internal/config"
 	"github.com/BenedictKing/ccx/internal/utils"
 	"github.com/gin-gonic/gin"
 )
@@ -606,6 +609,55 @@ func TestSanitizeMalformedThinkingBlocks_ContentObject(t *testing.T) {
 	}
 	if content["type"] != "text" {
 		t.Fatalf("content.type = %v, want text", content["type"])
+	}
+}
+
+func TestSendRequestWithLifecycleTraceUsesChannelRequestTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(80 * time.Millisecond)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer server.Close()
+
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatalf("NewRequest() err = %v", err)
+	}
+
+	upstream := &config.UpstreamConfig{RequestTimeoutMs: 20}
+	envCfg := &config.EnvConfig{RequestTimeout: 500}
+	_, err = SendRequestWithLifecycleTrace(req, upstream, envCfg, false, "Messages", nil)
+	if err == nil {
+		t.Fatal("expected request to timeout")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		if netErr, ok := err.(interface{ Timeout() bool }); !ok || !netErr.Timeout() {
+			t.Fatalf("error = %v, want timeout", err)
+		}
+	}
+}
+
+func TestSendRequestWithLifecycleTraceFallsBackToGlobalRequestTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		time.Sleep(20 * time.Millisecond)
+		_, _ = w.Write([]byte(`{"ok":true}`))
+	}))
+	defer server.Close()
+
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	if err != nil {
+		t.Fatalf("NewRequest() err = %v", err)
+	}
+
+	upstream := &config.UpstreamConfig{}
+	envCfg := &config.EnvConfig{RequestTimeout: 500}
+	resp, err := SendRequestWithLifecycleTrace(req, upstream, envCfg, false, "Messages", nil)
+	if err != nil {
+		t.Fatalf("SendRequestWithLifecycleTrace() err = %v", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
 }
 

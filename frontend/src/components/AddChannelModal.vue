@@ -1076,6 +1076,25 @@
               />
             </v-col>
 
+            <!-- 请求超时 -->
+            <v-col cols="12">
+              <v-text-field
+                v-model="form.requestTimeoutMs"
+                :label="t('addChannel.requestTimeoutMsLabel')"
+                :placeholder="t('addChannel.requestTimeoutMsPlaceholder')"
+                prepend-inner-icon="mdi-timer-sand"
+                :hint="t('addChannel.requestTimeoutMsHint')"
+                :rules="[rules.requestTimeoutMs]"
+                persistent-hint
+                clearable
+                variant="outlined"
+                density="comfortable"
+                type="number"
+                min="1"
+                step="1000"
+              />
+            </v-col>
+
             <!-- 路由前缀 -->
             <v-col cols="12">
               <v-text-field
@@ -1964,6 +1983,7 @@ const form = reactive({
   fastMode: false,
   customHeaders: {} as Record<string, string>,
   proxyUrl: '',
+  requestTimeoutMs: null as string | number | null,
   routePrefix: '',
   supportedModels: [] as string[],
   autoBlacklistBalance: true,
@@ -2165,6 +2185,11 @@ const rules = {
       }
     }
     return true
+  },
+  requestTimeoutMs: (value: string | number | null) => {
+    if (value === null || value === undefined || value === '') return true
+    const timeout = Number(value)
+    return (Number.isInteger(timeout) && timeout > 0) || t('addChannel.requestTimeoutMsInvalid')
   }
 }
 
@@ -2246,17 +2271,28 @@ const normalizeStringRecord = (record: Record<string, string>): Record<string, s
 }
 
 const buildComparablePayload = () => {
+  const payload = buildSubmitPayload()
+  return normalizeComparablePayload(payload)
+}
+
+const normalizeComparablePayload = (payload: Partial<Channel>) => ({
+  ...payload,
+  apiKeys: normalizeStringArray(payload.apiKeys || []),
+  baseUrls: normalizeStringArray(payload.baseUrls || []),
+  supportedModels: normalizeStringArray(payload.supportedModels || []),
+  customHeaders: normalizeStringRecord(payload.customHeaders || {}),
+  modelMapping: Object.fromEntries(Object.entries(payload.modelMapping || {}).sort(([a], [b]) => a.localeCompare(b))),
+  reasoningMapping: Object.fromEntries(Object.entries(payload.reasoningMapping || {}).sort(([a], [b]) => a.localeCompare(b))),
+  reasoningParamStyle: payload.reasoningParamStyle || 'reasoning',
+  requestTimeoutMs: payload.requestTimeoutMs || undefined
+})
+
+const buildSubmitPayload = () => {
   const payload = buildChannelPayload(form)
-  return {
-    ...payload,
-    apiKeys: normalizeStringArray(payload.apiKeys),
-    baseUrls: normalizeStringArray(payload.baseUrls || []),
-    supportedModels: normalizeStringArray(payload.supportedModels || []),
-    customHeaders: normalizeStringRecord(payload.customHeaders || {}),
-    modelMapping: Object.fromEntries(Object.entries(payload.modelMapping || {}).sort(([a], [b]) => a.localeCompare(b))),
-    reasoningMapping: Object.fromEntries(Object.entries(payload.reasoningMapping || {}).sort(([a], [b]) => a.localeCompare(b))),
-    reasoningParamStyle: payload.reasoningParamStyle || 'reasoning'
+  if (isEditing.value && props.channel?.requestTimeoutMs && !payload.requestTimeoutMs) {
+    payload.requestTimeoutMs = 0
   }
+  return payload
 }
 
 const hasEditableDraftChanges = computed(() => {
@@ -2285,6 +2321,7 @@ const hasEditableDraftChanges = computed(() => {
     fastMode: !!props.channel.fastMode,
     customHeaders: normalizeStringRecord(props.channel.customHeaders || {}),
     proxyUrl: props.channel.proxyUrl || '',
+    requestTimeoutMs: props.channel.requestTimeoutMs || undefined,
     routePrefix: props.channel.routePrefix || '',
     supportedModels: normalizeStringArray(props.channel.supportedModels || []),
     autoBlacklistBalance: props.channel.autoBlacklistBalance ?? true,
@@ -2298,7 +2335,7 @@ const hasEditableDraftChanges = computed(() => {
     visionFallbackModel: props.channel.visionFallbackModel || '',
   }
 
-  return JSON.stringify(currentPayload) !== JSON.stringify(originalPayload)
+  return JSON.stringify(currentPayload) !== JSON.stringify(normalizeComparablePayload(originalPayload as Partial<Channel>))
 })
 
 const ensureLatestSavedChannel = async (): Promise<number | null> => {
@@ -2321,7 +2358,7 @@ const ensureLatestSavedChannel = async (): Promise<number | null> => {
 
   silentlySaving.value = true
   try {
-    const payload = buildChannelPayload(form)
+    const payload = buildSubmitPayload()
     const result = await channelStore.saveChannel(payload, props.channel.index)
     await channelStore.refreshChannels()
     const latestChannel = (channelStore.currentChannelsData as any).channels?.find((ch: any) => ch.index === props.channel!.index) || null
@@ -2363,6 +2400,7 @@ const resetForm = () => {
   form.fastMode = false
   form.customHeaders = {}
   form.proxyUrl = ''
+  form.requestTimeoutMs = null
   form.routePrefix = ''
   form.supportedModels = []
   supportedModelsError.value = ''
@@ -2435,6 +2473,7 @@ const loadChannelData = (channel: Channel) => {
   form.fastMode = !!channel.fastMode
   form.customHeaders = { ...(channel.customHeaders || {}) }
   form.proxyUrl = channel.proxyUrl || ''
+  form.requestTimeoutMs = channel.requestTimeoutMs || null
   form.routePrefix = channel.routePrefix || ''
   const { validPatterns, hasInvalidPatterns } = filterValidSupportedModelPatterns(channel.supportedModels || [])
   form.supportedModels = validPatterns
@@ -2819,7 +2858,7 @@ const handleSubmit = async () => {
   const { valid } = await formRef.value.validate()
   if (!valid) return
 
-  const channelData = buildChannelPayload(form)
+  const channelData = buildSubmitPayload()
 
   emit('save', channelData)
 }
@@ -2833,7 +2872,7 @@ const PAYLOAD_KEYS = [
   'name', 'serviceType', 'baseUrl', 'baseUrls', 'website', 'insecureSkipVerify',
   'lowQuality', 'injectDummyThoughtSignature', 'stripThoughtSignature', 'description',
   'apiKeys', 'modelMapping', 'reasoningMapping', 'reasoningParamStyle', 'textVerbosity',
-  'fastMode', 'customHeaders', 'proxyUrl', 'routePrefix', 'supportedModels',
+  'fastMode', 'customHeaders', 'proxyUrl', 'requestTimeoutMs', 'routePrefix', 'supportedModels',
   'autoBlacklistBalance', 'normalizeMetadataUserId', 'passbackThinkingBlocks', 'stripEmptyTextBlocks', 'normalizeSystemRoleToTopLevel', 'codexNativeToolPassthrough',
   'codexToolCompat', 'normalizeNonstandardChatRoles', 'stripCodexClientTools'
 ] as const
@@ -2857,7 +2896,7 @@ const handleTestCapability = async () => {
   const { valid } = await formRef.value.validate()
   if (!valid) return
 
-  const channelData = buildChannelPayload(form)
+  const channelData = buildSubmitPayload()
   const original = extractPayloadFields(props.channel)
   const hasChanges = JSON.stringify(channelData) !== JSON.stringify(original)
 

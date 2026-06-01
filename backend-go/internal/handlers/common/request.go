@@ -207,7 +207,7 @@ func SendRequestWithLifecycleTrace(req *http.Request, upstream *config.UpstreamC
 	if isStream {
 		client = clientManager.GetStreamClient(upstream.InsecureSkipVerify, upstream.ProxyURL)
 	} else {
-		timeout := time.Duration(envCfg.RequestTimeout) * time.Millisecond
+		timeout := time.Duration(upstream.GetEffectiveRequestTimeoutMs(envCfg.RequestTimeout)) * time.Millisecond
 		client = clientManager.GetStandardClient(timeout, upstream.InsecureSkipVerify, upstream.ProxyURL)
 	}
 

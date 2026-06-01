@@ -597,6 +597,96 @@ func TestUpdateChatUpstreamCanSetNormalizeNonstandardChatRoles(t *testing.T) {
 	}
 }
 
+func TestRequestTimeoutMsEffectiveAndUpdates(t *testing.T) {
+	if got := (&UpstreamConfig{}).GetEffectiveRequestTimeoutMs(300000); got != 300000 {
+		t.Fatalf("default effective timeout = %d, want 300000", got)
+	}
+	if got := (&UpstreamConfig{RequestTimeoutMs: 15000}).GetEffectiveRequestTimeoutMs(300000); got != 15000 {
+		t.Fatalf("override effective timeout = %d, want 15000", got)
+	}
+
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.json")
+	initialConfig := `{
+		"upstream": [{"name":"messages","baseUrl":"https://messages.example.com","apiKeys":["sk-m"],"serviceType":"claude"}],
+		"chatUpstream": [{"name":"chat","baseUrl":"https://chat.example.com","apiKeys":["sk-c"],"serviceType":"openai"}],
+		"responsesUpstream": [{"name":"responses","baseUrl":"https://responses.example.com","apiKeys":["sk-r"],"serviceType":"responses"}],
+		"geminiUpstream": [{"name":"gemini","baseUrl":"https://gemini.example.com","apiKeys":["sk-g"],"serviceType":"gemini"}],
+		"imagesUpstream": [{"name":"images","baseUrl":"https://images.example.com","apiKeys":["sk-i"],"serviceType":"openai"}]
+	}`
+	if err := os.WriteFile(configPath, []byte(initialConfig), 0644); err != nil {
+		t.Fatalf("写入初始配置失败: %v", err)
+	}
+
+	cm, err := NewConfigManager(configPath)
+	if err != nil {
+		t.Fatalf("初始化配置管理器失败: %v", err)
+	}
+	defer cm.Close()
+
+	timeout := 15000
+	tests := []struct {
+		name   string
+		update func(UpstreamUpdate) error
+		read   func(Config) int
+	}{
+		{name: "messages", update: func(u UpstreamUpdate) error { _, err := cm.UpdateUpstream(0, u); return err }, read: func(c Config) int { return c.Upstream[0].RequestTimeoutMs }},
+		{name: "chat", update: func(u UpstreamUpdate) error { _, err := cm.UpdateChatUpstream(0, u); return err }, read: func(c Config) int { return c.ChatUpstream[0].RequestTimeoutMs }},
+		{name: "responses", update: func(u UpstreamUpdate) error { _, err := cm.UpdateResponsesUpstream(0, u); return err }, read: func(c Config) int { return c.ResponsesUpstream[0].RequestTimeoutMs }},
+		{name: "gemini", update: func(u UpstreamUpdate) error { _, err := cm.UpdateGeminiUpstream(0, u); return err }, read: func(c Config) int { return c.GeminiUpstream[0].RequestTimeoutMs }},
+		{name: "images", update: func(u UpstreamUpdate) error { _, err := cm.UpdateImagesUpstream(0, u); return err }, read: func(c Config) int { return c.ImagesUpstream[0].RequestTimeoutMs }},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := tt.update(UpstreamUpdate{RequestTimeoutMs: &timeout}); err != nil {
+				t.Fatalf("设置 requestTimeoutMs 失败: %v", err)
+			}
+			if got := tt.read(cm.GetConfig()); got != timeout {
+				t.Fatalf("RequestTimeoutMs = %d, want %d", got, timeout)
+			}
+
+			zero := 0
+			if err := tt.update(UpstreamUpdate{RequestTimeoutMs: &zero}); err != nil {
+				t.Fatalf("清除 requestTimeoutMs 失败: %v", err)
+			}
+			if got := tt.read(cm.GetConfig()); got != 0 {
+				t.Fatalf("cleared RequestTimeoutMs = %d, want 0", got)
+			}
+
+			negative := -1
+			if err := tt.update(UpstreamUpdate{RequestTimeoutMs: &negative}); err == nil {
+				t.Fatal("negative requestTimeoutMs should be rejected")
+			}
+		})
+	}
+}
+
+func TestAddUpstreamRejectsNegativeRequestTimeoutMs(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.json")
+	if err := os.WriteFile(configPath, []byte(`{"upstream":[]}`), 0644); err != nil {
+		t.Fatalf("写入初始配置失败: %v", err)
+	}
+
+	cm, err := NewConfigManager(configPath)
+	if err != nil {
+		t.Fatalf("初始化配置管理器失败: %v", err)
+	}
+	defer cm.Close()
+
+	err = cm.AddUpstream(UpstreamConfig{
+		Name:             "invalid-timeout",
+		BaseURL:          "https://example.com",
+		APIKeys:          []string{"sk-test"},
+		ServiceType:      "claude",
+		RequestTimeoutMs: -1,
+	})
+	if err == nil {
+		t.Fatal("expected AddUpstream to reject negative requestTimeoutMs")
+	}
+}
+
 // strPtr 辅助函数：返回字符串指针
 func strPtr(s string) *string {
 	return &s

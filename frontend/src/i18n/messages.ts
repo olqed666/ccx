@@ -259,6 +259,10 @@ export type MessageKey =
   | 'addChannel.proxyUrlLabel'
   | 'addChannel.proxyUrlPlaceholder'
   | 'addChannel.proxyUrlHint'
+  | 'addChannel.requestTimeoutMsLabel'
+  | 'addChannel.requestTimeoutMsPlaceholder'
+  | 'addChannel.requestTimeoutMsHint'
+  | 'addChannel.requestTimeoutMsInvalid'
   | 'addChannel.routePrefixLabel'
   | 'addChannel.routePrefixPlaceholder'
   | 'addChannel.routePrefixHint'
@@ -726,6 +730,10 @@ export const messages: Record<SupportedLocale, Record<MessageKey, string>> = {
     'addChannel.proxyUrlLabel': 'Proxy URL (optional)',
     'addChannel.proxyUrlPlaceholder': 'http://127.0.0.1:7890 or socks5://127.0.0.1:1080',
     'addChannel.proxyUrlHint': 'Supports HTTP/HTTPS/SOCKS5 proxy URLs for accessing upstream services through a proxy.',
+    'addChannel.requestTimeoutMsLabel': 'Request timeout (ms)',
+    'addChannel.requestTimeoutMsPlaceholder': 'Leave empty to inherit REQUEST_TIMEOUT',
+    'addChannel.requestTimeoutMsHint': 'Only applies to non-streaming upstream requests. Leave empty to inherit global REQUEST_TIMEOUT.',
+    'addChannel.requestTimeoutMsInvalid': 'Enter a positive integer in milliseconds, or leave empty to inherit the global timeout.',
     'addChannel.routePrefixLabel': 'Route Prefix (optional)',
     'addChannel.routePrefixPlaceholder': 'kimi',
     'addChannel.routePrefixHint': 'Access this channel via /{prefix}/v1/messages. Multiple channels can share the same prefix.',
@@ -1192,6 +1200,10 @@ export const messages: Record<SupportedLocale, Record<MessageKey, string>> = {
     'addChannel.proxyUrlLabel': 'Proxy URL (opsional)',
     'addChannel.proxyUrlPlaceholder': 'http://127.0.0.1:7890 atau socks5://127.0.0.1:1080',
     'addChannel.proxyUrlHint': 'Mendukung proxy HTTP/HTTPS/SOCKS5 untuk mengakses layanan upstream lewat proxy.',
+    'addChannel.requestTimeoutMsLabel': 'Timeout request (ms)',
+    'addChannel.requestTimeoutMsPlaceholder': 'Kosongkan untuk mewarisi REQUEST_TIMEOUT',
+    'addChannel.requestTimeoutMsHint': 'Hanya berlaku untuk request upstream non-streaming. Kosongkan untuk mewarisi REQUEST_TIMEOUT global.',
+    'addChannel.requestTimeoutMsInvalid': 'Masukkan bilangan bulat positif dalam milidetik, atau kosongkan untuk mewarisi timeout global.',
     'addChannel.routePrefixLabel': 'Prefiks Rute (opsional)',
     'addChannel.routePrefixPlaceholder': 'kimi',
     'addChannel.routePrefixHint': 'Akses channel ini melalui /{prefix}/v1/messages. Beberapa channel bisa berbagi prefiks yang sama.',
@@ -1658,6 +1670,10 @@ export const messages: Record<SupportedLocale, Record<MessageKey, string>> = {
     'addChannel.proxyUrlLabel': '代理 URL (可选)',
     'addChannel.proxyUrlPlaceholder': 'http://127.0.0.1:7890 或 socks5://127.0.0.1:1080',
     'addChannel.proxyUrlHint': '支持 HTTP/HTTPS/SOCKS5 代理，用于通过代理访问上游服务',
+    'addChannel.requestTimeoutMsLabel': '请求超时 (ms)',
+    'addChannel.requestTimeoutMsPlaceholder': '留空继承 REQUEST_TIMEOUT',
+    'addChannel.requestTimeoutMsHint': '仅作用于非流式上游请求；留空表示继承全局 REQUEST_TIMEOUT。',
+    'addChannel.requestTimeoutMsInvalid': '请输入毫秒单位的正整数，或留空继承全局超时。',
     'addChannel.routePrefixLabel': '路由前缀 (可选)',
     'addChannel.routePrefixPlaceholder': 'kimi',
     'addChannel.routePrefixHint': '通过 /{前缀}/v1/messages 访问此渠道，多个渠道可共享同一前缀',

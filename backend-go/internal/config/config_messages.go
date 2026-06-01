@@ -70,6 +70,9 @@ func (cm *ConfigManager) AddUpstream(upstream UpstreamConfig) error {
 	}
 
 	upstream.ServiceType = normalizeUpstreamServiceType(upstream.ServiceType, "claude")
+	if upstream.RequestTimeoutMs < 0 {
+		return fmt.Errorf("请求超时时间不能为负数")
+	}
 
 	// 去重 API Keys 和 Base URLs
 	upstream.APIKeys = deduplicateStrings(upstream.APIKeys)
@@ -239,6 +242,12 @@ func (cm *ConfigManager) UpdateUpstream(index int, updates UpstreamUpdate) (shou
 	}
 	if updates.ProxyURL != nil {
 		upstream.ProxyURL = *updates.ProxyURL
+	}
+	if updates.RequestTimeoutMs != nil {
+		if *updates.RequestTimeoutMs < 0 {
+			return false, fmt.Errorf("请求超时时间不能为负数")
+		}
+		upstream.RequestTimeoutMs = *updates.RequestTimeoutMs
 	}
 	if updates.SupportedModels != nil {
 		upstream.SupportedModels = updates.SupportedModels

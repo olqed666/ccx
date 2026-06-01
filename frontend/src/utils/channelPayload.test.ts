@@ -24,6 +24,7 @@ describe('buildChannelPayload', () => {
       fastMode: true,
       customHeaders: { 'x-test': '1' },
       proxyUrl: ' http://127.0.0.1:7890 ',
+      requestTimeoutMs: 15000,
       routePrefix: '',
       supportedModels: ['gpt-5'],
       autoBlacklistBalance: true,
@@ -48,6 +49,7 @@ describe('buildChannelPayload', () => {
     expect(result.textVerbosity).toBe('medium')
     expect(result.fastMode).toBe(true)
     expect(result.proxyUrl).toBe('http://127.0.0.1:7890')
+    expect(result.requestTimeoutMs).toBe(15000)
   })
 
   it('应对多个 baseUrls 去重并保留 baseUrls 输出', () => {
@@ -440,5 +442,44 @@ describe('buildChannelPayload', () => {
     })
 
     expect(result.normalizeNonstandardChatRoles).toBe(true)
+  })
+
+  it('空请求超时不写入 payload，继承全局配置', () => {
+    const result = buildChannelPayload({
+      name: 'inherit-timeout',
+      serviceType: 'openai',
+      baseUrl: 'https://api.example.com/v1',
+      baseUrls: [],
+      website: '',
+      insecureSkipVerify: false,
+      lowQuality: false,
+      injectDummyThoughtSignature: false,
+      stripThoughtSignature: false,
+      passbackReasoningContent: false,
+      passbackThinkingBlocks: false,
+      description: '',
+      apiKeys: ['sk-1'],
+      modelMapping: {},
+      reasoningMapping: {},
+      reasoningParamStyle: 'reasoning',
+      textVerbosity: '',
+      fastMode: false,
+      customHeaders: {},
+      proxyUrl: '',
+      requestTimeoutMs: null,
+      routePrefix: '',
+      supportedModels: [],
+      autoBlacklistBalance: true,
+      normalizeMetadataUserId: true,
+      stripEmptyTextBlocks: false,
+      normalizeSystemRoleToTopLevel: false,
+      codexNativeToolPassthrough: false,
+      codexToolCompat: true,
+      noVision: false,
+      noVisionModels: [],
+      visionFallbackModel: ''
+    })
+
+    expect(result.requestTimeoutMs).toBeUndefined()
   })
 })

@@ -63,6 +63,8 @@ type UpstreamConfig struct {
 	CustomHeaders map[string]string `json:"customHeaders,omitempty"` // 自定义请求头（覆盖或添加到上游请求）
 	// 渠道级代理
 	ProxyURL string `json:"proxyUrl,omitempty"` // HTTP/HTTPS/SOCKS5 代理地址
+	// 渠道级请求超时
+	RequestTimeoutMs int `json:"requestTimeoutMs,omitempty"` // 非流式上游请求超时时间（毫秒，0=继承全局 REQUEST_TIMEOUT）
 	// 模型白名单
 	SupportedModels []string `json:"supportedModels,omitempty"` // 支持的模型白名单（空=全部）；支持精确匹配，以及 prefix* / *suffix / *contains* 形式的包含与排除规则（排除用 ! 前缀）
 	// 路由前缀
@@ -117,6 +119,14 @@ func (u *UpstreamConfig) IsCodexToolCompatEnabled() bool {
 	return u.StripCodexClientTools
 }
 
+// GetEffectiveRequestTimeoutMs 返回渠道生效的非流式上游请求超时时间（毫秒）。
+func (u *UpstreamConfig) GetEffectiveRequestTimeoutMs(fallback int) int {
+	if u.RequestTimeoutMs > 0 {
+		return u.RequestTimeoutMs
+	}
+	return fallback
+}
+
 // UpstreamUpdate 用于部分更新 UpstreamConfig
 type UpstreamUpdate struct {
 	Name                          *string           `json:"name"`
@@ -156,6 +166,8 @@ type UpstreamUpdate struct {
 	CustomHeaders map[string]string `json:"customHeaders"`
 	// 渠道级代理
 	ProxyURL *string `json:"proxyUrl"`
+	// 渠道级请求超时
+	RequestTimeoutMs *int `json:"requestTimeoutMs"`
 	// 模型白名单
 	SupportedModels []string `json:"supportedModels"` // 支持的模型白名单（空=全部）；支持精确匹配，以及 prefix* / *suffix / *contains* 形式的包含与排除规则（排除用 ! 前缀）
 	// 路由前缀
