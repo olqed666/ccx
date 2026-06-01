@@ -142,6 +142,57 @@ http://192.168.1.23:3688
 
 如果日志显示路径不符合预期，说明客户端未按目标方式接入 CCX，应重新检查 Agent 配置和客户端 Provider 设置。
 
+### 快速验证各入口是否正常
+
+当请求报错或不确定 CCX 通路是否正常时，用 curl 直接测试对应入口。
+
+将下面的 `localhost:3688` 替换为你的实际地址和端口，`your-proxy-key` 替换为你的 `PROXY_ACCESS_KEY`。
+
+**Messages（Claude Code）**
+
+```bash
+curl -sS -i "http://localhost:3688/v1/messages" \
+  -H "x-api-key: your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "claude-sonnet-4-20250514",
+    "max_tokens": 64,
+    "messages": [{"role": "user", "content": "Reply with exactly: pong"}]
+  }'
+```
+
+**Responses（Codex）**
+
+```bash
+curl -sS -i "http://localhost:3688/v1/responses" \
+  -H "Authorization: Bearer your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.4",
+    "input": "Reply with exactly: pong"
+  }'
+```
+
+**Chat Completions（OpenCode）**
+
+```bash
+curl -sS -i "http://localhost:3688/v1/chat/completions" \
+  -H "Authorization: Bearer your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.4",
+    "messages": [{"role": "user", "content": "Reply with exactly: pong"}]
+  }'
+```
+
+**判定标准**：
+
+- 返回 `HTTP/1.1 200 OK` 且响应体有正常内容 → CCX 通路正常，问题在客户端配置。
+- 返回 `401` → 检查 `PROXY_ACCESS_KEY` 是否匹配。
+- 返回 `400` 且响应体提示 model not found → 检查渠道模型映射。
+- 返回 `502` 或连接超时 → 上游不可达，检查渠道配置和网络。
+
 ## 自动更新问题
 
 ### macOS 提示“无法验证开发者”
