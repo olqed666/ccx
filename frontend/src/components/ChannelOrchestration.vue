@@ -1352,9 +1352,15 @@ const refreshMetrics = async () => {
   }
 }
 
+// 同步 lastKnownActiveOrder 为当前 activeChannels 的顺序
+// 用于在用户主动排序（置顶/置底/拖拽）后，防止自动刷新用旧顺序覆盖
+const syncActiveOrder = () => {
+  lastKnownActiveOrder.value = activeChannels.value.map(ch => ch.index)
+}
+
 // Drag change event - auto-save order
 const onDragChange = () => {
-  // Auto-save the order to the backend after dragging
+  syncActiveOrder()
   saveOrder()
 }
 
@@ -1384,6 +1390,7 @@ const moveChannelToTop = async (channelIndex: number) => {
 
   const [channel] = activeChannels.value.splice(idx, 1)
   activeChannels.value.unshift(channel)
+  syncActiveOrder()
   await saveOrder()
 }
 
@@ -1395,6 +1402,7 @@ const moveChannelToBottom = async (channelIndex: number) => {
 
   const [channel] = activeChannels.value.splice(idx, 1)
   activeChannels.value.push(channel)
+  syncActiveOrder()
   await saveOrder()
 }
 
