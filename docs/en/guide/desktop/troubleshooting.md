@@ -142,6 +142,57 @@ Different clients use different request paths:
 
 If the log path does not match expectations, the client is not connected to CCX in the intended way. Recheck agent configuration and client provider settings.
 
+### Quick verify each endpoint with curl
+
+When requests fail or you are unsure whether the CCX path is healthy, test each endpoint directly with curl.
+
+Replace `localhost:3688` with your actual address and port, and `your-proxy-key` with your `PROXY_ACCESS_KEY`.
+
+**Messages (Claude Code)**
+
+```bash
+curl -sS -i "http://localhost:3688/v1/messages" \
+  -H "x-api-key: your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -H "anthropic-version: 2023-06-01" \
+  -d '{
+    "model": "claude-sonnet-4-20250514",
+    "max_tokens": 64,
+    "messages": [{"role": "user", "content": "Reply with exactly: pong"}]
+  }'
+```
+
+**Responses (Codex)**
+
+```bash
+curl -sS -i "http://localhost:3688/v1/responses" \
+  -H "Authorization: Bearer your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.4",
+    "input": "Reply with exactly: pong"
+  }'
+```
+
+**Chat Completions (OpenCode)**
+
+```bash
+curl -sS -i "http://localhost:3688/v1/chat/completions" \
+  -H "Authorization: Bearer your-proxy-key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "gpt-5.4",
+    "messages": [{"role": "user", "content": "Reply with exactly: pong"}]
+  }'
+```
+
+**How to interpret the result**:
+
+- `HTTP/1.1 200 OK` with valid response body → CCX path is healthy, the problem is in client configuration.
+- `401` → Check that `PROXY_ACCESS_KEY` matches the client API key.
+- `400` with model not found → Check channel model mapping.
+- `502` or connection timeout → Upstream is unreachable, check channel configuration and network.
+
 ## Auto update issues
 
 ### macOS shows an unverified developer warning
