@@ -269,7 +269,7 @@ onBeforeUnmount(() => {
                 <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground ml-auto">
                   <Gauge class="h-3 w-3" />
                   <span>{{ tf('capability.rpmLabel', 'RPM') }}</span>
-                  <Input v-model.number="rpmValue" type="number" min="1" max="60" step="1" class="h-5 w-12 text-[10px] font-mono px-1" @blur="handleRpmBlur" />
+                  <Input v-model.number="rpmValue" type="number" min="1" max="60" step="1" class="h-6 w-14 text-[11px] font-mono px-1.5" @blur="handleRpmBlur" />
                 </div>
 
                 <span v-if="progress?.totalModels && isActive" class="text-[10px] text-muted-foreground">
