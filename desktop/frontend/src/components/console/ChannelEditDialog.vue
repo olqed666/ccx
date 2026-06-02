@@ -554,36 +554,36 @@ type ModelMappingPresetEntry = { source: string; target: string; reasoning?: Mod
 const modelMappingPresets: Record<string, { mapping: ModelMappingPresetEntry[]; fastMode?: boolean; textVerbosity?: string }> = {
   'gpt-5.5': {
     mapping: [
-      { source: 'claude-opus-4-6', target: 'gpt-5.5', reasoning: 'xhigh' },
-      { source: 'claude-sonnet-4-6', target: 'gpt-5.4', reasoning: 'xhigh' },
-      { source: 'claude-haiku-4-5', target: 'gpt-5.3-codex', reasoning: 'high' },
+      { source: 'opus', target: 'gpt-5.5', reasoning: 'xhigh' },
+      { source: 'sonnet', target: 'gpt-5.4', reasoning: 'xhigh' },
+      { source: 'haiku', target: 'gpt-5.3-codex', reasoning: 'high' },
     ],
     fastMode: true,
     textVerbosity: 'medium',
   },
   'gpt-5.4': {
     mapping: [
-      { source: 'claude-opus-4-6', target: 'gpt-5.4', reasoning: 'xhigh' },
-      { source: 'claude-sonnet-4-6', target: 'gpt-5.4', reasoning: 'xhigh' },
-      { source: 'claude-haiku-4-5', target: 'gpt-5.3-codex', reasoning: 'high' },
+      { source: 'opus', target: 'gpt-5.4', reasoning: 'xhigh' },
+      { source: 'sonnet', target: 'gpt-5.4', reasoning: 'xhigh' },
+      { source: 'haiku', target: 'gpt-5.3-codex', reasoning: 'high' },
     ],
     fastMode: true,
     textVerbosity: 'medium',
   },
   'gpt-5.3-codex': {
     mapping: [
-      { source: 'claude-opus-4-6', target: 'gpt-5.3-codex', reasoning: 'xhigh' },
-      { source: 'claude-sonnet-4-6', target: 'gpt-5.3-codex', reasoning: 'xhigh' },
-      { source: 'claude-haiku-4-5', target: 'gpt-5.3-codex', reasoning: 'high' },
+      { source: 'opus', target: 'gpt-5.3-codex', reasoning: 'xhigh' },
+      { source: 'sonnet', target: 'gpt-5.3-codex', reasoning: 'xhigh' },
+      { source: 'haiku', target: 'gpt-5.3-codex', reasoning: 'high' },
     ],
     fastMode: true,
     textVerbosity: 'medium',
   },
   'gpt-5.2-codex': {
     mapping: [
-      { source: 'claude-opus-4-6', target: 'gpt-5.2', reasoning: 'xhigh' },
-      { source: 'claude-sonnet-4-6', target: 'gpt-5.2-codex', reasoning: 'xhigh' },
-      { source: 'claude-haiku-4-5', target: 'gpt-5.2-codex', reasoning: 'high' },
+      { source: 'opus', target: 'gpt-5.2', reasoning: 'xhigh' },
+      { source: 'sonnet', target: 'gpt-5.2-codex', reasoning: 'xhigh' },
+      { source: 'haiku', target: 'gpt-5.2-codex', reasoning: 'high' },
     ],
     fastMode: true,
     textVerbosity: 'medium',
@@ -603,9 +603,9 @@ const claudeChannelPresets: Record<string, {
 }> = {
   mimo: {
     mapping: [
-      { source: 'claude-opus-4-6', target: 'mimo-v2.5-pro' },
-      { source: 'claude-sonnet-4-6', target: 'mimo-v2.5-pro' },
-      { source: 'claude-haiku-4-5', target: 'mimo-v2.5-pro' },
+      { source: 'opus', target: 'mimo-v2.5-pro' },
+      { source: 'sonnet', target: 'mimo-v2.5-pro' },
+      { source: 'haiku', target: 'mimo-v2.5-pro' },
     ],
     passbackReasoningContent: true,
     passbackThinkingBlocks: false,
@@ -617,9 +617,9 @@ const claudeChannelPresets: Record<string, {
   },
   deepseek: {
     mapping: [
-      { source: 'claude-opus-4-6', target: 'deepseek-v4-pro' },
-      { source: 'claude-sonnet-4-6', target: 'deepseek-v4-pro' },
-      { source: 'claude-haiku-4-5', target: 'deepseek-v4-flash' },
+      { source: 'opus', target: 'deepseek-v4-pro' },
+      { source: 'sonnet', target: 'deepseek-v4-pro' },
+      { source: 'haiku', target: 'deepseek-v4-flash' },
     ],
     passbackReasoningContent: true,
     passbackThinkingBlocks: true,
@@ -632,41 +632,44 @@ const claudeChannelPresets: Record<string, {
 }
 
 const codexResponsesPresets: Record<string, {
-  mapping: ClaudePresetEntry[]
-  reasoningMapping: Record<string, string>
+  mapping: { source: string; target: string; reasoning?: ModelMappingRow['reasoning'] }[]
   reasoningParamStyle: string
   codexNativeToolPassthrough: boolean
   codexToolCompat: boolean
   stripCodexClientTools: boolean
   normalizeNonstandardChatRoles: boolean
   noVision: boolean
+  noVisionModels: string[]
+  visionFallbackModel: string
 }> = {
   mimo: {
     mapping: [
       { source: 'gpt-5', target: 'mimo-v2.5-pro' },
       { source: 'codex-auto-review', target: 'mimo-v2.5' },
     ],
-    reasoningMapping: {},
     reasoningParamStyle: 'reasoning',
     codexNativeToolPassthrough: false,
     codexToolCompat: false,
     stripCodexClientTools: false,
     normalizeNonstandardChatRoles: false,
     noVision: false,
+    noVisionModels: ['mimo-v2.5-pro'],
+    visionFallbackModel: 'mimo-v2.5',
   },
   deepseek: {
     mapping: [
-      { source: 'gpt-5', target: 'deepseek-v4-pro' },
-      { source: 'gpt-mini', target: 'deepseek-v4-flash' },
+      { source: 'gpt', target: 'deepseek-v4-pro', reasoning: 'max' },
+      { source: 'mini', target: 'deepseek-v4-flash' },
       { source: 'codex-auto-review', target: 'deepseek-v4-flash' },
     ],
-    reasoningMapping: { gpt: 'max' },
     reasoningParamStyle: 'reasoning',
     codexNativeToolPassthrough: true,
     codexToolCompat: false,
     stripCodexClientTools: false,
     normalizeNonstandardChatRoles: true,
     noVision: true,
+    noVisionModels: [],
+    visionFallbackModel: '',
   },
 }
 
@@ -695,7 +698,15 @@ const showCodexResponsesPresets = computed(() => props.channelType === 'response
 function applyModelMappingPreset(name: string) {
   const preset = modelMappingPresets[name]
   if (!preset) return
-  modelMappingRows.value = preset.mapping.map(m => ({ id: ++rowId, source: m.source, target: m.target, reasoning: m.reasoning || '', noVision: false }))
+  // 仅 OpenAI/Responses 上游应用 reasoning 映射（对齐 WebUI）
+  const applyReasoning = supportsOpenAIAdvanced.value
+  modelMappingRows.value = preset.mapping.map(m => ({
+    id: ++rowId,
+    source: m.source,
+    target: m.target,
+    reasoning: applyReasoning ? (m.reasoning || '') : '',
+    noVision: false,
+  }))
   if (preset.fastMode !== undefined) form.fastMode = preset.fastMode
   if (preset.textVerbosity !== undefined) form.textVerbosity = preset.textVerbosity as typeof form.textVerbosity
 }
@@ -716,13 +727,15 @@ function applyClaudePreset(name: string) {
 function applyCodexResponsesPreset(name: string) {
   const preset = codexResponsesPresets[name]
   if (!preset) return
-  modelMappingRows.value = preset.mapping.map(m => ({ id: ++rowId, source: m.source, target: m.target, reasoning: '', noVision: false }))
+  modelMappingRows.value = preset.mapping.map(m => ({ id: ++rowId, source: m.source, target: m.target, reasoning: m.reasoning || '', noVision: false }))
   form.reasoningParamStyle = preset.reasoningParamStyle as typeof form.reasoningParamStyle
   form.codexNativeToolPassthrough = preset.codexNativeToolPassthrough
   form.codexToolCompat = preset.codexToolCompat
   form.stripCodexClientTools = preset.stripCodexClientTools
   form.normalizeNonstandardChatRoles = preset.normalizeNonstandardChatRoles
   form.noVision = preset.noVision
+  form.noVisionModelsText = preset.noVisionModels.join('\n')
+  form.visionFallbackModel = preset.visionFallbackModel
 }
 
 // ── 模型列表拉取 ──
@@ -1147,6 +1160,8 @@ function buildCurrentPayload() {
                       <Zap class="mr-1 h-3 w-3" />
                       {{ name }}
                     </Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('deepseek')"><Zap class="mr-1 h-3 w-3" />DeepSeek</Button>
                   </div>
                   <div v-if="showClaudeChannelPresets" class="flex flex-wrap gap-1.5">
                     <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
