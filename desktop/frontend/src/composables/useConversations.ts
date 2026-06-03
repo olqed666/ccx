@@ -15,7 +15,6 @@ const channelsByKind = ref<Record<string, ConversationChannelInfo[]>>({})
 const overrides = ref<Record<string, SequenceOverrideInfo>>({})
 const loading = ref(false)
 const error = ref('')
-const activeKind = ref('')
 
 export function useConversations() {
   const api = useAdminApi()
@@ -43,12 +42,12 @@ export function useConversations() {
 
   async function setOverride(conversationId: string, sequence: ChannelSequenceEntry[]) {
     await api.post(`/api/conversations/${encodeURIComponent(conversationId)}/override`, { sequence })
-    await fetchConversations(activeKind.value || undefined)
+    await fetchConversations()
   }
 
   async function removeOverride(conversationId: string) {
     await api.del(`/api/conversations/${encodeURIComponent(conversationId)}/override`)
-    await fetchConversations(activeKind.value || undefined)
+    await fetchConversations()
   }
 
   return {
@@ -58,8 +57,6 @@ export function useConversations() {
     overrides,
     loading,
     error,
-    activeKind,
-    clearError,
     fetchConversations,
     setOverride,
     removeOverride,

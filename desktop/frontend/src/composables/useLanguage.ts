@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { applyDocumentLanguage, normalizeLocale, resolveInitialLocale, translate as coreTranslate, translateOrFallback as coreTranslateFallback } from '@/i18n/core'
+import { applyDocumentLanguage, resolveInitialLocale, translate as coreTranslate, translateOrFallback as coreTranslateFallback } from '@/i18n/core'
 import type { MessageKey, SupportedLocale } from '@/i18n/messages'
 import { defaultLocale, languageOptions } from '@/i18n/messages'
 import {

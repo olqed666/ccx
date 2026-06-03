@@ -157,7 +157,6 @@ const historicalApiKeys = computed(() => props.channel?.historicalApiKeys ?? [])
 const quickDetection = computed(() => parseQuickInput(quickInput.value, form.serviceType || undefined))
 const detectedBaseUrls = computed(() => quickDetection.value.detectedBaseUrls)
 const detectedApiKeys = computed(() => quickDetection.value.detectedApiKeys)
-const quickHasDetections = computed(() => detectedBaseUrls.value.length > 0 || detectedApiKeys.value.length > 0 || !!quickDetection.value.detectedServiceType)
 
 function resetForm() {
   form.name = ''
@@ -322,25 +321,6 @@ function getSubmitApiKeys() {
   return [...existingApiKeys.value, ...parseLines(newApiKeysText.value || form.apiKeysText)]
 }
 
-function mergeLineText(currentText: string, additions: string[]) {
-  const merged = [...parseLines(currentText)]
-  for (const addition of additions.map(item => item.trim()).filter(Boolean)) {
-    if (!merged.includes(addition)) merged.push(addition)
-  }
-  return merged.join('\n')
-}
-
-function applyQuickInput() {
-  const result = quickDetection.value
-  if (result.detectedServiceType) form.serviceType = result.detectedServiceType
-  if (result.detectedBaseUrl) form.baseUrl = result.detectedBaseUrl
-  if (result.detectedBaseUrls.length > 1) form.baseUrlsText = result.detectedBaseUrls.join('\n')
-  if (result.detectedApiKeys.length) form.apiKeysText = mergeLineText(form.apiKeysText, result.detectedApiKeys)
-  if (!form.name.trim() && result.detectedServiceType) {
-    form.name = `${props.channelType}-${result.detectedServiceType}-channel`
-  }
-}
-
 function handleQuickPaste(text: string) {
   const result = parseQuickInput(text, form.serviceType || undefined)
   if (result.detectedBaseUrl) form.baseUrl = result.detectedBaseUrl
@@ -353,20 +333,6 @@ function handleQuickPaste(text: string) {
   if (!form.name.trim()) {
     const st = form.serviceType || 'channel'
     form.name = `${props.channelType}-${st}-${Date.now().toString(36)}`
-  }
-}
-
-async function handleRestoreKey(key: string) {
-  if (!props.channel) return
-  restoringKey.value = key
-  error.value = ''
-  try {
-    await restoreApiKey(props.channel.index, key)
-    emit('saved')
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : String(e)
-  } finally {
-    restoringKey.value = ''
   }
 }
 
@@ -440,16 +406,6 @@ async function persistCurrentDraft(options: { notifyParent?: boolean; close?: bo
 
 async function handleSubmit() {
   await persistCurrentDraft({ notifyParent: true, close: true })
-}
-
-function shouldSkipEnterSubmit(target: EventTarget | null) {
-  const el = target instanceof Element ? target : null
-  if (!el) return false
-
-  // textarea / contenteditable 内保留原生编辑行为；按钮和选择器内保留自身 Enter 行为。
-  if (el.closest('textarea, button, [contenteditable]')) return true
-  const interactiveRole = el.closest('[role="button"], [role="combobox"], [role="listbox"], [role="option"], [role="switch"], [role="checkbox"]')
-  return Boolean(interactiveRole)
 }
 
 // Keyboard shortcuts: Esc 取消，创建模式 Cmd/Ctrl+Enter / 编辑模式 Enter 保存
@@ -1197,7 +1153,7 @@ function buildCurrentPayload() {
                   <!-- 预设按钮 -->
                   <div v-if="showModelMappingPresets" class="flex flex-wrap items-center gap-1.5">
                     <span class="text-[10px] text-muted-foreground">{{ tf('addChannel.oneClickSetup', '一键配置') }}</span>
-                    <Button v-for="(preset, name) in modelMappingPresets" :key="name" type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyModelMappingPreset(String(name))">
+                    <Button v-for="name in Object.keys(modelMappingPresets)" :key="name" type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyModelMappingPreset(name)">
                       <Zap class="mr-1 h-3 w-3" />
                       {{ name }}
                     </Button>

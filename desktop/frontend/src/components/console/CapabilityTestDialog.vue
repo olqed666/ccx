@@ -28,8 +28,6 @@ const { tf } = useLanguage()
 const {
   activeJob,
   snapshot,
-  loading,
-  polling,
   cancelling,
   error,
   startTest,
@@ -41,7 +39,6 @@ const {
   reset,
   protocolResults,
   compatibleProtocols,
-  lifecycle,
   outcome,
   isActive,
   state,

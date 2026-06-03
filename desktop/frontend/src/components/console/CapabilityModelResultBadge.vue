@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Badge } from '@/components/ui/badge'
 import { Loader2, CheckCircle2, XCircle, ArrowRight, Clock } from 'lucide-vue-next'
 import { useLanguage } from '@/composables/useLanguage'
 import type { CapabilityProtocolJobResult, CapabilityModelJobResult } from '@/services/admin-api'

@@ -18,7 +18,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
-  Activity,
   AlertTriangle,
   ArrowDown,
   ArrowUp,
@@ -35,7 +34,6 @@ import {
   RotateCcw,
   Sparkles,
   Terminal,
-  Timer,
   Trash2,
   XCircle,
   Zap,
@@ -78,7 +76,6 @@ const { tf } = useLanguage()
 
 const isSuspended = computed(() => props.channel.status === 'suspended')
 const isDisabled = computed(() => props.channel.status === 'disabled')
-const isActive = computed(() => !isSuspended.value && !isDisabled.value)
 
 const serviceTypeClass = computed(() => {
   const map: Record<string, string> = {

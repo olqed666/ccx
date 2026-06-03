@@ -106,9 +106,8 @@ const envGroups = computed<EnvGroup[]>(() => [
 
 const supportedKeys = envGroups.value.flatMap((group) => group.fields.map((field) => field.key))
 const allFields = envGroups.value.flatMap((group) => group.fields)
-const fieldMap = new Map(allFields.map((field) => [field.key, field]))
 
-const { envFile, envLoading, envSaving, envMessage, envError, editors, editorsLoading, openingEditor, loadEnvFile, saveEnvFile, loadEditors, openInEditor } = useEnvFile()
+const { envFile, envLoading, envSaving, envMessage, envError, editors, openingEditor, loadEnvFile, saveEnvFile, loadEditors, openInEditor } = useEnvFile()
 
 const saveState = ref<'idle' | 'saved' | 'failed'>('idle')
 let saveResetTimer: ReturnType<typeof setTimeout> | null = null

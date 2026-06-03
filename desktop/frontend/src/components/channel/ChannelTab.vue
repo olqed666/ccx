@@ -18,7 +18,6 @@ const emit = defineEmits<{
 const {
   presets,
   keysByProvider,
-  loading,
   creating,
   error,
   result,
@@ -171,10 +170,6 @@ const capabilityBadges = computed(() => {
 
 const effectiveBaseUrl = computed(() => {
   return currentPlan.value?.baseUrl || currentAsset.value?.baseUrl || ''
-})
-
-const keyPlaceholder = computed(() => {
-  return currentAsset.value?.apiKey ? t('channel.keySavedPlaceholder') : t('channel.keyInputPlaceholder')
 })
 
 const submit = async () => {
