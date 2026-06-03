@@ -27,6 +27,7 @@ import {
 import { useConsoleChannels } from '@/composables/useConsoleChannels'
 import { useLanguage } from '@/composables/useLanguage'
 import { buildChannelPayload } from '@/utils/channel-payload'
+import { syncBaseUrlsFormState } from '@/utils/channel-dialog-state'
 import { getChannelTypeApi, type ManagedChannelType } from '@/utils/channel-type-api'
 import { buildExpectedRequestUrls } from '@/utils/expected-request-urls'
 import { parseQuickInput } from '@/utils/quick-input-parser'
@@ -214,8 +215,8 @@ function populateFromChannel(ch: Channel) {
   form.name = ch.name || ''
   form.description = ch.description || ''
   form.serviceType = ch.serviceType || defaultServiceTypeForChannel()
-  form.baseUrl = ch.baseUrl || ''
-  form.baseUrlsText = (ch.baseUrls || []).join('\n')
+  // baseUrls 多 URL 时已包含主 URL；否则回退单个 baseUrl。form.baseUrl 由 watch 派生
+  form.baseUrlsText = (ch.baseUrls?.length ? ch.baseUrls : [ch.baseUrl].filter(Boolean)).join('\n')
   form.website = ch.website || ''
   form.proxyUrl = ch.proxyUrl || ''
   form.requestTimeoutMs = ch.requestTimeoutMs || ''
@@ -260,6 +261,12 @@ watch(() => props.channel, (ch) => {
   if (ch) populateFromChannel(ch)
 }, { immediate: true })
 
+// baseUrlsText 是唯一的 Base URL 输入（每行一个，第一行为主），派生 form.baseUrl / form.baseUrls（对齐 WebUI）
+watch([() => form.baseUrlsText, () => form.serviceType], () => {
+  const { baseUrl } = syncBaseUrlsFormState(form.baseUrlsText, form.serviceType)
+  form.baseUrl = baseUrl
+}, { immediate: true })
+
 // API Key 是否满足必填：现有 + 新增；编辑模式下有可恢复 disabled key 也算
 const hasConfigurableKeys = computed(() => {
   if (existingApiKeys.value.length > 0) return true
@@ -272,7 +279,7 @@ const errors = computed(() => {
   const errs: Record<string, string> = {}
   if (!form.name.trim()) errs.name = tf('console.form.nameRequired', '渠道名称必填')
   if (!form.serviceType) errs.serviceType = tf('console.form.serviceTypeRequired', '请选择服务类型')
-  if (!form.baseUrl.trim() && !form.baseUrlsText.trim()) errs.baseUrl = tf('console.form.baseUrlRequired', '至少需要一个 Base URL')
+  if (!form.baseUrlsText.trim()) errs.baseUrl = tf('console.form.baseUrlRequired', '至少需要一个 Base URL')
   // API Key 必填：现有 key + 新增 key，编辑模式下可恢复的 disabled key 也算
   if (!hasConfigurableKeys.value) errs.apiKeys = tf('console.form.apiKeyRequired', '至少需要一个 API Key')
   if (String(form.requestTimeoutMs).trim()) {
@@ -323,8 +330,9 @@ function getSubmitApiKeys() {
 
 function handleQuickPaste(text: string) {
   const result = parseQuickInput(text, form.serviceType || undefined)
-  if (result.detectedBaseUrl) form.baseUrl = result.detectedBaseUrl
-  if (result.detectedBaseUrls.length > 1) form.baseUrlsText = result.detectedBaseUrls.join('\n')
+  // 统一写入 baseUrlsText（每行一个，第一行为主），form.baseUrl 由 watch 派生
+  const detectedUrls = result.detectedBaseUrls.length ? result.detectedBaseUrls : [result.detectedBaseUrl].filter(Boolean)
+  if (detectedUrls.length) form.baseUrlsText = detectedUrls.join('\n')
   if (result.detectedApiKeys.length) {
     existingApiKeys.value = [...new Set([...existingApiKeys.value, ...result.detectedApiKeys])]
   }
@@ -841,6 +849,9 @@ function getNoVisionModelsFromRows(): string[] {
   return [...set]
 }
 
+// 生成参数分组是否有可见内容（fastMode/textVerbosity 仅 OpenAI/Responses；vision fallback 仅有 noVision 模型时）
+const hasGenerationParams = computed(() => supportsOpenAIAdvanced.value || getNoVisionModelsFromRows().length > 0)
+
 // ── Custom Headers 行操作 ──
 
 function headerRowsFromChannel(ch: Channel) {
@@ -1053,9 +1064,10 @@ function buildCurrentPayload() {
                   </h4>
                   <div class="space-y-1.5">
                     <Label>{{ tf('console.form.baseUrl', 'Base URL') }} *</Label>
-                    <Input
-                      v-model="form.baseUrl"
-                      placeholder="https://api.example.com"
+                    <Textarea
+                      v-model="form.baseUrlsText"
+                      class="min-h-20 font-mono text-xs"
+                      :placeholder="tf('console.form.baseUrlPlaceholder', '每行一个，第一行为主地址，其余作为故障转移\nhttps://api.example.com\nhttps://backup.example.com')"
                       :class="{ 'border-destructive': errors.baseUrl }"
                     />
                     <p v-if="errors.baseUrl" class="text-[10px] text-destructive">{{ errors.baseUrl }}</p>
@@ -1065,13 +1077,9 @@ function buildCurrentPayload() {
                       </div>
                     </div>
                   </div>
-                  <div class="space-y-1.5">
-                    <Label>{{ tf('console.form.additionalUrls', '额外 URL（每行一个）') }}</Label>
-                    <Textarea v-model="form.baseUrlsText" rows="3" placeholder="https://backup.example.com" />
-                  </div>
                 </section>
 
-                <section class="space-y-3 border bg-background/40 p-4" :class="errors.apiKeys ? 'border-destructive/40' : 'border-border'">
+                <section class="space-y-3 border bg-background/40 p-4 lg:col-span-2" :class="errors.apiKeys ? 'border-destructive/40' : 'border-border'">
                   <h4 class="text-xs font-semibold uppercase tracking-wider" :class="errors.apiKeys ? 'text-destructive' : 'text-muted-foreground'">
                     {{ tf('console.form.authentication', '认证') }} *
                   </h4>
@@ -1145,9 +1153,9 @@ function buildCurrentPayload() {
                   </div>
                 </section>
 
-                <section class="space-y-3 border border-border bg-background/40 p-4">
+                <section class="space-y-3 border border-border bg-background/40 p-4 lg:col-span-2">
                   <h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {{ tf('console.form.models', '模型') }}
+                    {{ tf('console.form.modelRedirect', '模型重定向') }}
                   </h4>
 
                   <!-- 预设按钮 -->
@@ -1236,6 +1244,13 @@ function buildCurrentPayload() {
                       </div>
                     </div>
                   </div>
+                </section>
+
+                <!-- ── 生成参数：快速模式 / Text verbosity / 视觉回退 ── -->
+                <section v-if="hasGenerationParams" class="space-y-3 border border-border bg-background/40 p-4">
+                  <h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {{ tf('console.form.generationParams', '生成参数') }}
+                  </h4>
 
                   <!-- fastMode + textVerbosity（仅 OpenAI/Responses，对齐 WebUI 模型卡片内布局） -->
                   <div v-if="supportsOpenAIAdvanced" class="grid items-end gap-3 md:grid-cols-2">
@@ -1262,6 +1277,13 @@ function buildCurrentPayload() {
                       <option v-for="m in targetModelOptions" :key="m" :value="m" />
                     </datalist>
                   </div>
+                </section>
+
+                <!-- ── 模型范围：支持的模型白名单 ── -->
+                <section class="space-y-3 border border-border bg-background/40 p-4">
+                  <h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {{ tf('console.form.modelScope', '模型范围') }}
+                  </h4>
                   <div class="space-y-1.5">
                     <Label>{{ tf('console.form.supportedModels', '支持的模型（每行一个，留空=全部）') }}</Label>
                     <Textarea v-model="form.supportedModelsText" rows="3" placeholder="gpt-4*&#10;claude-3*" class="font-mono text-xs" />
