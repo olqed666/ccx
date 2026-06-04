@@ -911,7 +911,8 @@ function getHeadersAsObject(): Record<string, string> {
 async function handleTestCapability() {
   if (!props.channel) return
 
-  const saved = await persistCurrentDraft({ notifyParent: true })
+  // 父组件收到 test-capability 后负责关闭编辑弹窗并刷新；这里不能先 emit saved，避免组件卸载后丢失事件。
+  const saved = await persistCurrentDraft()
   if (!saved) return
 
   emit('test-capability', {

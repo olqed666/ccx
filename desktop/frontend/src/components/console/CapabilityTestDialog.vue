@@ -54,7 +54,7 @@ watch(() => props.open, async (isOpen) => {
   } else {
     reset()
   }
-})
+}, { immediate: true })
 
 const currentJob = computed(() => activeJob.value)
 const progress = computed(() => currentJob.value?.progress)

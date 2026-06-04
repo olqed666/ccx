@@ -86,6 +86,7 @@ const showAddDialog = ref(false)
 const editingChannel = ref<Channel | null>(null)
 const logsChannel = ref<Channel | null>(null)
 const capabilityChannel = ref<Channel | null>(null)
+const showCapabilityDialog = ref(false)
 const draggedIndex = ref<number | null>(null)
 
 function clearActionError() {
@@ -237,8 +238,9 @@ function handleSaved() {
 
 function handleEditTestCapability(channel: Channel) {
   showAddDialog.value = false
-  refreshCurrentChannels()
+  void refreshCurrentChannels()
   capabilityChannel.value = channel
+  showCapabilityDialog.value = true
 }
 
 function handleLogs(channel: Channel) {
@@ -247,6 +249,12 @@ function handleLogs(channel: Channel) {
 
 function handleCapability(channel: Channel) {
   capabilityChannel.value = channel
+  showCapabilityDialog.value = true
+}
+
+function closeCapabilityDialog() {
+  showCapabilityDialog.value = false
+  capabilityChannel.value = null
 }
 
 async function handleReorder(newOrder: number[]) {
@@ -462,11 +470,13 @@ onMounted(() => {
     />
 
     <CapabilityTestDialog
-      :open="!!capabilityChannel"
+      v-if="capabilityChannel"
+      :key="`${type}-${capabilityChannel.index}`"
+      :open="showCapabilityDialog"
       :channel-type="type"
-      :channel-id="capabilityChannel?.index ?? -1"
-      :channel-name="capabilityChannel?.name ?? ''"
-      @close="capabilityChannel = null"
+      :channel-id="capabilityChannel.index"
+      :channel-name="capabilityChannel.name ?? ''"
+      @close="closeCapabilityDialog"
     />
   </div>
 </template>
