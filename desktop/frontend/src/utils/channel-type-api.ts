@@ -54,7 +54,7 @@ export function getChannelTypeApi(channelType: ManagedChannelType): ChannelTypeA
     pingAll: () => api.post(`${prefix}/ping`),
     addApiKey: (channelId, key) => api.post(`${prefix}/channels/${channelId}/keys`, { key }),
     removeApiKey: (channelId, key) => api.del(`${prefix}/channels/${channelId}/keys/${encodeURIComponent(key)}`),
-    restoreApiKey: (channelId, key) => api.post(`${prefix}/channels/${channelId}/keys/${encodeURIComponent(key)}/restore`),
+    restoreApiKey: (channelId, key) => api.post(`${prefix}/channels/${channelId}/keys/restore`, { apiKey: key }),
     moveApiKeyToTop: (channelId, key) => api.post(`${prefix}/channels/${channelId}/keys/${encodeURIComponent(key)}/top`),
     moveApiKeyToBottom: (channelId, key) => api.post(`${prefix}/channels/${channelId}/keys/${encodeURIComponent(key)}/bottom`),
     getChannelLogs: (channelId) => api.get(`${prefix}/channels/${channelId}/logs`),
