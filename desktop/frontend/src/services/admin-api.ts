@@ -72,6 +72,8 @@ export interface Channel {
   customHeaders?: Record<string, string>
   proxyUrl?: string
   requestTimeoutMs?: number
+  streamFirstContentTimeoutMs?: number
+  streamInactivityTimeoutMs?: number
   routePrefix?: string
   autoBlacklistBalance?: boolean
   normalizeMetadataUserId?: boolean

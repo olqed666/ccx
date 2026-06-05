@@ -53,5 +53,9 @@ func BuildChannelView(up config.UpstreamConfig, index int) gin.H {
 		// Gemini 特定开关
 		"injectDummyThoughtSignature": up.InjectDummyThoughtSignature,
 		"stripThoughtSignature":       up.StripThoughtSignature,
+		// 超时配置
+		"requestTimeoutMs":            up.RequestTimeoutMs,
+		"streamFirstContentTimeoutMs": up.StreamFirstContentTimeoutMs,
+		"streamInactivityTimeoutMs":   up.StreamInactivityTimeoutMs,
 	}
 }

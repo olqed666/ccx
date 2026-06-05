@@ -110,8 +110,8 @@ const fetchConfig = async () => {
     form.windowSize = data.windowSize ?? 10
     form.failureThreshold = data.failureThreshold ?? 0.5
     form.consecutiveFailuresThreshold = data.consecutiveFailuresThreshold ?? 3
-    form.streamFirstContentTimeoutMs = data.streamFirstContentTimeoutMs ?? 30000
-    form.streamInactivityTimeoutMs = data.streamInactivityTimeoutMs ?? 5000
+    form.streamFirstContentTimeoutMs = data.streamFirstContentTimeoutMs && data.streamFirstContentTimeoutMs >= 5000 ? data.streamFirstContentTimeoutMs : 30000
+    form.streamInactivityTimeoutMs = data.streamInactivityTimeoutMs && data.streamInactivityTimeoutMs >= 1000 ? data.streamInactivityTimeoutMs : 5000
     matchPreset()
   } catch (e) {
     showMessage(t('env.runtimeCbLoadFailed', { error: e instanceof Error ? e.message : String(e) }), 'error')
@@ -264,19 +264,19 @@ onMounted(() => {
         <div class="flex-1 px-3">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs text-muted-foreground">{{ t('env.runtimeCbStreamFirstContentTimeout') }}</span>
-            <span class="text-xs font-medium">{{ form.streamFirstContentTimeoutMs === 0 ? 'off' : (form.streamFirstContentTimeoutMs / 1000) + 's' }}</span>
+            <span class="text-xs font-medium">{{ (form.streamFirstContentTimeoutMs / 1000) + 's' }}</span>
           </div>
           <input
             type="range"
             :value="form.streamFirstContentTimeoutMs"
-            :min="0"
+            :min="5000"
             :max="300000"
             step="1000"
             class="cb-slider w-full"
             :disabled="!status.running"
             @input="onSliderChange('streamFirstContentTimeoutMs', $event)"
           />
-          <div class="flex justify-between text-xs text-muted-foreground"><span>off</span><span>300s</span></div>
+          <div class="flex justify-between text-xs text-muted-foreground"><span>5s</span><span>300s</span></div>
         </div>
 
         <div class="w-px bg-border mx-1 self-stretch" />
@@ -285,19 +285,19 @@ onMounted(() => {
         <div class="flex-1 px-3">
           <div class="flex items-center justify-between mb-1">
             <span class="text-xs text-muted-foreground">{{ t('env.runtimeCbStreamInactivityTimeout') }}</span>
-            <span class="text-xs font-medium">{{ form.streamInactivityTimeoutMs === 0 ? 'off' : (form.streamInactivityTimeoutMs / 1000) + 's' }}</span>
+            <span class="text-xs font-medium">{{ (form.streamInactivityTimeoutMs / 1000) + 's' }}</span>
           </div>
           <input
             type="range"
             :value="form.streamInactivityTimeoutMs"
-            :min="0"
+            :min="1000"
             :max="60000"
             step="1000"
             class="cb-slider w-full"
             :disabled="!status.running"
             @input="onSliderChange('streamInactivityTimeoutMs', $event)"
           />
-          <div class="flex justify-between text-xs text-muted-foreground"><span>off</span><span>60s</span></div>
+          <div class="flex justify-between text-xs text-muted-foreground"><span>1s</span><span>60s</span></div>
         </div>
       </div>
 

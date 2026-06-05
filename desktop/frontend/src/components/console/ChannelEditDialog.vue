@@ -124,6 +124,10 @@ const form = reactive({
   website: '',
   proxyUrl: '',
   requestTimeoutMs: '' as string | number,
+  streamFirstContentTimeoutEnabled: false,
+  streamFirstContentTimeoutMs: 30000,
+  streamInactivityTimeoutEnabled: false,
+  streamInactivityTimeoutMs: 5000,
   routePrefix: '',
   insecureSkipVerify: false,
   apiKeysText: '',
@@ -168,6 +172,10 @@ function resetForm() {
   form.website = ''
   form.proxyUrl = ''
   form.requestTimeoutMs = ''
+  form.streamFirstContentTimeoutEnabled = false
+  form.streamFirstContentTimeoutMs = 30000
+  form.streamInactivityTimeoutEnabled = false
+  form.streamInactivityTimeoutMs = 5000
   form.routePrefix = ''
   form.insecureSkipVerify = false
   form.apiKeysText = ''
@@ -220,6 +228,10 @@ function populateFromChannel(ch: Channel) {
   form.website = ch.website || ''
   form.proxyUrl = ch.proxyUrl || ''
   form.requestTimeoutMs = ch.requestTimeoutMs || ''
+  form.streamFirstContentTimeoutEnabled = !!(ch.streamFirstContentTimeoutMs && ch.streamFirstContentTimeoutMs > 0)
+  form.streamFirstContentTimeoutMs = ch.streamFirstContentTimeoutMs && ch.streamFirstContentTimeoutMs > 0 ? ch.streamFirstContentTimeoutMs : 30000
+  form.streamInactivityTimeoutEnabled = !!(ch.streamInactivityTimeoutMs && ch.streamInactivityTimeoutMs > 0)
+  form.streamInactivityTimeoutMs = ch.streamInactivityTimeoutMs && ch.streamInactivityTimeoutMs > 0 ? ch.streamInactivityTimeoutMs : 5000
   form.routePrefix = ch.routePrefix || ''
   form.insecureSkipVerify = ch.insecureSkipVerify ?? false
   existingApiKeys.value = [...(ch.apiKeys || [])]
@@ -369,6 +381,8 @@ function buildSubmitPayload() {
         customHeaders: parseJsonObject<Record<string, string>>(form.customHeadersText, 'Custom headers'),
         proxyUrl: form.proxyUrl,
         requestTimeoutMs: form.requestTimeoutMs,
+        streamFirstContentTimeoutMs: form.streamFirstContentTimeoutEnabled ? form.streamFirstContentTimeoutMs : undefined,
+        streamInactivityTimeoutMs: form.streamInactivityTimeoutEnabled ? form.streamInactivityTimeoutMs : undefined,
         routePrefix: form.routePrefix,
         supportedModels: parseLines(form.supportedModelsText),
         autoBlacklistBalance: form.autoBlacklistBalance,
@@ -386,6 +400,12 @@ function buildSubmitPayload() {
 
   if (isEditMode.value && props.channel?.requestTimeoutMs && !String(form.requestTimeoutMs ?? '').trim()) {
     payload.requestTimeoutMs = 0
+  }
+  if (isEditMode.value && props.channel?.streamFirstContentTimeoutMs && !form.streamFirstContentTimeoutEnabled) {
+    payload.streamFirstContentTimeoutMs = 0
+  }
+  if (isEditMode.value && props.channel?.streamInactivityTimeoutMs && !form.streamInactivityTimeoutEnabled) {
+    payload.streamInactivityTimeoutMs = 0
   }
 
   return payload
@@ -930,6 +950,8 @@ function buildCurrentPayload() {
     customHeaders: getHeadersAsObject(),
     proxyUrl: form.proxyUrl,
     requestTimeoutMs: form.requestTimeoutMs,
+    streamFirstContentTimeoutMs: form.streamFirstContentTimeoutEnabled ? form.streamFirstContentTimeoutMs : undefined,
+    streamInactivityTimeoutMs: form.streamInactivityTimeoutEnabled ? form.streamInactivityTimeoutMs : undefined,
     routePrefix: form.routePrefix,
     supportedModels: parseLines(form.supportedModelsText),
     autoBlacklistBalance: form.autoBlacklistBalance,
@@ -1484,6 +1506,63 @@ function buildCurrentPayload() {
                           <Input v-model="form.requestTimeoutMs" type="number" class="h-7 text-xs" placeholder="60000" :class="{ 'border-destructive': errors.requestTimeoutMs }" />
                           <p v-if="errors.requestTimeoutMs" class="text-[10px] text-destructive">{{ errors.requestTimeoutMs }}</p>
                           <p v-else class="text-[10px] leading-4 text-muted-foreground">{{ tf('console.form.requestTimeoutMsHint', '仅作用于非流式上游请求；留空表示继承全局 REQUEST_TIMEOUT。') }}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Stream Timeouts -->
+                    <div class="space-y-2">
+                      <div class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{{ tf('console.form.streamTimeouts', '流式超时') }}</div>
+                      <div class="grid gap-3 md:grid-cols-2">
+                        <div class="border border-border bg-background/60 p-3 space-y-2">
+                          <div class="flex items-center justify-between gap-3">
+                            <Switch v-model="form.streamFirstContentTimeoutEnabled" class="shrink-0" />
+                            <div class="min-w-0 space-y-0.5">
+                              <Label class="text-xs">{{ tf('console.form.streamFirstContentTimeoutOverrideLabel', '自定义首字等待超时') }}</Label>
+                              <p class="text-[10px] leading-4 text-muted-foreground">{{ form.streamFirstContentTimeoutEnabled ? tf('console.form.streamTimeoutOverrideHint', '自定义值覆盖全局流式超时') : tf('console.form.streamTimeoutInheritHint', '继承全局流式超时') }}</p>
+                            </div>
+                          </div>
+                          <div :class="{ 'opacity-50 pointer-events-none': !form.streamFirstContentTimeoutEnabled }">
+                            <div class="flex items-center justify-between mb-1">
+                              <span class="text-[10px] text-muted-foreground">{{ tf('console.form.streamFirstContentTimeoutLabel', '首字等待超时') }}</span>
+                              <span class="text-[10px] font-medium">{{ (form.streamFirstContentTimeoutMs / 1000) }}s</span>
+                            </div>
+                            <input
+                              v-model.number="form.streamFirstContentTimeoutMs"
+                              type="range"
+                              min="5000"
+                              max="300000"
+                              step="1000"
+                              class="cb-slider w-full"
+                              :disabled="!form.streamFirstContentTimeoutEnabled"
+                            />
+                            <div class="flex justify-between text-[10px] text-muted-foreground"><span>5s</span><span>300s</span></div>
+                          </div>
+                        </div>
+                        <div class="border border-border bg-background/60 p-3 space-y-2">
+                          <div class="flex items-center justify-between gap-3">
+                            <Switch v-model="form.streamInactivityTimeoutEnabled" class="shrink-0" />
+                            <div class="min-w-0 space-y-0.5">
+                              <Label class="text-xs">{{ tf('console.form.streamInactivityTimeoutOverrideLabel', '自定义断流超时') }}</Label>
+                              <p class="text-[10px] leading-4 text-muted-foreground">{{ form.streamInactivityTimeoutEnabled ? tf('console.form.streamTimeoutOverrideHint', '自定义值覆盖全局流式超时') : tf('console.form.streamTimeoutInheritHint', '继承全局流式超时') }}</p>
+                            </div>
+                          </div>
+                          <div :class="{ 'opacity-50 pointer-events-none': !form.streamInactivityTimeoutEnabled }">
+                            <div class="flex items-center justify-between mb-1">
+                              <span class="text-[10px] text-muted-foreground">{{ tf('console.form.streamInactivityTimeoutLabel', '首字后断流超时') }}</span>
+                              <span class="text-[10px] font-medium">{{ (form.streamInactivityTimeoutMs / 1000) }}s</span>
+                            </div>
+                            <input
+                              v-model.number="form.streamInactivityTimeoutMs"
+                              type="range"
+                              min="1000"
+                              max="60000"
+                              step="1000"
+                              class="cb-slider w-full"
+                              :disabled="!form.streamInactivityTimeoutEnabled"
+                            />
+                            <div class="flex justify-between text-[10px] text-muted-foreground"><span>1s</span><span>60s</span></div>
+                          </div>
                         </div>
                       </div>
                     </div>

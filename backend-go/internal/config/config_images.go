@@ -93,6 +93,9 @@ func (cm *ConfigManager) AddImagesUpstream(upstream UpstreamConfig) error {
 	if upstream.RequestTimeoutMs < 0 {
 		return fmt.Errorf("请求超时时间不能为负数")
 	}
+	if err := validateStreamTimeouts(upstream.StreamFirstContentTimeoutMs, upstream.StreamInactivityTimeoutMs); err != nil {
+		return err
+	}
 
 	// 去重 API Keys 和 Base URLs
 	upstream.APIKeys = deduplicateStrings(upstream.APIKeys)
@@ -264,9 +267,15 @@ func (cm *ConfigManager) UpdateImagesUpstream(index int, updates UpstreamUpdate)
 		upstream.RequestTimeoutMs = *updates.RequestTimeoutMs
 	}
 	if updates.StreamFirstContentTimeoutMs != nil {
+		if err := validateStreamFirstContentTimeoutMs(*updates.StreamFirstContentTimeoutMs); err != nil {
+			return false, err
+		}
 		upstream.StreamFirstContentTimeoutMs = *updates.StreamFirstContentTimeoutMs
 	}
 	if updates.StreamInactivityTimeoutMs != nil {
+		if err := validateStreamInactivityTimeoutMs(*updates.StreamInactivityTimeoutMs); err != nil {
+			return false, err
+		}
 		upstream.StreamInactivityTimeoutMs = *updates.StreamInactivityTimeoutMs
 	}
 	if updates.SupportedModels != nil {

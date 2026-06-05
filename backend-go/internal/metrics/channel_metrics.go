@@ -2131,8 +2131,8 @@ type CircuitBreakerParams struct {
 	FailureThreshold             float64 `json:"failureThreshold"`
 	ConsecutiveFailuresThreshold int64   `json:"consecutiveFailuresThreshold"`
 	// 流式健康检测参数
-	StreamFirstContentTimeoutMs int `json:"streamFirstContentTimeoutMs"` // HTTP 200 后首个有效内容等待超时（ms，0=禁用）
-	StreamInactivityTimeoutMs   int `json:"streamInactivityTimeoutMs"`   // 首字后连续性确认窗口（ms，0=禁用）
+	StreamFirstContentTimeoutMs int `json:"streamFirstContentTimeoutMs"` // HTTP 200 后首个有效内容等待超时（ms，5000-300000）
+	StreamInactivityTimeoutMs   int `json:"streamInactivityTimeoutMs"`   // 首字后连续性确认窗口（ms，1000-60000）
 }
 
 // GetCircuitBreakerConfig 获取当前运行时生效的熔断器配置
@@ -2140,11 +2140,11 @@ func (m *MetricsManager) GetCircuitBreakerConfig() CircuitBreakerParams {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 	return CircuitBreakerParams{
-		WindowSize:                  m.windowSize,
-		FailureThreshold:            m.failureThreshold,
+		WindowSize:                   m.windowSize,
+		FailureThreshold:             m.failureThreshold,
 		ConsecutiveFailuresThreshold: m.consecutiveFailuresThreshold,
-		StreamFirstContentTimeoutMs: m.streamFirstContentTimeoutMs,
-		StreamInactivityTimeoutMs:   m.streamInactivityTimeoutMs,
+		StreamFirstContentTimeoutMs:  m.streamFirstContentTimeoutMs,
+		StreamInactivityTimeoutMs:    m.streamInactivityTimeoutMs,
 	}
 }
 
@@ -2159,19 +2159,15 @@ func (m *MetricsManager) UpdateCircuitBreakerConfig(params CircuitBreakerParams)
 	if params.ConsecutiveFailuresThreshold < 1 {
 		params.ConsecutiveFailuresThreshold = defaultConsecutiveRetryableFailuresThreshold
 	}
-	if params.StreamFirstContentTimeoutMs != 0 {
-		if params.StreamFirstContentTimeoutMs < 1000 {
-			params.StreamFirstContentTimeoutMs = 1000
-		} else if params.StreamFirstContentTimeoutMs > 300000 {
-			params.StreamFirstContentTimeoutMs = 300000
-		}
+	if params.StreamFirstContentTimeoutMs < 5000 {
+		params.StreamFirstContentTimeoutMs = 5000
+	} else if params.StreamFirstContentTimeoutMs > 300000 {
+		params.StreamFirstContentTimeoutMs = 300000
 	}
-	if params.StreamInactivityTimeoutMs != 0 {
-		if params.StreamInactivityTimeoutMs < 1000 {
-			params.StreamInactivityTimeoutMs = 1000
-		} else if params.StreamInactivityTimeoutMs > 60000 {
-			params.StreamInactivityTimeoutMs = 60000
-		}
+	if params.StreamInactivityTimeoutMs < 1000 {
+		params.StreamInactivityTimeoutMs = 1000
+	} else if params.StreamInactivityTimeoutMs > 60000 {
+		params.StreamInactivityTimeoutMs = 60000
 	}
 
 	m.mu.Lock()

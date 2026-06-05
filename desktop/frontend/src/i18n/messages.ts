@@ -481,6 +481,13 @@ export type MessageKey =
   | 'console.form.customHeaders'
   | 'console.form.requestTimeoutMs'
   | 'console.form.requestTimeoutInvalid'
+  | 'console.form.streamTimeouts'
+  | 'console.form.streamFirstContentTimeoutOverrideLabel'
+  | 'console.form.streamFirstContentTimeoutLabel'
+  | 'console.form.streamInactivityTimeoutOverrideLabel'
+  | 'console.form.streamInactivityTimeoutLabel'
+  | 'console.form.streamTimeoutOverrideHint'
+  | 'console.form.streamTimeoutInheritHint'
   | 'console.form.cancel'
   | 'console.form.create'
   | 'console.form.save'
@@ -1079,6 +1086,13 @@ export const messages: Record<SupportedLocale, Messages> = {
     'console.form.customHeaders': 'Custom headers (JSON)',
     'console.form.requestTimeoutMs': 'Request timeout (ms)',
     'console.form.requestTimeoutInvalid': 'Timeout must be a positive integer in ms',
+    'console.form.streamTimeouts': 'Stream timeouts',
+    'console.form.streamFirstContentTimeoutOverrideLabel': 'Customize first content timeout',
+    'console.form.streamFirstContentTimeoutLabel': 'First content timeout',
+    'console.form.streamInactivityTimeoutOverrideLabel': 'Customize inactivity timeout',
+    'console.form.streamInactivityTimeoutLabel': 'Inactivity timeout',
+    'console.form.streamTimeoutOverrideHint': 'Custom value overrides the global stream timeout for this channel.',
+    'console.form.streamTimeoutInheritHint': 'Disabled means this channel inherits the global stream timeout.',
     'console.form.cancel': 'Cancel',
     'console.form.create': 'Create',
     'console.form.save': 'Save',
@@ -1669,6 +1683,13 @@ export const messages: Record<SupportedLocale, Messages> = {
     'console.form.customHeaders': '自定义 Headers（JSON）',
     'console.form.requestTimeoutMs': '请求超时（ms）',
     'console.form.requestTimeoutInvalid': '请求超时必须是正整数毫秒',
+    'console.form.streamTimeouts': '流式超时',
+    'console.form.streamFirstContentTimeoutOverrideLabel': '自定义首字等待超时',
+    'console.form.streamFirstContentTimeoutLabel': '首字等待超时',
+    'console.form.streamInactivityTimeoutOverrideLabel': '自定义断流超时',
+    'console.form.streamInactivityTimeoutLabel': '首字后断流超时',
+    'console.form.streamTimeoutOverrideHint': '自定义值会覆盖本渠道的全局流式超时。',
+    'console.form.streamTimeoutInheritHint': '关闭表示本渠道继承全局流式超时。',
     'console.form.cancel': '取消',
     'console.form.create': '创建',
     'console.form.save': '保存',

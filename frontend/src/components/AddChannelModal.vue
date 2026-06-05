@@ -1077,6 +1077,73 @@
               />
             </v-col>
 
+            <!-- 流式超时覆盖 -->
+            <v-col cols="12" md="6">
+              <v-card variant="tonal" class="pa-4 h-100">
+                <v-switch
+                  v-model="form.streamFirstContentTimeoutEnabled"
+                  :label="t('addChannel.streamFirstContentTimeoutOverrideLabel')"
+                  color="primary"
+                  density="comfortable"
+                  hide-details
+                />
+                <div class="mt-3" :class="{ 'opacity-50': !form.streamFirstContentTimeoutEnabled }">
+                  <div class="d-flex justify-space-between align-center mb-2">
+                    <span class="text-caption text-medium-emphasis">{{ t('addChannel.streamFirstContentTimeoutLabel') }}</span>
+                    <span class="text-caption font-weight-medium">{{ (form.streamFirstContentTimeoutMs / 1000) }}s</span>
+                  </div>
+                  <input
+                    v-model.number="form.streamFirstContentTimeoutMs"
+                    type="range"
+                    min="5000"
+                    max="300000"
+                    step="1000"
+                    class="w-100"
+                    :disabled="!form.streamFirstContentTimeoutEnabled"
+                  />
+                  <div class="d-flex justify-space-between text-caption text-medium-emphasis">
+                    <span>5s</span><span>300s</span>
+                  </div>
+                  <div class="text-caption text-medium-emphasis mt-2">
+                    {{ form.streamFirstContentTimeoutEnabled ? t('addChannel.streamTimeoutOverrideHint') : t('addChannel.streamTimeoutInheritHint') }}
+                  </div>
+                </div>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12" md="6">
+              <v-card variant="tonal" class="pa-4 h-100">
+                <v-switch
+                  v-model="form.streamInactivityTimeoutEnabled"
+                  :label="t('addChannel.streamInactivityTimeoutOverrideLabel')"
+                  color="primary"
+                  density="comfortable"
+                  hide-details
+                />
+                <div class="mt-3" :class="{ 'opacity-50': !form.streamInactivityTimeoutEnabled }">
+                  <div class="d-flex justify-space-between align-center mb-2">
+                    <span class="text-caption text-medium-emphasis">{{ t('addChannel.streamInactivityTimeoutLabel') }}</span>
+                    <span class="text-caption font-weight-medium">{{ (form.streamInactivityTimeoutMs / 1000) }}s</span>
+                  </div>
+                  <input
+                    v-model.number="form.streamInactivityTimeoutMs"
+                    type="range"
+                    min="1000"
+                    max="60000"
+                    step="1000"
+                    class="w-100"
+                    :disabled="!form.streamInactivityTimeoutEnabled"
+                  />
+                  <div class="d-flex justify-space-between text-caption text-medium-emphasis">
+                    <span>1s</span><span>60s</span>
+                  </div>
+                  <div class="text-caption text-medium-emphasis mt-2">
+                    {{ form.streamInactivityTimeoutEnabled ? t('addChannel.streamTimeoutOverrideHint') : t('addChannel.streamTimeoutInheritHint') }}
+                  </div>
+                </div>
+              </v-card>
+            </v-col>
+
             <!-- 路由前缀 -->
             <v-col cols="12">
               <v-text-field
@@ -1933,6 +2000,10 @@ const form = reactive({
   customHeaders: {} as Record<string, string>,
   proxyUrl: '',
   requestTimeoutMs: null as string | number | null,
+  streamFirstContentTimeoutEnabled: false,
+  streamFirstContentTimeoutMs: 30000,
+  streamInactivityTimeoutEnabled: false,
+  streamInactivityTimeoutMs: 5000,
   routePrefix: '',
   supportedModels: [] as string[],
   autoBlacklistBalance: true,
@@ -2233,11 +2304,25 @@ const normalizeComparablePayload = (payload: Partial<Channel>) => ({
   modelMapping: Object.fromEntries(Object.entries(payload.modelMapping || {}).sort(([a], [b]) => a.localeCompare(b))),
   reasoningMapping: Object.fromEntries(Object.entries(payload.reasoningMapping || {}).sort(([a], [b]) => a.localeCompare(b))),
   reasoningParamStyle: payload.reasoningParamStyle || 'reasoning',
-  requestTimeoutMs: payload.requestTimeoutMs || undefined
+  requestTimeoutMs: payload.requestTimeoutMs || undefined,
+  streamFirstContentTimeoutMs: payload.streamFirstContentTimeoutMs || undefined,
+  streamInactivityTimeoutMs: payload.streamInactivityTimeoutMs || undefined
 })
 
 const buildSubmitPayload = () => {
   const payload = buildChannelPayload(form)
+  if (!form.streamFirstContentTimeoutEnabled) {
+    delete payload.streamFirstContentTimeoutMs
+    if (isEditing.value && props.channel?.streamFirstContentTimeoutMs) {
+      payload.streamFirstContentTimeoutMs = 0
+    }
+  }
+  if (!form.streamInactivityTimeoutEnabled) {
+    delete payload.streamInactivityTimeoutMs
+    if (isEditing.value && props.channel?.streamInactivityTimeoutMs) {
+      payload.streamInactivityTimeoutMs = 0
+    }
+  }
   if (isEditing.value && props.channel?.requestTimeoutMs && !payload.requestTimeoutMs) {
     payload.requestTimeoutMs = 0
   }
@@ -2271,6 +2356,8 @@ const hasEditableDraftChanges = computed(() => {
     customHeaders: normalizeStringRecord(props.channel.customHeaders || {}),
     proxyUrl: props.channel.proxyUrl || '',
     requestTimeoutMs: props.channel.requestTimeoutMs || undefined,
+    streamFirstContentTimeoutMs: props.channel.streamFirstContentTimeoutMs || undefined,
+    streamInactivityTimeoutMs: props.channel.streamInactivityTimeoutMs || undefined,
     routePrefix: props.channel.routePrefix || '',
     supportedModels: normalizeStringArray(props.channel.supportedModels || []),
     autoBlacklistBalance: props.channel.autoBlacklistBalance ?? true,
@@ -2350,6 +2437,10 @@ const resetForm = () => {
   form.customHeaders = {}
   form.proxyUrl = ''
   form.requestTimeoutMs = null
+  form.streamFirstContentTimeoutEnabled = false
+  form.streamFirstContentTimeoutMs = 30000
+  form.streamInactivityTimeoutEnabled = false
+  form.streamInactivityTimeoutMs = 5000
   form.routePrefix = ''
   form.supportedModels = []
   supportedModelsError.value = ''
@@ -2423,6 +2514,10 @@ const loadChannelData = (channel: Channel) => {
   form.customHeaders = { ...(channel.customHeaders || {}) }
   form.proxyUrl = channel.proxyUrl || ''
   form.requestTimeoutMs = channel.requestTimeoutMs || null
+  form.streamFirstContentTimeoutEnabled = !!(channel.streamFirstContentTimeoutMs && channel.streamFirstContentTimeoutMs > 0)
+  form.streamFirstContentTimeoutMs = channel.streamFirstContentTimeoutMs && channel.streamFirstContentTimeoutMs > 0 ? channel.streamFirstContentTimeoutMs : 30000
+  form.streamInactivityTimeoutEnabled = !!(channel.streamInactivityTimeoutMs && channel.streamInactivityTimeoutMs > 0)
+  form.streamInactivityTimeoutMs = channel.streamInactivityTimeoutMs && channel.streamInactivityTimeoutMs > 0 ? channel.streamInactivityTimeoutMs : 5000
   form.routePrefix = channel.routePrefix || ''
   const { validPatterns, hasInvalidPatterns } = filterValidSupportedModelPatterns(channel.supportedModels || [])
   form.supportedModels = validPatterns
@@ -2821,7 +2916,7 @@ const PAYLOAD_KEYS = [
   'name', 'serviceType', 'baseUrl', 'baseUrls', 'website', 'insecureSkipVerify',
   'lowQuality', 'injectDummyThoughtSignature', 'stripThoughtSignature', 'description',
   'apiKeys', 'modelMapping', 'reasoningMapping', 'reasoningParamStyle', 'textVerbosity',
-  'fastMode', 'customHeaders', 'proxyUrl', 'requestTimeoutMs', 'routePrefix', 'supportedModels',
+  'fastMode', 'customHeaders', 'proxyUrl', 'requestTimeoutMs', 'streamFirstContentTimeoutMs', 'streamInactivityTimeoutMs', 'routePrefix', 'supportedModels',
   'autoBlacklistBalance', 'normalizeMetadataUserId', 'passbackThinkingBlocks', 'stripEmptyTextBlocks', 'normalizeSystemRoleToTopLevel', 'codexNativeToolPassthrough',
   'codexToolCompat', 'normalizeNonstandardChatRoles', 'stripCodexClientTools'
 ] as const

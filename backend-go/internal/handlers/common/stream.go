@@ -32,29 +32,49 @@ var ErrStreamFirstContentTimeout = errors.New("stream first content timeout")
 // Header 未发送，可安全 failover 到下一个 Key/BaseURL/渠道
 var ErrStreamStalled = errors.New("stream stalled after first content")
 
+// ErrStreamPostCommitStalled Header 已发送后，上游长时间没有有效输出
+// Header 已发送，不能安全拼接 failover；用于中止当前流并记录渠道故障
+var ErrStreamPostCommitStalled = errors.New("stream stalled after response committed")
+
 // StreamPreflightTimeouts 流式预检测超时参数
 type StreamPreflightTimeouts struct {
-	FirstContentTimeoutMs int // 阶段A：首个有效内容等待超时（ms，0=禁用）
-	InactivityTimeoutMs   int // 阶段B：首字后连续性确认窗口（ms，0=禁用则首字后立即放行）
+	FirstContentTimeoutMs int // 阶段A：首个有效内容等待超时（ms，范围 5000-300000）
+	InactivityTimeoutMs   int // 阶段B：首字后连续性确认窗口（ms，范围 1000-60000）
 }
 
-// ResolveStreamTimeout 解析流式超时参数：渠道覆盖 > 全局默认
-func ResolveStreamTimeout(channelValue int, globalValue int) int {
-	switch {
-	case channelValue == -1:
-		return 0 // 本渠道禁用
-	case channelValue > 0:
-		return channelValue // 覆盖全局
-	default:
-		return globalValue // 0=继承全局
+// ResolveStreamFirstContentTimeout 解析首字等待超时：渠道 >0 覆盖全局，否则继承全局
+func ResolveStreamFirstContentTimeout(channelValue int, globalValue int) int {
+	val := globalValue
+	if channelValue > 0 {
+		val = channelValue
 	}
+	if val < 5000 {
+		val = 5000
+	} else if val > 300000 {
+		val = 300000
+	}
+	return val
+}
+
+// ResolveStreamInactivityTimeout 解析断流超时：渠道 >0 覆盖全局，否则继承全局
+func ResolveStreamInactivityTimeout(channelValue int, globalValue int) int {
+	val := globalValue
+	if channelValue > 0 {
+		val = channelValue
+	}
+	if val < 1000 {
+		val = 1000
+	} else if val > 60000 {
+		val = 60000
+	}
+	return val
 }
 
 // ResolveStreamPreflightTimeouts 根据渠道覆盖和全局配置解析有效超时参数
 func ResolveStreamPreflightTimeouts(upstream *config.UpstreamConfig, global metrics.CircuitBreakerParams) StreamPreflightTimeouts {
 	return StreamPreflightTimeouts{
-		FirstContentTimeoutMs: ResolveStreamTimeout(upstream.StreamFirstContentTimeoutMs, global.StreamFirstContentTimeoutMs),
-		InactivityTimeoutMs:   ResolveStreamTimeout(upstream.StreamInactivityTimeoutMs, global.StreamInactivityTimeoutMs),
+		FirstContentTimeoutMs: ResolveStreamFirstContentTimeout(upstream.StreamFirstContentTimeoutMs, global.StreamFirstContentTimeoutMs),
+		InactivityTimeoutMs:   ResolveStreamInactivityTimeout(upstream.StreamInactivityTimeoutMs, global.StreamInactivityTimeoutMs),
 	}
 }
 
@@ -854,7 +874,17 @@ func ProcessStreamEvents(
 	envCfg *config.EnvConfig,
 	startTime time.Time,
 	requestBody []byte,
+	timeouts StreamPreflightTimeouts,
 ) (*types.Usage, error) {
+	// post-commit：Header 已发送后的语义活动 watchdog，只由有效输出重置。
+	var postCommitTimer *time.Timer
+	var postCommitChan <-chan time.Time
+	if timeouts.InactivityTimeoutMs > 0 {
+		postCommitTimer = time.NewTimer(time.Duration(timeouts.InactivityTimeoutMs) * time.Millisecond)
+		postCommitChan = postCommitTimer.C
+		defer postCommitTimer.Stop()
+	}
+
 	for {
 		select {
 		case event, ok := <-eventChan:
@@ -862,7 +892,17 @@ func ProcessStreamEvents(
 				usage := logStreamCompletion(ctx, envCfg, startTime)
 				return usage, nil
 			}
+			prevTextLen := ctx.OutputTextBuffer.Len()
 			ProcessStreamEvent(c, w, flusher, event, ctx, envCfg, requestBody)
+			if postCommitTimer != nil && (ctx.OutputTextBuffer.Len() > prevTextLen || HasClaudeSemanticContent(event)) {
+				if !postCommitTimer.Stop() {
+					select {
+					case <-postCommitTimer.C:
+					default:
+					}
+				}
+				postCommitTimer.Reset(time.Duration(timeouts.InactivityTimeoutMs) * time.Millisecond)
+			}
 
 		case err, ok := <-errChan:
 			if !ok {
@@ -881,6 +921,15 @@ func ProcessStreamEvents(
 
 				return nil, err
 			}
+		case <-postCommitChan:
+			log.Printf("[Messages-StreamStalled] 流式断流: 首字后 %dms 无有效输出（Header 已发送）", timeouts.InactivityTimeoutMs)
+			logPartialResponse(ctx, envCfg)
+			if !ctx.ClientGone {
+				if _, err := w.Write([]byte(BuildStreamErrorEvent(ErrStreamPostCommitStalled))); err == nil {
+					flusher.Flush()
+				}
+			}
+			return nil, ErrStreamPostCommitStalled
 		}
 	}
 }
@@ -1364,7 +1413,7 @@ func HandleStreamResponse(
 		ProcessStreamEvent(c, w, flusher, bufferedEvent, ctx, envCfg, requestBody)
 	}
 
-	usage, err := ProcessStreamEvents(c, w, flusher, eventChan, errChan, ctx, envCfg, startTime, requestBody)
+	usage, err := ProcessStreamEvents(c, w, flusher, eventChan, errChan, ctx, envCfg, startTime, requestBody, timeouts)
 	c.Set("responseText", ctx.ResponseText)
 	if err != nil {
 		return nil, err

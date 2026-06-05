@@ -90,11 +90,11 @@ func GetCircuitBreaker(getCurrent func() metrics.CircuitBreakerParams) gin.Handl
 func SetCircuitBreaker(cfgManager *config.ConfigManager) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var req struct {
-			WindowSize                  *int     `json:"windowSize"`
-			FailureThreshold            *float64 `json:"failureThreshold"`
+			WindowSize                   *int     `json:"windowSize"`
+			FailureThreshold             *float64 `json:"failureThreshold"`
 			ConsecutiveFailuresThreshold *int     `json:"consecutiveFailuresThreshold"`
-			StreamFirstContentTimeoutMs *int     `json:"streamFirstContentTimeoutMs"`
-			StreamInactivityTimeoutMs   *int     `json:"streamInactivityTimeoutMs"`
+			StreamFirstContentTimeoutMs  *int     `json:"streamFirstContentTimeoutMs"`
+			StreamInactivityTimeoutMs    *int     `json:"streamInactivityTimeoutMs"`
 		}
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(400, gin.H{"error": "请求格式无效"})
@@ -121,24 +121,24 @@ func SetCircuitBreaker(cfgManager *config.ConfigManager) gin.HandlerFunc {
 			}
 		}
 		if req.StreamFirstContentTimeoutMs != nil {
-			if *req.StreamFirstContentTimeoutMs != 0 && (*req.StreamFirstContentTimeoutMs < 1000 || *req.StreamFirstContentTimeoutMs > 300000) {
-				c.JSON(400, gin.H{"error": "streamFirstContentTimeoutMs 必须为 0（禁用）或 1000-300000 之间"})
+			if *req.StreamFirstContentTimeoutMs < 5000 || *req.StreamFirstContentTimeoutMs > 300000 {
+				c.JSON(400, gin.H{"error": "streamFirstContentTimeoutMs 必须在 5000-300000 之间"})
 				return
 			}
 		}
 		if req.StreamInactivityTimeoutMs != nil {
-			if *req.StreamInactivityTimeoutMs != 0 && (*req.StreamInactivityTimeoutMs < 1000 || *req.StreamInactivityTimeoutMs > 60000) {
-				c.JSON(400, gin.H{"error": "streamInactivityTimeoutMs 必须为 0（禁用）或 1000-60000 之间"})
+			if *req.StreamInactivityTimeoutMs < 1000 || *req.StreamInactivityTimeoutMs > 60000 {
+				c.JSON(400, gin.H{"error": "streamInactivityTimeoutMs 必须在 1000-60000 之间"})
 				return
 			}
 		}
 
 		if err := cfgManager.SetCircuitBreakerConfig(config.CircuitBreakerConfig{
-			WindowSize:                  req.WindowSize,
-			FailureThreshold:            req.FailureThreshold,
+			WindowSize:                   req.WindowSize,
+			FailureThreshold:             req.FailureThreshold,
 			ConsecutiveFailuresThreshold: req.ConsecutiveFailuresThreshold,
-			StreamFirstContentTimeoutMs: req.StreamFirstContentTimeoutMs,
-			StreamInactivityTimeoutMs:   req.StreamInactivityTimeoutMs,
+			StreamFirstContentTimeoutMs:  req.StreamFirstContentTimeoutMs,
+			StreamInactivityTimeoutMs:    req.StreamInactivityTimeoutMs,
 		}); err != nil {
 			c.JSON(500, gin.H{"error": "保存配置失败"})
 			return

@@ -511,19 +511,19 @@
             <div class="cb-control">
               <div class="cb-control-header">
                 <span class="cb-slider-label">{{ t('dialog.circuitBreaker.streamFirstContentTimeout') }}</span>
-                <span class="cb-slider-value">{{ cbForm.streamFirstContentTimeoutMs === 0 ? 'off' : (cbForm.streamFirstContentTimeoutMs / 1000) + 's' }}</span>
+                <span class="cb-slider-value">{{ (cbForm.streamFirstContentTimeoutMs / 1000) + 's' }}</span>
               </div>
               <input
                 type="range"
                 :value="cbForm.streamFirstContentTimeoutMs"
-                :min="0"
+                :min="5000"
                 :max="300000"
                 step="1000"
                 class="cb-slider w-100"
                 @input="onSliderChange('streamFirstContentTimeoutMs', $event)"
               />
               <div class="cb-slider-range">
-                <span>off</span><span>300s</span>
+                <span>5s</span><span>300s</span>
               </div>
             </div>
 
@@ -531,19 +531,19 @@
             <div class="cb-control">
               <div class="cb-control-header">
                 <span class="cb-slider-label">{{ t('dialog.circuitBreaker.streamInactivityTimeout') }}</span>
-                <span class="cb-slider-value">{{ cbForm.streamInactivityTimeoutMs === 0 ? 'off' : (cbForm.streamInactivityTimeoutMs / 1000) + 's' }}</span>
+                <span class="cb-slider-value">{{ (cbForm.streamInactivityTimeoutMs / 1000) + 's' }}</span>
               </div>
               <input
                 type="range"
                 :value="cbForm.streamInactivityTimeoutMs"
-                :min="0"
+                :min="1000"
                 :max="60000"
                 step="1000"
                 class="cb-slider w-100"
                 @input="onSliderChange('streamInactivityTimeoutMs', $event)"
               />
               <div class="cb-slider-range">
-                <span>off</span><span>60s</span>
+                <span>1s</span><span>60s</span>
               </div>
             </div>
           </div>
@@ -1593,6 +1593,8 @@ const handleCopyToTab = async (targetProtocol: string, serviceProtocol = targetP
     website: sourceChannel.website,
     proxyUrl: sourceChannel.proxyUrl,
     requestTimeoutMs: sourceChannel.requestTimeoutMs,
+    streamFirstContentTimeoutMs: sourceChannel.streamFirstContentTimeoutMs,
+    streamInactivityTimeoutMs: sourceChannel.streamInactivityTimeoutMs,
     insecureSkipVerify: sourceChannel.insecureSkipVerify,
     modelMapping: sourceChannel.modelMapping,
     reasoningMapping: sourceChannel.reasoningMapping,
@@ -1796,8 +1798,8 @@ const openCircuitBreakerDialog = async () => {
     cbForm.windowSize = params.windowSize
     cbForm.failureThreshold = params.failureThreshold
     cbForm.consecutiveFailuresThreshold = params.consecutiveFailuresThreshold
-    cbForm.streamFirstContentTimeoutMs = params.streamFirstContentTimeoutMs ?? 30000
-    cbForm.streamInactivityTimeoutMs = params.streamInactivityTimeoutMs ?? 5000
+    cbForm.streamFirstContentTimeoutMs = params.streamFirstContentTimeoutMs && params.streamFirstContentTimeoutMs >= 5000 ? params.streamFirstContentTimeoutMs : 30000
+    cbForm.streamInactivityTimeoutMs = params.streamInactivityTimeoutMs && params.streamInactivityTimeoutMs >= 1000 ? params.streamInactivityTimeoutMs : 5000
     matchPreset()
   } catch (e) {
     console.error('Failed to load circuit breaker config:', e)

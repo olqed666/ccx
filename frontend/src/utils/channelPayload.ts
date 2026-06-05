@@ -24,6 +24,8 @@ export interface ChannelFormLike {
   customHeaders: Record<string, string>
   proxyUrl: string
   requestTimeoutMs?: string | number | null
+  streamFirstContentTimeoutMs?: string | number | null
+  streamInactivityTimeoutMs?: string | number | null
   routePrefix: string
   supportedModels: string[]
   autoBlacklistBalance: boolean
@@ -96,6 +98,16 @@ export function buildChannelPayload(form: ChannelFormLike): Omit<Channel, 'index
   const requestTimeoutMs = Number(form.requestTimeoutMs)
   if (Number.isInteger(requestTimeoutMs) && requestTimeoutMs > 0) {
     channelData.requestTimeoutMs = requestTimeoutMs
+  }
+
+  const streamFirstContentTimeoutMs = Number(form.streamFirstContentTimeoutMs)
+  if (Number.isInteger(streamFirstContentTimeoutMs) && streamFirstContentTimeoutMs > 0) {
+    channelData.streamFirstContentTimeoutMs = streamFirstContentTimeoutMs
+  }
+
+  const streamInactivityTimeoutMs = Number(form.streamInactivityTimeoutMs)
+  if (Number.isInteger(streamInactivityTimeoutMs) && streamInactivityTimeoutMs > 0) {
+    channelData.streamInactivityTimeoutMs = streamInactivityTimeoutMs
   }
 
   return channelData

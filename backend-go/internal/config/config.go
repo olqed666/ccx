@@ -191,8 +191,8 @@ type CircuitBreakerConfig struct {
 	FailureThreshold             *float64 `json:"failureThreshold,omitempty"`
 	ConsecutiveFailuresThreshold *int     `json:"consecutiveFailuresThreshold,omitempty"`
 	// 流式健康检测全局默认参数
-	StreamFirstContentTimeoutMs *int `json:"streamFirstContentTimeoutMs,omitempty"` // HTTP 200 后首个有效内容等待超时（ms，0=禁用，nil=使用默认 30000）
-	StreamInactivityTimeoutMs   *int `json:"streamInactivityTimeoutMs,omitempty"`   // 首字后连续性确认窗口（ms，0=禁用，nil=使用默认 5000）
+	StreamFirstContentTimeoutMs *int `json:"streamFirstContentTimeoutMs,omitempty"` // HTTP 200 后首个有效内容等待超时（ms，范围 5000-300000）
+	StreamInactivityTimeoutMs   *int `json:"streamInactivityTimeoutMs,omitempty"`   // 首字后连续性确认窗口（ms，范围 1000-60000）
 }
 
 type Config struct {
@@ -650,23 +650,19 @@ func (cm *ConfigManager) SetCircuitBreakerConfig(update CircuitBreakerConfig) er
 	}
 	if update.StreamFirstContentTimeoutMs != nil {
 		v := *update.StreamFirstContentTimeoutMs
-		if v != 0 {
-			if v < 1000 {
-				v = 1000
-			} else if v > 300000 {
-				v = 300000
-			}
+		if v < 5000 {
+			v = 5000
+		} else if v > 300000 {
+			v = 300000
 		}
 		cb.StreamFirstContentTimeoutMs = &v
 	}
 	if update.StreamInactivityTimeoutMs != nil {
 		v := *update.StreamInactivityTimeoutMs
-		if v != 0 {
-			if v < 1000 {
-				v = 1000
-			} else if v > 60000 {
-				v = 60000
-			}
+		if v < 1000 {
+			v = 1000
+		} else if v > 60000 {
+			v = 60000
 		}
 		cb.StreamInactivityTimeoutMs = &v
 	}

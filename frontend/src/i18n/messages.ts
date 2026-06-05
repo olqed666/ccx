@@ -263,6 +263,12 @@ export type MessageKey =
   | 'addChannel.requestTimeoutMsPlaceholder'
   | 'addChannel.requestTimeoutMsHint'
   | 'addChannel.requestTimeoutMsInvalid'
+  | 'addChannel.streamFirstContentTimeoutOverrideLabel'
+  | 'addChannel.streamFirstContentTimeoutLabel'
+  | 'addChannel.streamInactivityTimeoutOverrideLabel'
+  | 'addChannel.streamInactivityTimeoutLabel'
+  | 'addChannel.streamTimeoutOverrideHint'
+  | 'addChannel.streamTimeoutInheritHint'
   | 'addChannel.routePrefixLabel'
   | 'addChannel.routePrefixPlaceholder'
   | 'addChannel.routePrefixHint'
@@ -736,6 +742,12 @@ export const messages: Record<SupportedLocale, Record<MessageKey, string>> = {
     'addChannel.requestTimeoutMsPlaceholder': 'Leave empty to inherit REQUEST_TIMEOUT',
     'addChannel.requestTimeoutMsHint': 'Only applies to non-streaming upstream requests. Leave empty to inherit global REQUEST_TIMEOUT.',
     'addChannel.requestTimeoutMsInvalid': 'Enter a positive integer in milliseconds, or leave empty to inherit the global timeout.',
+    'addChannel.streamFirstContentTimeoutOverrideLabel': 'Customize first content timeout',
+    'addChannel.streamFirstContentTimeoutLabel': 'First content timeout',
+    'addChannel.streamInactivityTimeoutOverrideLabel': 'Customize inactivity timeout',
+    'addChannel.streamInactivityTimeoutLabel': 'Inactivity timeout',
+    'addChannel.streamTimeoutOverrideHint': 'Custom value overrides the global stream timeout for this channel.',
+    'addChannel.streamTimeoutInheritHint': 'Disabled means this channel inherits the global stream timeout.',
     'addChannel.routePrefixLabel': 'Route Prefix (optional)',
     'addChannel.routePrefixPlaceholder': 'kimi',
     'addChannel.routePrefixHint': 'Access this channel via /{prefix}/v1/messages. Multiple channels can share the same prefix.',
@@ -1208,6 +1220,12 @@ export const messages: Record<SupportedLocale, Record<MessageKey, string>> = {
     'addChannel.requestTimeoutMsPlaceholder': 'Kosongkan untuk mewarisi REQUEST_TIMEOUT',
     'addChannel.requestTimeoutMsHint': 'Hanya berlaku untuk request upstream non-streaming. Kosongkan untuk mewarisi REQUEST_TIMEOUT global.',
     'addChannel.requestTimeoutMsInvalid': 'Masukkan bilangan bulat positif dalam milidetik, atau kosongkan untuk mewarisi timeout global.',
+    'addChannel.streamFirstContentTimeoutOverrideLabel': 'Kustom timeout konten pertama',
+    'addChannel.streamFirstContentTimeoutLabel': 'Timeout konten pertama',
+    'addChannel.streamInactivityTimeoutOverrideLabel': 'Kustom timeout tidak aktif',
+    'addChannel.streamInactivityTimeoutLabel': 'Timeout tidak aktif',
+    'addChannel.streamTimeoutOverrideHint': 'Nilai kustom akan menimpa timeout streaming global untuk channel ini.',
+    'addChannel.streamTimeoutInheritHint': 'Nonaktif berarti channel ini mewarisi timeout streaming global.',
     'addChannel.routePrefixLabel': 'Prefiks Rute (opsional)',
     'addChannel.routePrefixPlaceholder': 'kimi',
     'addChannel.routePrefixHint': 'Akses channel ini melalui /{prefix}/v1/messages. Beberapa channel bisa berbagi prefiks yang sama.',
@@ -1680,6 +1698,12 @@ export const messages: Record<SupportedLocale, Record<MessageKey, string>> = {
     'addChannel.requestTimeoutMsPlaceholder': '留空继承 REQUEST_TIMEOUT',
     'addChannel.requestTimeoutMsHint': '仅作用于非流式上游请求；留空表示继承全局 REQUEST_TIMEOUT。',
     'addChannel.requestTimeoutMsInvalid': '请输入毫秒单位的正整数，或留空继承全局超时。',
+    'addChannel.streamFirstContentTimeoutOverrideLabel': '自定义首字等待超时',
+    'addChannel.streamFirstContentTimeoutLabel': '首字等待超时',
+    'addChannel.streamInactivityTimeoutOverrideLabel': '自定义断流超时',
+    'addChannel.streamInactivityTimeoutLabel': '首字后断流超时',
+    'addChannel.streamTimeoutOverrideHint': '自定义值会覆盖本渠道的全局流式超时。',
+    'addChannel.streamTimeoutInheritHint': '关闭表示本渠道继承全局流式超时。',
     'addChannel.routePrefixLabel': '路由前缀 (可选)',
     'addChannel.routePrefixPlaceholder': 'kimi',
     'addChannel.routePrefixHint': '通过 /{前缀}/v1/messages 访问此渠道，多个渠道可共享同一前缀',
