@@ -4,6 +4,7 @@ package chat
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -161,7 +162,8 @@ func handleMultiChannel(
 					channelScheduler.MarkURLSuccess(scheduler.ChannelKindChat, channelIndex, url)
 				},
 				func(c *gin.Context, resp *http.Response, upstreamCopy *config.UpstreamConfig, apiKey string, actualRequestBody []byte) (*types.Usage, error) {
-					return handleSuccess(c, resp, upstreamCopy.ServiceType, envCfg, startTime, model, isStream, cfgManager.GetFuzzyModeEnabled())
+					timeouts := common.ResolveStreamPreflightTimeouts(upstreamCopy, metricsManager.GetCircuitBreakerConfig())
+						return handleSuccess(c, resp, upstreamCopy.ServiceType, envCfg, startTime, model, isStream, cfgManager.GetFuzzyModeEnabled(), timeouts)
 				},
 				model,
 				"",
@@ -236,7 +238,8 @@ func handleSingleChannel(
 		nil,
 		nil,
 		func(c *gin.Context, resp *http.Response, upstreamCopy *config.UpstreamConfig, apiKey string, actualRequestBody []byte) (*types.Usage, error) {
-			return handleSuccess(c, resp, upstreamCopy.ServiceType, envCfg, startTime, model, isStream, cfgManager.GetFuzzyModeEnabled())
+			timeouts := common.ResolveStreamPreflightTimeouts(upstreamCopy, metricsManager.GetCircuitBreakerConfig())
+						return handleSuccess(c, resp, upstreamCopy.ServiceType, envCfg, startTime, model, isStream, cfgManager.GetFuzzyModeEnabled(), timeouts)
 		},
 		model,
 		"",
@@ -683,11 +686,12 @@ func handleSuccess(
 	model string,
 	isStream bool,
 	fuzzyMode bool,
+	timeouts common.StreamPreflightTimeouts,
 ) (*types.Usage, error) {
 	defer resp.Body.Close()
 
 	if isStream {
-		return handleStreamSuccess(c, resp, upstreamType, envCfg, startTime, model)
+		return handleStreamSuccess(c, resp, upstreamType, envCfg, startTime, model, timeouts)
 	}
 
 	// 非流式响应处理
@@ -907,6 +911,7 @@ func handleStreamSuccess(
 	envCfg *config.EnvConfig,
 	startTime time.Time,
 	model string,
+	timeouts common.StreamPreflightTimeouts,
 ) (*types.Usage, error) {
 	var totalUsage *types.Usage
 	logBuffer := common.NewLimitedLogBuffer(common.MaxUpstreamResponseLogBytes)
@@ -914,8 +919,13 @@ func handleStreamSuccess(
 
 	common.LogUpstreamResponseHeaders(resp, envCfg, "Chat")
 
-	preflight, err := preflightChatStream(resp, upstreamType)
+	preflight, err := preflightChatStream(resp, upstreamType, timeouts)
 	if err != nil {
+		if errors.Is(err, common.ErrStreamFirstContentTimeout) {
+			log.Printf("[Chat-FirstContentTimeout] 流式首字超时: %dms，触发重试", timeouts.FirstContentTimeoutMs)
+		} else if errors.Is(err, common.ErrStreamStalled) {
+			log.Printf("[Chat-StreamStalled] 流式断流: 首字后 %dms 无活动，触发重试", timeouts.InactivityTimeoutMs)
+		}
 		return nil, err
 	}
 	if preflight.malformedToolName != "" {
@@ -966,13 +976,14 @@ type chatToolTracker interface {
 	ProcessResponsesEvent(string) (bool, string)
 }
 
-func preflightChatStream(resp *http.Response, upstreamType string) (*chatStreamPreflight, error) {
+// preflightChatStream Chat 流式预检测（两阶段：首字等待 + 首字后断流检测）
+func preflightChatStream(resp *http.Response, upstreamType string, timeouts common.StreamPreflightTimeouts) (*chatStreamPreflight, error) {
 	result := &chatStreamPreflight{}
 	tracker := common.NewStreamToolCallTracker()
 	chatTracker := newOpenAIChatToolCallTracker()
-	buf := make([]byte, 32*1024)
 	var remainder string
 	const maxPreflightBytes = 1024 * 1024
+	hasFirstContent := false
 
 	flushRemainder := func() {
 		if remainder != "" {
@@ -981,30 +992,111 @@ func preflightChatStream(resp *http.Response, upstreamType string) (*chatStreamP
 		}
 	}
 
-	for result.malformedToolName == "" && len(result.buffered) < maxPreflightBytes {
-		n, err := resp.Body.Read(buf)
-		if n > 0 {
-			chunk := buf[:n]
-			result.buffered = append(result.buffered, chunk...)
-			data := remainder + string(chunk)
-			lines := strings.Split(data, "\n")
-			remainder = lines[len(lines)-1]
-			completeLines := lines[:len(lines)-1]
-			if malformed, name := detectMalformedChatStreamLines(completeLines, upstreamType, tracker, chatTracker); malformed {
-				result.malformedToolName = name
-				flushRemainder()
-				break
+	// 启动 goroutine 读取 body chunk
+	chunkChan := make(chan []byte, 16)
+	bodyErrChan := make(chan error, 1)
+	go func() {
+		defer close(chunkChan)
+		buf := make([]byte, 32*1024)
+		for {
+			n, err := resp.Body.Read(buf)
+			if n > 0 {
+				chunk := make([]byte, n)
+				copy(chunk, buf[:n])
+				chunkChan <- chunk
 			}
-			if chatStreamHasTextContent(completeLines, upstreamType) && !tracker.HasPendingToolCall() && !chatTracker.HasPendingToolCall() {
-				flushRemainder()
-				break
+			if err != nil {
+				if err != io.EOF {
+					bodyErrChan <- err
+				}
+				return
 			}
 		}
-		if err != nil {
-			if err == io.EOF {
-				break
+	}()
+
+	// 阶段A：首个有效内容等待超时
+	firstContentTimeout := time.NewTimer(time.Duration(max(timeouts.FirstContentTimeoutMs, 0)) * time.Millisecond)
+	defer firstContentTimeout.Stop()
+
+	// 阶段B：首字后不活动超时（初始为 nil，阶段B 时激活）
+	var inactivityTimer *time.Timer
+	inactivityChan := (<-chan time.Time)(nil)
+
+	for result.malformedToolName == "" && len(result.buffered) < maxPreflightBytes {
+		var chunk []byte
+		var chunkOk bool
+
+		select {
+		case chunk, chunkOk = <-chunkChan:
+			if !chunkOk {
+				// chunkChan 关闭：body 读取完成
+				flushRemainder()
+				return result, nil
 			}
+		case err := <-bodyErrChan:
+			flushRemainder()
 			return result, err
+		case <-firstContentTimeout.C:
+			// 阶段A超时：首个有效内容等待超时
+			if timeouts.FirstContentTimeoutMs > 0 {
+				flushRemainder()
+				return result, common.ErrStreamFirstContentTimeout
+			}
+			// 超时被禁用（0），保守放行
+			flushRemainder()
+			return result, nil
+		case <-inactivityChan:
+			// 阶段B超时：首字后断流
+			flushRemainder()
+			return result, common.ErrStreamStalled
+		}
+
+		if !chunkOk {
+			continue
+		}
+
+		result.buffered = append(result.buffered, chunk...)
+		data := remainder + string(chunk)
+		lines := strings.Split(data, "\n")
+		remainder = lines[len(lines)-1]
+		completeLines := lines[:len(lines)-1]
+
+		if malformed, name := detectMalformedChatStreamLines(completeLines, upstreamType, tracker, chatTracker); malformed {
+			result.malformedToolName = name
+			flushRemainder()
+			break
+		}
+
+		if chatStreamHasTextContent(completeLines, upstreamType) && !tracker.HasPendingToolCall() && !chatTracker.HasPendingToolCall() {
+			if !hasFirstContent {
+				// 阶段A→阶段B：首次检测到有效内容
+				hasFirstContent = true
+				firstContentTimeout.Stop()
+				if timeouts.InactivityTimeoutMs > 0 {
+					inactivityTimer = time.NewTimer(time.Duration(timeouts.InactivityTimeoutMs) * time.Millisecond)
+					inactivityChan = inactivityTimer.C
+					defer inactivityTimer.Stop()
+				} else {
+					// 禁用阶段B，直接放行
+					flushRemainder()
+					return result, nil
+				}
+			} else {
+				// 阶段B中收到第二个有效内容：健康流，放行
+				flushRemainder()
+				return result, nil
+			}
+		}
+
+		// 阶段B中重置不活动定时器
+		if hasFirstContent && inactivityTimer != nil {
+			if !inactivityTimer.Stop() {
+				select {
+				case <-inactivityTimer.C:
+				default:
+				}
+			}
+			inactivityTimer.Reset(time.Duration(timeouts.InactivityTimeoutMs) * time.Millisecond)
 		}
 	}
 
