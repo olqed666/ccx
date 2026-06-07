@@ -31,9 +31,15 @@ Windows 系统下桌面应用图标周边没有透明背景，需要修正图标
 
 桌面端渠道中心中，一个渠道添加成功后切换到另一个渠道时，之前的"添加成功"提示没有清除。需要在渠道切换或表单重置时同步清理成功提示状态，避免误导用户。
 
-## [ ] GPT 类型上游模型测试覆盖 codex-auto-review
+## [x] GPT 类型上游模型测试覆盖 codex-auto-review
 
 GPT 类型的上游模型测试用例应包含 `codex-auto-review`，确保 Codex 自动评审相关模型能力在 GPT 类渠道中被覆盖。
+
+**关键变更：**
+- `capability_probe_models.go`: chat/responses 探测模型列表新增 `codex-auto-review`
+- `frontend/src/App.vue`: 同步前端占位模型列表
+- `capability_probe_models_test.go`: 新增 `TestGetCapabilityProbeModels_ContainsCodexAutoReview` 和 `TestGetCapabilityProbeModels_CodexAutoReviewRedirect`
+- `capability_test_redirect_test.go`: 新增 `TestRunRedirectVerification_CodexAutoReview`（GPT 类渠道重定向集成测试）和 `TestRunRedirectVerification_CodexAutoReviewDedup`（去重验证）
 
 ## [x] 桌面端同步 stripImageGenerationTool 开关
 

@@ -622,3 +622,110 @@ func TestUpdateCapabilityJobModelResult_VirtualProtocol(t *testing.T) {
 		t.Fatal("expected streamingSupported to be true")
 	}
 }
+
+// TestRunRedirectVerification_CodexAutoReview 验证 GPT 类渠道的 codex-auto-review 模型重定向测试覆盖
+func TestRunRedirectVerification_CodexAutoReview(t *testing.T) {
+	resetCapabilityTestState()
+
+	var receivedModel atomic.Value
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		var payload map[string]interface{}
+		if err := json.Unmarshal(body, &payload); err != nil {
+			http.Error(w, "invalid json", http.StatusBadRequest)
+			return
+		}
+		if model, ok := payload["model"].(string); ok {
+			receivedModel.Store(model)
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hi\"},\"finish_reason\":null}]}\n\n"))
+		_, _ = w.Write([]byte("data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	channel := &config.UpstreamConfig{
+		Name:        "gpt-channel-with-auto-review",
+		ServiceType: "openai",
+		BaseURL:     server.URL,
+		APIKeys:     []string{"test-key"},
+		ModelMapping: map[string]string{
+			"codex-auto-review": "deepseek-v4-flash",
+			"gpt-5.5":          "deepseek-v4",
+		},
+	}
+
+	job := newCapabilityTestJob(1, channel.Name, "responses", channel.ServiceType, []string{"responses->chat"}, 5*time.Second, 600)
+	capabilityJobs.create(job)
+
+	// 只测试 codex-auto-review 模型
+	results := runRedirectVerification(context.Background(), channel, "responses", "responses", 5*time.Second, 600, job.JobID, nil, 1, "test-key", "test-codex-auto-review", nil, []string{"codex-auto-review"})
+	if len(results) != 1 {
+		t.Fatalf("results length=%d, want 1", len(results))
+	}
+	if !results[0].Success {
+		errMsg := "<nil>"
+		if results[0].Error != nil {
+			errMsg = *results[0].Error
+		}
+		t.Fatalf("codex-auto-review redirect test failed: %s", errMsg)
+	}
+	if results[0].ProbeModel != "codex-auto-review" {
+		t.Fatalf("probeModel=%s, want codex-auto-review", results[0].ProbeModel)
+	}
+	if results[0].ActualModel != "deepseek-v4-flash" {
+		t.Fatalf("actualModel=%s, want deepseek-v4-flash", results[0].ActualModel)
+	}
+
+	// 验证发送到上游的是重定向后的实际模型
+	if got, ok := receivedModel.Load().(string); ok {
+		if got != "deepseek-v4-flash" {
+			t.Fatalf("upstream received model=%s, want deepseek-v4-flash", got)
+		}
+	}
+}
+
+// TestRunRedirectVerification_CodexAutoReviewDedup 验证 codex-auto-review 和其他模型映射到同一实际模型时只测试一次
+func TestRunRedirectVerification_CodexAutoReviewDedup(t *testing.T) {
+	resetCapabilityTestState()
+
+	var requestCount atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hi\"},\"finish_reason\":null}]}\n\n"))
+		_, _ = w.Write([]byte("data: {\"id\":\"chatcmpl-1\",\"object\":\"chat.completion.chunk\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	defer server.Close()
+
+	// codex-auto-review 和 gpt-5.4-mini 映射到同一实际模型
+	channel := &config.UpstreamConfig{
+		Name:        "gpt-channel-dedup",
+		ServiceType: "openai",
+		BaseURL:     server.URL,
+		APIKeys:     []string{"test-key"},
+		ModelMapping: map[string]string{
+			"codex-auto-review": "deepseek-v4-flash",
+			"gpt-5.4-mini":     "deepseek-v4-flash",
+			"gpt-5.5":          "deepseek-v4",
+		},
+	}
+
+	job := newCapabilityTestJob(1, channel.Name, "responses", channel.ServiceType, []string{"responses->chat"}, 5*time.Second, 600)
+	capabilityJobs.create(job)
+
+	results := runRedirectVerification(context.Background(), channel, "responses", "responses", 5*time.Second, 600, job.JobID, nil, 1, "test-key", "test-codex-dedup", nil, []string{"codex-auto-review", "gpt-5.4-mini", "gpt-5.5"})
+
+	// deepseek-v4-flash 只应测试一次（去重），deepseek-v4 测试一次
+	if len(results) != 2 {
+		t.Fatalf("results length=%d, want 2 (dedup deepseek-v4-flash)", len(results))
+	}
+	if got := requestCount.Load(); got != 2 {
+		t.Fatalf("request count=%d, want 2 (dedup should reduce 3 models to 2 unique actual models)", got)
+	}
+}
