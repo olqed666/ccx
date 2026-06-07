@@ -649,6 +649,107 @@ const codexResponsesPresets: Record<string, {
     noVisionModels: [],
     visionFallbackModel: '',
   },
+  compshare: {
+    mapping: [
+      { source: 'gpt', target: 'glm-5.1' },
+      { source: 'mini', target: 'deepseek-v4-flash' },
+      { source: 'codex-auto-review', target: 'deepseek-v4-flash' },
+    ],
+    reasoningParamStyle: 'reasoning',
+    codexNativeToolPassthrough: true,
+    codexToolCompat: false,
+    stripCodexClientTools: false,
+    normalizeNonstandardChatRoles: true,
+    noVision: false,
+    noVisionModels: ['deepseek-v4-flash'],
+    visionFallbackModel: 'MiniMax-M2.7',
+  },
+  minimax: {
+    mapping: [
+      { source: 'gpt-5', target: 'MiniMax-M2.7' },
+      { source: 'codex-auto-review', target: 'MiniMax-M2.7' },
+    ],
+    reasoningParamStyle: '',
+    codexNativeToolPassthrough: true,
+    codexToolCompat: false,
+    stripCodexClientTools: false,
+    normalizeNonstandardChatRoles: true,
+    noVision: false,
+    noVisionModels: [],
+    visionFallbackModel: '',
+  },
+  dashscope: {
+    mapping: [
+      { source: 'gpt-5.5', target: 'glm-5.1', reasoning: 'high' },
+      { source: 'gpt-5.4', target: 'deepseek-v4-pro', reasoning: 'max' },
+      { source: 'gpt-5.4-mini', target: 'deepseek-v4-flash', reasoning: 'high' },
+      { source: 'codex-auto-review', target: 'deepseek-v4-flash' },
+    ],
+    reasoningParamStyle: 'reasoning',
+    codexNativeToolPassthrough: false,
+    codexToolCompat: true,
+    stripCodexClientTools: true,
+    normalizeNonstandardChatRoles: false,
+    noVision: false,
+    noVisionModels: [],
+    visionFallbackModel: '',
+  },
+  kimi: {
+    mapping: [
+      { source: 'gpt-5', target: 'kimi-k2.6' },
+      { source: 'codex-auto-review', target: 'kimi-k2.6' },
+    ],
+    reasoningParamStyle: '',
+    codexNativeToolPassthrough: false,
+    codexToolCompat: true,
+    stripCodexClientTools: true,
+    normalizeNonstandardChatRoles: false,
+    noVision: false,
+    noVisionModels: [],
+    visionFallbackModel: '',
+  },
+  glm: {
+    mapping: [
+      { source: 'gpt-5', target: 'glm-5.1' },
+      { source: 'codex-auto-review', target: 'glm-5.1' },
+    ],
+    reasoningParamStyle: '',
+    codexNativeToolPassthrough: false,
+    codexToolCompat: true,
+    stripCodexClientTools: true,
+    normalizeNonstandardChatRoles: false,
+    noVision: false,
+    noVisionModels: [],
+    visionFallbackModel: '',
+  },
+  'opencode-zen': {
+    mapping: [
+      { source: 'gpt-5', target: 'glm-5.1' },
+      { source: 'codex-auto-review', target: 'glm-5.1' },
+    ],
+    reasoningParamStyle: '',
+    codexNativeToolPassthrough: false,
+    codexToolCompat: true,
+    stripCodexClientTools: true,
+    normalizeNonstandardChatRoles: false,
+    noVision: false,
+    noVisionModels: [],
+    visionFallbackModel: '',
+  },
+  'opencode-go': {
+    mapping: [
+      { source: 'gpt-5', target: 'glm-5.1' },
+      { source: 'codex-auto-review', target: 'glm-5.1' },
+    ],
+    reasoningParamStyle: '',
+    codexNativeToolPassthrough: false,
+    codexToolCompat: true,
+    stripCodexClientTools: true,
+    normalizeNonstandardChatRoles: false,
+    noVision: false,
+    noVisionModels: [],
+    visionFallbackModel: '',
+  },
 }
 
 const serviceTypeOptions = computed(() => {
@@ -1191,6 +1292,13 @@ function buildCurrentPayload() {
                     <span class="text-[10px] text-muted-foreground">{{ tf('addChannel.oneClickSetup', '一键配置') }}</span>
                     <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
                     <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('deepseek')"><Zap class="mr-1 h-3 w-3" />DeepSeek</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('compshare')"><Zap class="mr-1 h-3 w-3" />Compshare</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('minimax')"><Zap class="mr-1 h-3 w-3" />MiniMax</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('dashscope')"><Zap class="mr-1 h-3 w-3" />DashScope</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('kimi')"><Zap class="mr-1 h-3 w-3" />Kimi</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('glm')"><Zap class="mr-1 h-3 w-3" />GLM</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('opencode-zen')"><Zap class="mr-1 h-3 w-3" />OpenCode Zen</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('opencode-go')"><Zap class="mr-1 h-3 w-3" />OpenCode Go</Button>
                   </div>
 
                   <!-- 结构化模型映射行 -->

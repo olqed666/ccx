@@ -422,6 +422,18 @@ func TestChannelTargetConfigsExcludeRetiredGPTModels(t *testing.T) {
 	}
 }
 
+func TestResponsesTargetMustIncludeCodexAutoReview(t *testing.T) {
+	responsesConfigs, ok := channelTargetConfigs[TargetResponses]
+	if !ok {
+		t.Fatal("channelTargetConfigs[TargetResponses] not found")
+	}
+	for provider, config := range responsesConfigs {
+		if _, found := config.ModelMapping["codex-auto-review"]; !found {
+			t.Fatalf("provider %q responses config missing codex-auto-review mapping", provider)
+		}
+	}
+}
+
 func TestBuildPayloadRejectsUnsupportedTarget(t *testing.T) {
 	// kimi 现已支持 Messages，此用例验证不支持的 target（如自定义拼接的错误值）仍能正确拒绝。
 	_, err := BuildPayload(CreateChannelRequest{Provider: ProviderKimi, Target: "invalid-target", APIKey: "sk-test"})
