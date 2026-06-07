@@ -63,6 +63,29 @@ func ResponsesToClaudeMessages(sess *session.Session, newInput interface{}, inst
 
 func appendResponsesItemsToClaudeMessages(messages []types.ClaudeMessage, items []types.ResponsesItem) ([]types.ClaudeMessage, error) {
 	pendingThinking := []types.ClaudeContent{}
+	pendingToolUses := []types.ClaudeContent{}
+	pendingToolResults := []types.ClaudeContent{}
+
+	// flushToolUses 将缓冲的 tool_use（连同 thinking）合并为一条 assistant 消息
+	flushToolUses := func() {
+		if len(pendingToolUses) == 0 {
+			return
+		}
+		content := append([]types.ClaudeContent(nil), pendingThinking...)
+		content = append(content, pendingToolUses...)
+		messages = append(messages, types.ClaudeMessage{Role: "assistant", Content: content})
+		pendingThinking = nil
+		pendingToolUses = nil
+	}
+
+	// flushToolResults 将缓冲的 tool_result 合并为一条 user 消息
+	flushToolResults := func() {
+		if len(pendingToolResults) == 0 {
+			return
+		}
+		messages = append(messages, types.ClaudeMessage{Role: "user", Content: pendingToolResults})
+		pendingToolResults = nil
+	}
 
 	flushThinking := func() {
 		if len(pendingThinking) == 0 {
@@ -91,6 +114,31 @@ func appendResponsesItemsToClaudeMessages(messages []types.ClaudeMessage, items 
 			continue
 		}
 
+		// 判断是否为 tool_use（assistant 消息中仅包含 tool_use content）
+		if msg.Role == "assistant" {
+			if contents, ok := msg.Content.([]types.ClaudeContent); ok && len(contents) == 1 && contents[0].Type == "tool_use" {
+				// 遇到 tool_use 前，先刷出之前的 tool_result 缓冲
+				flushToolResults()
+				pendingToolUses = append(pendingToolUses, contents[0])
+				continue
+			}
+		}
+
+		// 判断是否为 tool_result（user 消息中仅包含 tool_result content）
+		if msg.Role == "user" {
+			if contents, ok := msg.Content.([]types.ClaudeContent); ok && len(contents) == 1 && contents[0].Type == "tool_result" {
+				// 遇到 tool_result 前，先刷出 tool_use 缓冲
+				flushToolUses()
+				pendingToolResults = append(pendingToolResults, contents[0])
+				continue
+			}
+		}
+
+		// 其他类型的消息：依次刷出所有缓冲
+		flushToolUses()
+		flushToolResults()
+
+		// 处理 thinking 合并到 assistant 消息
 		if len(pendingThinking) > 0 {
 			if msg.Role == "assistant" {
 				switch content := msg.Content.(type) {
@@ -117,6 +165,9 @@ func appendResponsesItemsToClaudeMessages(messages []types.ClaudeMessage, items 
 		messages = append(messages, *msg)
 	}
 
+	// 循环结束后刷出剩余缓冲
+	flushToolUses()
+	flushToolResults()
 	flushThinking()
 	return messages, nil
 }

@@ -433,6 +433,150 @@ func TestClaudeResponseToResponses_TextOnlyRegression(t *testing.T) {
 	}
 }
 
+// TestResponsesToClaudeMessages_MultipleToolUseMerged 测试连续多个 function_call 合并为一条 assistant 消息
+func TestResponsesToClaudeMessages_MultipleToolUseMerged(t *testing.T) {
+	sess := &session.Session{Messages: []types.ResponsesItem{}}
+
+	// 模拟 Codex 发来的多 tool_use 序列：两个 function_call + 两个 function_call_output
+	messages, _, err := ResponsesToClaudeMessages(sess, []interface{}{
+		map[string]interface{}{
+			"type": "message",
+			"role": "user",
+			"content": []interface{}{
+				map[string]interface{}{"type": "input_text", "text": "请查看文件"},
+			},
+		},
+		map[string]interface{}{
+			"type":      "function_call",
+			"call_id":   "call_1",
+			"name":      "read_file",
+			"arguments": `{"path":"a.ts"}`,
+		},
+		map[string]interface{}{
+			"type":      "function_call",
+			"call_id":   "call_2",
+			"name":      "read_file",
+			"arguments": `{"path":"b.ts"}`,
+		},
+		map[string]interface{}{
+			"type":    "function_call_output",
+			"call_id": "call_1",
+			"output":  "content of a.ts",
+		},
+		map[string]interface{}{
+			"type":    "function_call_output",
+			"call_id": "call_2",
+			"output":  "content of b.ts",
+		},
+		map[string]interface{}{
+			"type": "message",
+			"role": "user",
+			"content": []interface{}{
+				map[string]interface{}{"type": "input_text", "text": "继续"},
+			},
+		},
+	}, "")
+	if err != nil {
+		t.Fatalf("转换失败: %v", err)
+	}
+
+	// 期望结构：
+	// [0] user: "请查看文件"
+	// [1] assistant: [tool_use call_1, tool_use call_2]  ← 合并
+	// [2] user: [tool_result call_1, tool_result call_2]  ← 合并
+	// [3] user: "继续"
+	if len(messages) != 4 {
+		t.Fatalf("期望 4 条消息，实际 %d: %#v", len(messages), messages)
+	}
+
+	// 验证 assistant 消息包含两个 tool_use
+	if messages[1].Role != "assistant" {
+		t.Fatalf("messages[1].Role = %s, want assistant", messages[1].Role)
+	}
+	assistantContent, ok := messages[1].Content.([]types.ClaudeContent)
+	if !ok {
+		t.Fatalf("messages[1].Content 不是 []ClaudeContent")
+	}
+	if len(assistantContent) != 2 {
+		t.Fatalf("期望 2 个 tool_use，实际 %d", len(assistantContent))
+	}
+	if assistantContent[0].Type != "tool_use" || assistantContent[0].ID != "call_1" {
+		t.Fatalf("tool_use[0] 不匹配: %#v", assistantContent[0])
+	}
+	if assistantContent[1].Type != "tool_use" || assistantContent[1].ID != "call_2" {
+		t.Fatalf("tool_use[1] 不匹配: %#v", assistantContent[1])
+	}
+
+	// 验证 user 消息包含两个 tool_result
+	if messages[2].Role != "user" {
+		t.Fatalf("messages[2].Role = %s, want user", messages[2].Role)
+	}
+	userContent, ok := messages[2].Content.([]types.ClaudeContent)
+	if !ok {
+		t.Fatalf("messages[2].Content 不是 []ClaudeContent")
+	}
+	if len(userContent) != 2 {
+		t.Fatalf("期望 2 个 tool_result，实际 %d", len(userContent))
+	}
+	if userContent[0].Type != "tool_result" || userContent[0].ToolUseID != "call_1" {
+		t.Fatalf("tool_result[0] 不匹配: %#v", userContent[0])
+	}
+	if userContent[1].Type != "tool_result" || userContent[1].ToolUseID != "call_2" {
+		t.Fatalf("tool_result[1] 不匹配: %#v", userContent[1])
+	}
+}
+
+// TestResponsesToClaudeMessages_ReasoningBeforeMultipleToolUse 测试 reasoning + 多 tool_use 合并
+func TestResponsesToClaudeMessages_ReasoningBeforeMultipleToolUse(t *testing.T) {
+	sess := &session.Session{Messages: []types.ResponsesItem{}}
+
+	messages, _, err := ResponsesToClaudeMessages(sess, []interface{}{
+		map[string]interface{}{
+			"type":   "reasoning",
+			"status": "completed",
+			"summary": []interface{}{
+				map[string]interface{}{"type": "summary_text", "text": "let me check both files"},
+			},
+		},
+		map[string]interface{}{
+			"type":      "function_call",
+			"call_id":   "call_a",
+			"name":      "ls",
+			"arguments": `{"path":"."}`,
+		},
+		map[string]interface{}{
+			"type":      "function_call",
+			"call_id":   "call_b",
+			"name":      "cat",
+			"arguments": `{"path":"x.ts"}`,
+		},
+	}, "")
+	if err != nil {
+		t.Fatalf("转换失败: %v", err)
+	}
+
+	// 期望：1 条 assistant 消息包含 [thinking, tool_use, tool_use]
+	if len(messages) != 1 {
+		t.Fatalf("期望 1 条消息，实际 %d", len(messages))
+	}
+	content, ok := messages[0].Content.([]types.ClaudeContent)
+	if !ok {
+		t.Fatal("Content 类型错误")
+	}
+	if len(content) != 3 {
+		t.Fatalf("期望 3 个内容块，实际 %d: %#v", len(content), content)
+	}
+	if content[0].Type != "thinking" {
+		t.Fatalf("content[0].Type = %s, want thinking", content[0].Type)
+	}
+	if content[1].Type != "tool_use" || content[1].ID != "call_a" {
+		t.Fatalf("content[1] 不匹配: %#v", content[1])
+	}
+	if content[2].Type != "tool_use" || content[2].ID != "call_b" {
+		t.Fatalf("content[2] 不匹配: %#v", content[2])
+	}
+}
+
 // TestResponsesToClaudeMessages_ToolCallMissingToolUse 测试缺少 tool_use 字段的兼容性处理
 func TestResponsesToClaudeMessages_ToolCallMissingToolUse(t *testing.T) {
 	sess := &session.Session{

@@ -524,7 +524,15 @@ func (m *Manager) buildEnv(port int) []string {
 	env := os.Environ()
 	env = setEnv(env, "PORT", strconv.Itoa(port))
 	env = setEnv(env, "ENABLE_WEB_UI", "true")
-	env = setEnv(env, "ENV", "production")
+
+	// 尊重用户在 .env 中显式设置的 ENV（用于开启 debug 日志等场景）
+	envPath := filepath.Join(m.dataDir, ".env")
+	if userEnv := readEnvValueFromFile(envPath, "ENV"); userEnv != "" {
+		env = setEnv(env, "ENV", userEnv)
+	} else {
+		env = setEnv(env, "ENV", "production")
+	}
+
 	if key, err := m.EnsureProxyAccessKey(); err == nil && key != "" {
 		env = setEnv(env, "PROXY_ACCESS_KEY", key)
 	} else if err != nil {
@@ -699,6 +707,31 @@ func readPortFromEnvFile(path string) (int, error) {
 		return port, nil
 	}
 	return 0, nil
+}
+
+// readEnvValueFromFile 从 .env 文件中读取指定 key 的值。
+// 找不到或文件不存在时返回空字符串。
+func readEnvValueFromFile(path, key string) string {
+	content, err := os.ReadFile(path)
+	if err != nil {
+		return ""
+	}
+	prefix := key + "="
+	for _, line := range strings.Split(string(content), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if rest, ok := strings.CutPrefix(line, "export "); ok {
+			line = strings.TrimSpace(rest)
+		}
+		if !strings.HasPrefix(line, prefix) {
+			continue
+		}
+		value := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+		return strings.Trim(value, `"'`)
+	}
+	return ""
 }
 
 func appendEnvValue(path string, key string, value string) error {
