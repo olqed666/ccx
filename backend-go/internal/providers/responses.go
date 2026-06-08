@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/BenedictKing/ccx/internal/config"
@@ -628,10 +629,13 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 		pendingEventType := ""
 		messageStartSent := false
 		textBlockStarted := false
-		textBlockIndex := 0
-		toolBlockIndex := 1
+		thinkingBlockStarted := false
+		blockIndex := 0 // 下一个可用的 content_block 索引（thinking/text/tool_use 共享）
+		textBlockIndex := -1
+		thinkingBlockIndex := -1
 		currentTool := map[string]string{}
 		var currentToolArgs strings.Builder
+		currentToolIndex := -1
 		latestInputTokens := 0
 		latestOutputTokens := 0
 		latestCacheCreationTokens := 0
@@ -640,11 +644,81 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 		latestCacheCreation1hTokens := 0
 		latestCacheTTL := ""
 		stopReason := "end_turn"
+		emittedAnyConvertedEvent := false
+		unknownEventTypes := map[string]int{}
 
 		emitJSON := func(eventName string, payload map[string]interface{}) {
 			payload["type"] = eventName
 			b, _ := json.Marshal(payload)
 			eventChan <- fmt.Sprintf("event: %s\ndata: %s\n\n", eventName, string(b))
+			emittedAnyConvertedEvent = true
+		}
+
+		ensureMessageStart := func() {
+			if !messageStartSent {
+				eventChan <- buildMessageStartEvent("responses")
+				messageStartSent = true
+				emittedAnyConvertedEvent = true
+			}
+		}
+
+		// closeOpenContentBlocks 在切换到新内容类型或结束前，闭合已打开的 thinking/text 块。
+		closeOpenContentBlocks := func() {
+			if thinkingBlockStarted {
+				emitJSON("content_block_stop", map[string]interface{}{"index": thinkingBlockIndex})
+				thinkingBlockStarted = false
+			}
+			if textBlockStarted {
+				emitJSON("content_block_stop", map[string]interface{}{"index": textBlockIndex})
+				textBlockStarted = false
+			}
+		}
+
+		// emitClaudeError 把上游错误体转成 Claude 风格的 error 事件，
+		// 使下游 PreflightStreamEvents 的 DetectStreamBlacklistError 能识别认证/余额错误并拉黑 Key，
+		// 同时让空流诊断携带具体错误信息而非笼统的"未收到任何 SSE 事件"。
+		emitClaudeError := func(errType, errMsg, errCode string) {
+			errObj := map[string]interface{}{}
+			if errType != "" {
+				errObj["type"] = errType
+			} else {
+				errObj["type"] = "api_error"
+			}
+			if errMsg != "" {
+				errObj["message"] = errMsg
+			}
+			if errCode != "" {
+				errObj["code"] = errCode
+			}
+			payload := map[string]interface{}{"type": "error", "error": errObj}
+			b, _ := json.Marshal(payload)
+			eventChan <- fmt.Sprintf("event: error\ndata: %s\n\n", string(b))
+			emittedAnyConvertedEvent = true
+		}
+
+		// extractUpstreamError 从 Responses 错误体（顶层 error / response.error / event:error）中提取错误信息。
+		extractUpstreamError := func(data map[string]interface{}) (errType, errMsg, errCode string, ok bool) {
+			candidates := []interface{}{data["error"]}
+			if resp, isMap := data["response"].(map[string]interface{}); isMap {
+				candidates = append(candidates, resp["error"])
+			}
+			for _, cand := range candidates {
+				switch e := cand.(type) {
+				case map[string]interface{}:
+					return toString(e["type"]), toString(e["message"]), toString(e["code"]), true
+				case string:
+					if strings.TrimSpace(e) != "" {
+						return "", e, "", true
+					}
+				}
+			}
+			// 顶层 message（部分 new-api 风格错误）
+			if msg := toString(data["message"]); msg != "" {
+				if dataType := toString(data["type"]); dataType == "error" {
+					return "", msg, toString(data["code"]), true
+				}
+			}
+			return "", "", "", false
 		}
 
 		for scanner.Scan() {
@@ -660,8 +734,15 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 				continue
 			}
 
+			payloadStr := strings.TrimPrefix(line, "data: ")
+			if strings.TrimSpace(payloadStr) == "[DONE]" {
+				pendingEventType = ""
+				continue
+			}
+
 			var data map[string]interface{}
-			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "data: ")), &data); err != nil {
+			if err := json.Unmarshal([]byte(payloadStr), &data); err != nil {
+				pendingEventType = ""
 				continue
 			}
 
@@ -672,12 +753,44 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 			pendingEventType = ""
 
 			switch eventType {
+			case "response.reasoning_summary_text.delta", "response.reasoning_text.delta":
+				delta := toString(data["delta"])
+				if delta == "" {
+					if t := toString(data["text"]); t != "" {
+						delta = t
+					}
+				}
+				if delta == "" {
+					continue
+				}
+				ensureMessageStart()
+				// reasoning 必须在 text 之前；若已开 text 块则先闭合（异常顺序兜底）
+				if textBlockStarted {
+					emitJSON("content_block_stop", map[string]interface{}{"index": textBlockIndex})
+					textBlockStarted = false
+				}
+				if !thinkingBlockStarted {
+					thinkingBlockIndex = blockIndex
+					blockIndex++
+					emitJSON("content_block_start", map[string]interface{}{
+						"index":         thinkingBlockIndex,
+						"content_block": map[string]interface{}{"type": "thinking", "thinking": ""},
+					})
+					thinkingBlockStarted = true
+				}
+				emitJSON("content_block_delta", map[string]interface{}{
+					"index": thinkingBlockIndex,
+					"delta": map[string]interface{}{"type": "thinking_delta", "thinking": delta},
+				})
 			case "response.output_text.delta":
-				if !messageStartSent {
-					eventChan <- buildMessageStartEvent("responses")
-					messageStartSent = true
+				ensureMessageStart()
+				if thinkingBlockStarted {
+					emitJSON("content_block_stop", map[string]interface{}{"index": thinkingBlockIndex})
+					thinkingBlockStarted = false
 				}
 				if !textBlockStarted {
+					textBlockIndex = blockIndex
+					blockIndex++
 					emitJSON("content_block_start", map[string]interface{}{
 						"index":         textBlockIndex,
 						"content_block": map[string]interface{}{"type": "text", "text": ""},
@@ -696,14 +809,8 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 				if toString(item["type"]) != "function_call" {
 					continue
 				}
-				if !messageStartSent {
-					eventChan <- buildMessageStartEvent("responses")
-					messageStartSent = true
-				}
-				if textBlockStarted {
-					emitJSON("content_block_stop", map[string]interface{}{"index": textBlockIndex})
-					textBlockStarted = false
-				}
+				ensureMessageStart()
+				closeOpenContentBlocks()
 				currentTool = map[string]string{
 					"id":   toString(item["call_id"]),
 					"name": toString(item["name"]),
@@ -712,8 +819,10 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 				if currentTool["id"] == "" {
 					currentTool["id"] = currentTool["name"]
 				}
+				currentToolIndex = blockIndex
+				blockIndex++
 				emitJSON("content_block_start", map[string]interface{}{
-					"index": toolBlockIndex,
+					"index": currentToolIndex,
 					"content_block": map[string]interface{}{
 						"type": "tool_use",
 						"id":   currentTool["id"],
@@ -739,16 +848,24 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 					argsJSON = sanitizeClaudeToolArgsJSON(currentTool["name"], argsJSON)
 
 					emitJSON("content_block_delta", map[string]interface{}{
-						"index": toolBlockIndex,
+						"index": currentToolIndex,
 						"delta": map[string]interface{}{"type": "input_json_delta", "partial_json": argsJSON},
 					})
-					emitJSON("content_block_stop", map[string]interface{}{"index": toolBlockIndex})
-					toolBlockIndex++
+					emitJSON("content_block_stop", map[string]interface{}{"index": currentToolIndex})
 					stopReason = "tool_use"
 					currentTool = map[string]string{}
 					currentToolArgs.Reset()
+					currentToolIndex = -1
 				}
-			case "response.completed":
+			case "response.failed", "response.error", "error":
+				// 上游以 200 + SSE 形式返回错误体（new-api 等常见）。转成 Claude error 事件，
+				// 让下游识别拉黑条件并给出精确诊断，而非被笼统判为空流。
+				if errType, errMsg, errCode, ok := extractUpstreamError(data); ok {
+					emitClaudeError(errType, errMsg, errCode)
+				} else {
+					emitClaudeError("", "upstream returned an error event without details", "")
+				}
+			case "response.completed", "response.incomplete":
 				response, _ := data["response"].(map[string]interface{})
 				usage, _ := response["usage"].(map[string]interface{})
 				if v, ok := usage["input_tokens"].(float64); ok {
@@ -775,17 +892,11 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 					latestCacheTTL = v
 				}
 				status := toString(response["status"])
-				if status == "incomplete" {
+				if status == "incomplete" || eventType == "response.incomplete" {
 					stopReason = "max_tokens"
 				}
-				if textBlockStarted {
-					emitJSON("content_block_stop", map[string]interface{}{"index": textBlockIndex})
-					textBlockStarted = false
-				}
-				if !messageStartSent {
-					eventChan <- buildMessageStartEvent("responses")
-					messageStartSent = true
-				}
+				closeOpenContentBlocks()
+				ensureMessageStart()
 				usagePayload := map[string]interface{}{
 					"input_tokens":  latestInputTokens,
 					"output_tokens": latestOutputTokens,
@@ -810,7 +921,21 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 					"usage": usagePayload,
 				})
 				emitJSON("message_stop", map[string]interface{}{})
+			default:
+				// 记录未识别事件类型，便于在空流时给出诊断线索。
+				// 已知但无需转换的良性事件（created/in_progress/output_text.done/reasoning_summary_*.{added,done} 等）也会落到这里，
+				// 仅做计数，不影响流转。
+				if eventType != "" {
+					unknownEventTypes[eventType]++
+				}
 			}
+		}
+
+		// 流自然结束但本地未产出任何可转换事件：注入一个 error 事件，
+		// 使下游诊断从"未收到任何 SSE 事件"升级为携带上游事件线索，便于排查上游不兼容问题。
+		if !emittedAnyConvertedEvent && len(unknownEventTypes) > 0 {
+			summary := summarizeUnknownResponsesEvents(unknownEventTypes)
+			emitClaudeError("upstream_unconvertible", "Responses 流仅含无法转换的事件: "+summary, "")
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -819,6 +944,20 @@ func (p *ResponsesProvider) HandleStreamResponse(body io.ReadCloser) (<-chan str
 	}()
 
 	return eventChan, errChan, nil
+}
+
+// summarizeUnknownResponsesEvents 把未识别事件类型按出现次数汇总成稳定字符串（用于诊断日志）。
+func summarizeUnknownResponsesEvents(counts map[string]int) string {
+	keys := make([]string, 0, len(counts))
+	for k := range counts {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, k := range keys {
+		parts = append(parts, fmt.Sprintf("%s×%d", k, counts[k]))
+	}
+	return strings.Join(parts, ", ")
 }
 
 func extractResponsesCacheReadTokens(usage map[string]interface{}) int {
