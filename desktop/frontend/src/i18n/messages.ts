@@ -310,6 +310,8 @@ export type MessageKey =
   | 'agent.placeholderDashScope'
   | 'agent.placeholderRequired'
   | 'agent.codexDiagnosticTitle'
+  | 'agent.codexTroubleshoot'
+  | 'agent.codexTroubleshooting'
   | 'agent.codexDiagnosticHealthy'
   | 'agent.codexDiagnosticMismatch'
   | 'agent.codexDiagnosticCheck'
@@ -341,6 +343,7 @@ export type MessageKey =
   | 'agent.responsesDiagnosticSuggestedProtocolMismatch'
   | 'agent.responsesDiagnosticSuggestedResume'
   | 'agent.responsesLogsDiagnosticTitle'
+  | 'agent.responsesLogsDiagnosticHealthy'
   | 'agent.responsesLogsDiagnosticAuth'
   | 'agent.responsesLogsDiagnosticRateLimit'
   | 'agent.responsesLogsDiagnosticUpstream5xx'
@@ -1008,6 +1011,8 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.placeholderDashScope': 'Required: DashScope API Key (sk-xxx or sk-sp-xxx)',
     'agent.placeholderRequired': 'Required: enter API Key',
     'agent.codexDiagnosticTitle': 'Codex troubleshooting',
+    'agent.codexTroubleshoot': 'Troubleshoot',
+    'agent.codexTroubleshooting': 'Checking...',
     'agent.codexDiagnosticHealthy': 'Current Codex config looks consistent with CCX.',
     'agent.codexDiagnosticMismatch': 'config.toml and auth.json may be inconsistent.',
     'agent.codexDiagnosticCheck': 'Check item',
@@ -1039,6 +1044,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.responsesDiagnosticSuggestedProtocolMismatch': 'Suggested action: check serviceType and baseUrl so the channel resolves to a /responses endpoint.',
     'agent.responsesDiagnosticSuggestedResume': 'Suggested action: inspect logs and resume the affected channels after recovery.',
     'agent.responsesLogsDiagnosticTitle': 'Recent failed requests',
+    'agent.responsesLogsDiagnosticHealthy': 'No recent failed Responses requests were found.',
     'agent.responsesLogsDiagnosticAuth': 'Recent Responses requests failed with authentication errors (401/403).',
     'agent.responsesLogsDiagnosticRateLimit': 'Recent Responses requests were rate limited (429).',
     'agent.responsesLogsDiagnosticUpstream5xx': 'Recent Responses requests failed with upstream 5xx errors.',
@@ -1050,7 +1056,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.responsesLogsDiagnosticSuggestedUpstream5xx': 'Suggested action: switch channel, inspect upstream status, or retry later.',
     'agent.responsesLogsDiagnosticSuggestedTimeout': 'Suggested action: inspect upstream latency, timeout settings, and recent logs.',
     'agent.responsesLogsDiagnosticSuggestedGeneric': 'Suggested action: open the Responses channel logs and inspect the latest failures.',
-    'agent.codexDiagnosticIntro': 'Checks run from top to bottom: config consistency → Responses channel availability → recent failed requests.',
+    'agent.codexDiagnosticIntro': 'Troubleshooting runs on demand: config consistency → Responses channel availability → recent failed requests.',
     'agent.codexDiagnosticLayerConfig': 'Layer 1 · Codex config',
     'agent.codexDiagnosticLayerChannels': 'Layer 2 · Responses channels',
     'agent.codexDiagnosticLayerLogs': 'Layer 3 · Recent failed requests',
@@ -1703,6 +1709,8 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.placeholderDashScope': '必填：DashScope API Key（sk-xxx 或 sk-sp-xxx）',
     'agent.placeholderRequired': '必填：输入 API Key',
     'agent.codexDiagnosticTitle': 'Codex 排障诊断',
+    'agent.codexTroubleshoot': '排障检测',
+    'agent.codexTroubleshooting': '检测中...',
     'agent.codexDiagnosticHealthy': '当前 Codex 配置与 CCX 看起来是一致的。',
     'agent.codexDiagnosticMismatch': 'config.toml 与 auth.json 可能不一致。',
     'agent.codexDiagnosticCheck': '检查项',
@@ -1734,6 +1742,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.responsesDiagnosticSuggestedProtocolMismatch': '建议动作：检查 serviceType 和 baseUrl，确保该渠道最终落到 /responses 端点。',
     'agent.responsesDiagnosticSuggestedResume': '建议动作：查看日志并在恢复后重新启用相关渠道。',
     'agent.responsesLogsDiagnosticTitle': '最近失败请求',
+    'agent.responsesLogsDiagnosticHealthy': '未发现最近的 Responses 失败请求。',
     'agent.responsesLogsDiagnosticAuth': '最近的 Responses 请求出现了认证错误（401/403）。',
     'agent.responsesLogsDiagnosticRateLimit': '最近的 Responses 请求触发了限流（429）。',
     'agent.responsesLogsDiagnosticUpstream5xx': '最近的 Responses 请求出现了上游 5xx 错误。',
@@ -1745,7 +1754,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.responsesLogsDiagnosticSuggestedUpstream5xx': '建议动作：切换渠道、检查上游状态，或稍后再试。',
     'agent.responsesLogsDiagnosticSuggestedTimeout': '建议动作：检查上游延迟、超时配置和最近日志。',
     'agent.responsesLogsDiagnosticSuggestedGeneric': '建议动作：打开 Responses 渠道日志并检查最近失败项。',
-    'agent.codexDiagnosticIntro': '诊断按顺序执行：配置一致性 → Responses 渠道可用性 → 最近失败请求。',
+    'agent.codexDiagnosticIntro': '按需排障检测：配置一致性 → Responses 渠道可用性 → 最近失败请求。',
     'agent.codexDiagnosticLayerConfig': '第 1 层 · Codex 配置',
     'agent.codexDiagnosticLayerChannels': '第 2 层 · Responses 渠道',
     'agent.codexDiagnosticLayerLogs': '第 3 层 · 最近失败请求',

@@ -1,4 +1,4 @@
-import { computed, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import { useAgentConfig } from '@/composables/useAgentConfig'
 import { useLanguage } from '@/composables/useLanguage'
 import { useAdminApi } from '@/composables/useAdminApi'
@@ -15,7 +15,7 @@ const diagnosticMessageKeyMap: Record<string, Parameters<ReturnType<typeof useLa
   'codex.auth_unreadable': 'agent.codexDiagnosticCodeAuthUnreadable',
 }
 
-// 模块级共享状态：Status 页与 Agent 页共用同一份诊断缓存，避免各自拉取导致状态不一致。
+// 模块级共享状态：同一页面内多次使用 composable 时复用排障缓存。
 const responsesChannels = ref<Channel[]>([])
 const responsesMetrics = ref<ChannelDashboardResponse['metrics']>([])
 const responsesChannelsLoaded = ref(false)
@@ -23,9 +23,9 @@ const responsesChannelError = ref('')
 const recentFailedLogs = ref<ChannelLogEntry[]>([])
 const recentFailedLogsLoaded = ref(false)
 const recentFailedLogsError = ref('')
+const codexTroubleshootingRequested = ref(false)
+const codexTroubleshootingLoading = ref(false)
 let refreshPromise: Promise<void> | null = null
-let diagnosticsWatchRegistered = false
-let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 export function useResponsesDiagnostics() {
   const { agentStatuses } = useAgentConfig()
@@ -101,7 +101,7 @@ export function useResponsesDiagnostics() {
         responsesMetrics.value = []
         responsesChannelsLoaded.value = true
         recentFailedLogs.value = []
-        recentFailedLogsLoaded.value = true
+        recentFailedLogsLoaded.value = false
         recentFailedLogsError.value = ''
       }
     })()
@@ -113,39 +113,30 @@ export function useResponsesDiagnostics() {
     }
   }
 
-  if (!diagnosticsWatchRegistered) {
-    diagnosticsWatchRegistered = true
-    watch(
-      () => status.value.running,
-      (running) => {
-        if (running) {
-          void refreshResponsesChannels()
-          if (!refreshTimer) {
-            refreshTimer = setInterval(() => {
-              void refreshResponsesChannels()
-            }, 10000)
-          }
-        } else {
-          if (refreshTimer) {
-            clearInterval(refreshTimer)
-            refreshTimer = null
-          }
-          responsesChannels.value = []
-          responsesMetrics.value = []
-          responsesChannelsLoaded.value = false
-          responsesChannelError.value = ''
-          recentFailedLogs.value = []
-          recentFailedLogsLoaded.value = false
-          recentFailedLogsError.value = ''
-        }
-      },
-      { immediate: true },
-    )
+  async function runCodexTroubleshooting() {
+    if (codexTroubleshootingLoading.value) return
+
+    codexTroubleshootingRequested.value = true
+    codexTroubleshootingLoading.value = true
+    try {
+      if (codexUsesLocalGateway.value) {
+        await refreshResponsesChannels()
+      } else {
+        responsesChannels.value = []
+        responsesMetrics.value = []
+        responsesChannelsLoaded.value = false
+        responsesChannelError.value = ''
+        recentFailedLogs.value = []
+        recentFailedLogsLoaded.value = false
+        recentFailedLogsError.value = ''
+      }
+    } finally {
+      codexTroubleshootingLoading.value = false
+    }
   }
 
   const codexDiagnosticVisible = computed(() => {
-    const current = codexStatus.value
-    return !!current && (!!current.diagnosticMessage || current.configConsistent === false)
+    return codexTroubleshootingRequested.value && !!codexStatus.value
   })
 
   const codexDiagnosticSeverity = computed<'ok' | 'warn'>(() => {
@@ -178,7 +169,9 @@ export function useResponsesDiagnostics() {
     return suggestions
   })
 
-  const responsesChannelDiagnosticVisible = computed(() => codexUsesLocalGateway.value && status.value.running && responsesChannelsLoaded.value)
+  const responsesChannelDiagnosticVisible = computed(() => {
+    return codexTroubleshootingRequested.value && codexUsesLocalGateway.value && status.value.running && responsesChannelsLoaded.value
+  })
 
   const responsesMetricByIndex = (index: number) => responsesMetrics.value.find(metric => metric.channelIndex === index)
 
@@ -249,13 +242,18 @@ export function useResponsesDiagnostics() {
     return [] as string[]
   })
 
-  const recentFailedLogsDiagnosticVisible = computed(() => codexUsesLocalGateway.value && status.value.running && recentFailedLogsLoaded.value && (recentFailedLogs.value.length > 0 || !!recentFailedLogsError.value))
+  const recentFailedLogsDiagnosticVisible = computed(() => {
+    return codexTroubleshootingRequested.value
+      && codexUsesLocalGateway.value
+      && status.value.running
+      && recentFailedLogsLoaded.value
+  })
 
   const recentFailedLogsDiagnosticSummary = computed(() => {
     if (!recentFailedLogsLoaded.value) return ''
     if (recentFailedLogsError.value) return recentFailedLogsError.value
     const latest = recentFailedLogs.value[0]
-    if (!latest) return ''
+    if (!latest) return t('agent.responsesLogsDiagnosticHealthy')
 
     if (latest.statusCode === 401 || latest.statusCode === 403) {
       return t('agent.responsesLogsDiagnosticAuth')
@@ -273,6 +271,11 @@ export function useResponsesDiagnostics() {
     }
 
     return t('agent.responsesLogsDiagnosticGeneric')
+  })
+
+  const recentFailedLogsDiagnosticSeverity = computed<'ok' | 'warn'>(() => {
+    if (recentFailedLogsError.value) return 'warn'
+    return recentFailedLogs.value.length > 0 ? 'warn' : 'ok'
   })
 
   const recentFailedLogsDiagnosticSuggestions = computed(() => {
@@ -300,21 +303,6 @@ export function useResponsesDiagnostics() {
     return [t('agent.responsesLogsDiagnosticSuggestedGeneric')]
   })
 
-  const statusSummaryVisible = computed(() => {
-    return codexDiagnosticVisible.value || (responsesChannelDiagnosticVisible.value && responsesChannelDiagnosticSeverity.value === 'warn') || recentFailedLogsDiagnosticVisible.value
-  })
-
-  const statusSummaryText = computed(() => {
-    if (codexDiagnosticVisible.value) return codexDiagnosticSummary.value
-    if (responsesChannelDiagnosticVisible.value && responsesChannelDiagnosticSeverity.value === 'warn') {
-      return responsesChannelDiagnosticSummary.value
-    }
-    if (recentFailedLogsDiagnosticVisible.value) {
-      return recentFailedLogsDiagnosticSummary.value
-    }
-    return ''
-  })
-
   return {
     codexStatus,
     codexDiagnosticVisible,
@@ -329,10 +317,10 @@ export function useResponsesDiagnostics() {
     responsesChannelDiagnosticSuggestions,
     recentFailedLogs,
     recentFailedLogsDiagnosticVisible,
+    recentFailedLogsDiagnosticSeverity,
     recentFailedLogsDiagnosticSummary,
     recentFailedLogsDiagnosticSuggestions,
-    statusSummaryVisible,
-    statusSummaryText,
-    refreshResponsesChannels,
+    codexTroubleshootingLoading,
+    runCodexTroubleshooting,
   }
 }

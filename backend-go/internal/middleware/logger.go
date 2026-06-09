@@ -34,12 +34,18 @@ func FilteredLogger(envCfg *config.EnvConfig, skipPrefixes ...string) gin.Handle
 
 	return gin.LoggerWithConfig(gin.LoggerConfig{
 		Skip: func(c *gin.Context) bool {
+			path := c.Request.URL.Path
+
+			// CORS 预检不改变服务状态；排障按钮读取 Responses 渠道日志时会触发该预检，静默避免刷屏。
+			if c.Request.Method == http.MethodOptions && isResponsesChannelLogsPath(path) {
+				return true
+			}
+
 			// 只跳过 GET 请求，保留其他方法的审计日志
 			if c.Request.Method != http.MethodGet {
 				return false
 			}
 
-			path := c.Request.URL.Path
 			for _, prefix := range skipPrefixes {
 				if strings.HasPrefix(path, prefix) {
 					return true
@@ -48,4 +54,8 @@ func FilteredLogger(envCfg *config.EnvConfig, skipPrefixes ...string) gin.Handle
 			return false
 		},
 	})
+}
+
+func isResponsesChannelLogsPath(path string) bool {
+	return strings.HasPrefix(path, "/api/responses/channels/") && strings.HasSuffix(path, "/logs")
 }

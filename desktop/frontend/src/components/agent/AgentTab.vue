@@ -19,9 +19,11 @@ const {
   responsesChannelDiagnosticSummary,
   responsesChannelDiagnosticSuggestions,
   recentFailedLogsDiagnosticVisible,
+  recentFailedLogsDiagnosticSeverity,
   recentFailedLogsDiagnosticSummary,
   recentFailedLogsDiagnosticSuggestions,
-  refreshResponsesChannels,
+  codexTroubleshootingLoading,
+  runCodexTroubleshooting,
 } = useResponsesDiagnostics()
 const {
   agentStatuses,
@@ -75,7 +77,6 @@ const {
 
 onMounted(() => {
   loadAgentStatuses()
-  void refreshResponsesChannels()
 })
 
 const handleApply = async (platform: AgentPlatform) => {
@@ -101,6 +102,16 @@ const handleMigrate = () => {
   showMigrateDialog()
 }
 
+const handleTroubleshoot = async () => {
+  actionError.value = ''
+  try {
+    await loadAgentStatuses()
+    await runCodexTroubleshooting()
+  } catch (error) {
+    actionError.value = error instanceof Error ? error.message : String(error)
+  }
+}
+
 const handleConfirm = async () => {
   actionError.value = ''
   try {
@@ -110,7 +121,6 @@ const handleConfirm = async () => {
       await confirmRestore()
     }
     await loadAgentStatuses()
-    await refreshResponsesChannels()
   } catch (error) {
     actionError.value = error instanceof Error ? error.message : String(error)
   }
@@ -160,11 +170,14 @@ const handleConfirm = async () => {
         :responses-channel-diagnostic-summary="platform === 'codex' ? responsesChannelDiagnosticSummary : ''"
         :responses-channel-diagnostic-suggestions="platform === 'codex' ? responsesChannelDiagnosticSuggestions : []"
         :recent-failed-logs-diagnostic-visible="platform === 'codex' ? recentFailedLogsDiagnosticVisible : false"
+        :recent-failed-logs-diagnostic-severity="platform === 'codex' ? recentFailedLogsDiagnosticSeverity : 'ok'"
         :recent-failed-logs-diagnostic-summary="platform === 'codex' ? recentFailedLogsDiagnosticSummary : ''"
         :recent-failed-logs-diagnostic-suggestions="platform === 'codex' ? recentFailedLogsDiagnosticSuggestions : []"
+        :codex-troubleshooting-loading="platform === 'codex' ? codexTroubleshootingLoading : false"
         @apply="handleApply(platform)"
         @restore="handleRestore(platform)"
         @migrate="handleMigrate"
+        @troubleshoot="handleTroubleshoot"
         @update:selected-claude-provider="selectedClaudeProvider = $event"
         @update:claude-provider-keys="claudeProviderKeys = $event"
         @update:claude-mimo-base-url="claudeMimoBaseUrl = $event"

@@ -52,14 +52,17 @@ const props = defineProps<{
   responsesChannelDiagnosticSummary?: string
   responsesChannelDiagnosticSuggestions?: string[]
   recentFailedLogsDiagnosticVisible?: boolean
+  recentFailedLogsDiagnosticSeverity?: 'ok' | 'warn'
   recentFailedLogsDiagnosticSummary?: string
   recentFailedLogsDiagnosticSuggestions?: string[]
+  codexTroubleshootingLoading?: boolean
 }>()
 
 const emit = defineEmits<{
   apply: []
   restore: []
   migrate: []
+  troubleshoot: []
   'update:selectedClaudeProvider': [value: AgentProvider]
   'update:claudeProviderKeys': [value: Record<AgentProvider, string>]
   'update:claudeMimoBaseUrl': [value: string]
@@ -348,7 +351,7 @@ const openFileInEditor = async (editorPath: string, filePath: string) => {
 
       <p v-if="agentStatus?.lastError" class="text-sm text-destructive-foreground">{{ agentStatus.lastError }}</p>
 
-      <div v-if="platform === 'codex' && (codexDiagnosticVisible || (responsesChannelDiagnosticVisible && responsesChannelDiagnosticSeverity === 'warn') || recentFailedLogsDiagnosticVisible)" class="rounded-lg border border-border/60 bg-secondary/20 px-3 py-3">
+      <div v-if="platform === 'codex' && (codexDiagnosticVisible || responsesChannelDiagnosticVisible || recentFailedLogsDiagnosticVisible)" class="rounded-lg border border-border/60 bg-secondary/20 px-3 py-3">
         <p class="text-xs text-muted-foreground leading-relaxed">{{ t('agent.codexDiagnosticIntro') }}</p>
       </div>
 
@@ -380,8 +383,11 @@ const openFileInEditor = async (editorPath: string, filePath: string) => {
       </div>
 
       <div
-        v-if="platform === 'codex' && responsesChannelDiagnosticVisible && responsesChannelDiagnosticSeverity === 'warn'"
-        class="rounded-lg border border-cyan-500/30 bg-cyan-500/8 px-3 py-3 space-y-2"
+        v-if="platform === 'codex' && responsesChannelDiagnosticVisible"
+        class="rounded-lg border px-3 py-3 space-y-2"
+        :class="responsesChannelDiagnosticSeverity === 'warn'
+          ? 'border-cyan-500/30 bg-cyan-500/8'
+          : 'border-emerald-500/30 bg-emerald-500/8'"
       >
         <div class="flex items-center justify-between gap-2">
           <h4 class="text-sm font-semibold">{{ t('agent.codexDiagnosticLayerChannels') }}</h4>
@@ -401,7 +407,10 @@ const openFileInEditor = async (editorPath: string, filePath: string) => {
 
       <div
         v-if="platform === 'codex' && recentFailedLogsDiagnosticVisible"
-        class="rounded-lg border border-rose-500/30 bg-rose-500/8 px-3 py-3 space-y-2"
+        class="rounded-lg border px-3 py-3 space-y-2"
+        :class="recentFailedLogsDiagnosticSeverity === 'warn'
+          ? 'border-rose-500/30 bg-rose-500/8'
+          : 'border-emerald-500/30 bg-emerald-500/8'"
       >
         <div class="flex items-center justify-between gap-2">
           <h4 class="text-sm font-semibold">{{ t('agent.codexDiagnosticLayerLogs') }}</h4>
@@ -425,6 +434,9 @@ const openFileInEditor = async (editorPath: string, filePath: string) => {
         </Button>
         <Button size="sm" variant="secondary" :disabled="configLoading || !agentStatus?.hasState" @click="emit('restore')">
           {{ t('agent.restoreConfig') }}
+        </Button>
+        <Button v-if="platform === 'codex'" size="sm" variant="secondary" :disabled="configLoading || codexTroubleshootingLoading" @click="emit('troubleshoot')">
+          {{ codexTroubleshootingLoading ? t('agent.codexTroubleshooting') : t('agent.codexTroubleshoot') }}
         </Button>
         <Button v-if="platform === 'codex'" size="sm" variant="outline" :disabled="configLoading || migrateLoading" @click="emit('migrate')">
           {{ t('agent.migrateSessions') }}
