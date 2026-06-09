@@ -278,7 +278,7 @@ func Presets() []ProviderPreset {
 			ID:                  ProviderMiniMax,
 			Order:               70,
 			Label:               "MiniMax",
-			Description:         "全球化多模态 AI 公司（港股上市），旗舰 M2.7 具备 Agent 自我进化能力，海螺视频 / 音频模型全球第一梯队，海外收入超七成。",
+			Description:         "全球化多模态 AI 公司（港股上市），旗舰 M3 支持百万上下文、原生视觉与 Agent 能力，海螺视频 / 音频模型全球第一梯队，海外收入超七成。",
 			DirectAgent:         true,
 			NativeMessages:      true,
 			ChatCompatible:      true,

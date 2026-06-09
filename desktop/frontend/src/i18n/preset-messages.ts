@@ -92,7 +92,7 @@ export const presetMessages: Record<SupportedLocale, Record<string, string>> = {
 
     // MiniMax
     'channel.preset.minimax.description':
-      'Global multimodal AI leader (HK-listed). Flagship M2.7 with Agent self-evolution. Hailuo video/audio models in global top tier. Over 70% revenue from international markets.',
+      'Global multimodal AI leader (HK-listed). Flagship M3 with 1M context, native vision, and Agent capabilities. Hailuo video/audio models in global top tier. Over 70% revenue from international markets.',
     'channel.preset.minimax.plan.anthropic.description': 'Claude Messages native endpoint',
     'channel.preset.minimax.plan.openai-chat.description': 'Common Chat / Responses endpoint',
 
