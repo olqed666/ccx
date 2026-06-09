@@ -120,8 +120,10 @@ export const presetMessages: Record<SupportedLocale, Record<string, string>> = {
     // Youyun OriginRouter
     'channel.preset.originrouter.plan.anthropic.description': 'Claude Messages native endpoint',
     'channel.preset.originrouter.plan.openai-chat.description': 'Common Chat / Responses endpoint',
+    'channel.preset.dashscope.plan.token-plan-anthropic.label': 'Token Plan (Anthropic)',
     'channel.preset.dashscope.plan.token-plan-anthropic.description':
       'Token Plan Claude Messages native endpoint',
+    'channel.preset.dashscope.plan.token-plan-openai-chat.label': 'Token Plan (OpenAI)',
     'channel.preset.dashscope.plan.token-plan-openai-chat.description':
       'Token Plan Chat / Responses shared endpoint',
 

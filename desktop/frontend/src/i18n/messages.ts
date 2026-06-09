@@ -174,6 +174,10 @@ export type MessageKey =
   | 'channel.preset.kimi.plan.anthropic.description'
   | 'channel.preset.kimi.plan.openai-chat.label'
   | 'channel.preset.kimi.plan.openai-chat.description'
+  | 'channel.preset.kimi.plan.coding-anthropic.label'
+  | 'channel.preset.kimi.plan.coding-anthropic.description'
+  | 'channel.preset.kimi.plan.coding-openai-chat.label'
+  | 'channel.preset.kimi.plan.coding-openai-chat.description'
   // GLM plans
   | 'channel.preset.glm.plan.anthropic.label'
   | 'channel.preset.glm.plan.anthropic.description'
@@ -195,6 +199,10 @@ export type MessageKey =
   | 'channel.preset.dashscope.plan.coding-anthropic.description'
   | 'channel.preset.dashscope.plan.coding-openai-chat.label'
   | 'channel.preset.dashscope.plan.coding-openai-chat.description'
+  | 'channel.preset.dashscope.plan.token-plan-anthropic.label'
+  | 'channel.preset.dashscope.plan.token-plan-anthropic.description'
+  | 'channel.preset.dashscope.plan.token-plan-openai-chat.label'
+  | 'channel.preset.dashscope.plan.token-plan-openai-chat.description'
   // OpenCode Zen plans
   | 'channel.preset.opencode-zen.plan.anthropic.label'
   | 'channel.preset.opencode-zen.plan.anthropic.description'
@@ -205,6 +213,20 @@ export type MessageKey =
   | 'channel.preset.opencode-go.plan.anthropic.description'
   | 'channel.preset.opencode-go.plan.openai-chat.label'
   | 'channel.preset.opencode-go.plan.openai-chat.description'
+  // ModelScope
+  | 'channel.preset.modelscope.label'
+  | 'channel.preset.modelscope.description'
+  | 'channel.preset.modelscope.plan.anthropic.label'
+  | 'channel.preset.modelscope.plan.anthropic.description'
+  | 'channel.preset.modelscope.plan.openai-chat.label'
+  | 'channel.preset.modelscope.plan.openai-chat.description'
+  // OpenRouter
+  | 'channel.preset.openrouter.label'
+  | 'channel.preset.openrouter.description'
+  | 'channel.preset.openrouter.plan.anthropic.label'
+  | 'channel.preset.openrouter.plan.anthropic.description'
+  | 'channel.preset.openrouter.plan.openai-chat.label'
+  | 'channel.preset.openrouter.plan.openai-chat.description'
   // Targets (shared across providers)
   | 'channel.target.messages.label'
   | 'channel.target.messages.description'
@@ -787,7 +809,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'details.openDir': 'Open directory',
     'channel.headerEyebrow': 'Channel Preset Center',
     'channel.title': 'Channel Center',
-    'channel.description': 'Use DeepSeek, MiMo, Kimi, GLM, and MiniMax keys for both direct Agent routing and the unified CCX channel pool. Provider presets handle advanced switches automatically.',
+    'channel.description': 'Use DeepSeek, MiMo, Kimi, GLM, MiniMax, DashScope, and more keys for both direct Agent routing and the unified CCX channel pool. Provider presets handle advanced switches automatically.',
     'channel.hasKey': 'Key saved',
     'channel.promo': 'Register via promotion link to claim the exclusive perk',
     'channel.console': 'Open official console',
@@ -805,21 +827,21 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.badgeNativeMessages': 'Native Messages',
     // Provider labels & descriptions
     'channel.preset.deepseek.label': 'DeepSeek',
-    'channel.preset.deepseek.description': 'Messages native passthrough, Codex Responses, and Chat passthrough — three protocol support.',
+    'channel.preset.deepseek.description': 'V4-Pro / V4-Flash dual-flagship reasoning models at breakthrough costs. Fully open-source (MIT), delivering frontier-level performance at unbeatable prices.',
     'channel.preset.mimo.label': 'MiMo',
-    'channel.preset.mimo.description': 'Messages native passthrough, Codex Responses, and Chat passthrough; includes pay-as-you-go and Token Plan endpoints.',
+    'channel.preset.mimo.description': "Xiaomi's in-house AI platform for the Agent era. Flagship MiMo-V2.5-Pro with trillion parameters and 1M context, powering Xiaomi's smart ecosystem across devices, vehicles, and homes.",
     'channel.preset.compshare.label': 'Youyun Zhisuan Plans',
     'channel.preset.compshare.description': "Youyun Zhisuan is UCloud's AI cloud platform, offering cost-effective domestic AI model Agent Plan packages by monthly subscription or pay-as-you-go, starting from 49 CNY/month. It also provides stable access to official overseas models, supports Claude Code, Codex, and API integrations, and offers enterprise-grade high concurrency, 24/7 technical support, and self-service invoicing. Users who register through the promotion link can receive a free 5 CNY platform trial credit.",
     'channel.preset.runapi.label': 'RunAPI',
     'channel.preset.runapi.description': "RunAPI is an efficient and stable API platform—an alternative to OpenRouter. A single API Key gives you access to 150+ leading models, including OpenAI, Claude, Gemini, DeepSeek, Grok, and more, at prices as low as 10% of the original (up to 90% off), with exceptional stability. It's seamlessly compatible with tools like Claude Code, OpenClaw, and others. RunAPI offers an exclusive perk for CCX users: register and contact an administrator to claim ¥7 in free credit.",
     'channel.preset.kimi.label': 'Kimi / Moonshot',
-    'channel.preset.kimi.description': 'Messages native passthrough, Codex Responses, and Chat passthrough — three protocol support.',
+    'channel.preset.kimi.description': "Moonshot AI's intelligent assistant platform. Flagship Kimi K2.6 with native multimodal, renowned for ultra-long context and Agent Swarm capabilities.",
     'channel.preset.glm.label': 'GLM / BigModel',
-    'channel.preset.glm.description': 'Messages native passthrough, Codex Responses, and Chat passthrough — three protocol support.',
+    'channel.preset.glm.description': "Zhipu AI's model-as-a-service platform from Tsinghua. Flagship GLM-5.1 rivals frontier models in coding. Hong Kong-listed, trained entirely on Huawei Ascend chips.",
     'channel.preset.minimax.label': 'MiniMax',
-    'channel.preset.minimax.description': 'Messages native passthrough, Codex Responses, and Chat passthrough — three protocol support.',
-    'channel.preset.dashscope.label': 'Alibaba DashScope',
-    'channel.preset.dashscope.description': 'Messages native passthrough, Codex Responses, and Chat passthrough — three protocol support.',
+    'channel.preset.minimax.description': 'Global multimodal AI leader (HK-listed). Flagship M3 with 1M context, native vision, and Agent capabilities. Hailuo video/audio models in global top tier. Over 70% revenue from international markets.',
+    'channel.preset.dashscope.label': 'Alibaba Cloud DashScope',
+    'channel.preset.dashscope.description': "Alibaba Cloud's one-stop LLM platform integrating Qwen and third-party models. Full-modality coverage with pay-as-you-go, Coding Plan, and Token Plan options.",
     'channel.preset.opencode-zen.label': 'OpenCode Zen',
     'channel.preset.opencode-zen.description': 'Pay-as-you-go curated model gateway, supporting Messages, Chat, and Responses protocols.',
     'channel.preset.opencode-go.label': 'OpenCode Go',
@@ -861,6 +883,10 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.preset.kimi.plan.anthropic.description': 'Claude Messages native endpoint',
     'channel.preset.kimi.plan.openai-chat.label': 'OpenAI-compatible',
     'channel.preset.kimi.plan.openai-chat.description': 'Chat / Responses shared endpoint',
+    'channel.preset.kimi.plan.coding-anthropic.label': 'Coding Plan (Anthropic)',
+    'channel.preset.kimi.plan.coding-anthropic.description': 'Coding Plan Claude Messages native endpoint',
+    'channel.preset.kimi.plan.coding-openai-chat.label': 'Coding Plan (OpenAI)',
+    'channel.preset.kimi.plan.coding-openai-chat.description': 'Coding Plan Chat / Responses shared endpoint',
     // GLM plans
     'channel.preset.glm.plan.anthropic.label': 'Anthropic-compatible',
     'channel.preset.glm.plan.anthropic.description': 'Claude Messages native endpoint',
@@ -882,6 +908,10 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.preset.dashscope.plan.coding-anthropic.description': 'Coding Plan Claude Messages native endpoint',
     'channel.preset.dashscope.plan.coding-openai-chat.label': 'Coding Plan (OpenAI)',
     'channel.preset.dashscope.plan.coding-openai-chat.description': 'Coding Plan Chat / Responses shared endpoint',
+    'channel.preset.dashscope.plan.token-plan-anthropic.label': 'Token Plan (Anthropic)',
+    'channel.preset.dashscope.plan.token-plan-anthropic.description': 'Token Plan Claude Messages native endpoint',
+    'channel.preset.dashscope.plan.token-plan-openai-chat.label': 'Token Plan (OpenAI)',
+    'channel.preset.dashscope.plan.token-plan-openai-chat.description': 'Token Plan Chat / Responses shared endpoint',
     // Tencent Lkeap plans
     'channel.preset.tencent-lkeap.plan.anthropic.label': 'Anthropic-compatible',
     'channel.preset.tencent-lkeap.plan.anthropic.description': 'Claude Messages native endpoint',
@@ -917,6 +947,20 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.preset.opencode-go.plan.anthropic.description': 'Claude Messages native endpoint',
     'channel.preset.opencode-go.plan.openai-chat.label': 'OpenAI-compatible',
     'channel.preset.opencode-go.plan.openai-chat.description': 'Chat / Responses shared endpoint',
+    // ModelScope
+    'channel.preset.modelscope.label': 'ModelScope',
+    'channel.preset.modelscope.description': "Alibaba DAMO Academy's open-source model community with 10,000+ models across text, image, and speech. Full-lifecycle support for model exploration, inference, and training.",
+    'channel.preset.modelscope.plan.anthropic.label': 'Anthropic-compatible',
+    'channel.preset.modelscope.plan.anthropic.description': 'Claude Messages native endpoint',
+    'channel.preset.modelscope.plan.openai-chat.label': 'OpenAI-compatible',
+    'channel.preset.modelscope.plan.openai-chat.description': 'Chat / Responses shared endpoint',
+    // OpenRouter
+    'channel.preset.openrouter.label': 'OpenRouter',
+    'channel.preset.openrouter.description': "The largest AI model aggregator — access hundreds of models with a single API key. OpenAI-compatible with built-in guardrails for security, governance, and cost control.",
+    'channel.preset.openrouter.plan.anthropic.label': 'Anthropic-compatible',
+    'channel.preset.openrouter.plan.anthropic.description': 'Claude Messages native endpoint',
+    'channel.preset.openrouter.plan.openai-chat.label': 'OpenAI-compatible',
+    'channel.preset.openrouter.plan.openai-chat.description': 'Chat / Responses shared endpoint',
     // Targets (shared)
     'channel.target.messages.label': 'Claude Messages',
     'channel.target.messages.description': 'Native Claude Messages protocol, supports direct Claude Code connection or proxy via CCX',
@@ -1496,7 +1540,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'details.openDir': '打开目录',
     'channel.headerEyebrow': 'Channel Preset Center',
     'channel.title': '渠道中心',
-    'channel.description': '统一把 DeepSeek、MiMo、Kimi、GLM、MiniMax Key 可同时用于 Agent 直连和 CCX 统一渠道池，复杂开关由预设自动处理。',
+    'channel.description': '统一把 DeepSeek、MiMo、Kimi、GLM、MiniMax、DashScope 等 Key 可同时用于 Agent 直连和 CCX 统一渠道池，复杂开关由预设自动处理。',
     'channel.hasKey': '已有 Key',
     'channel.promo': '通过推广链接注册领取专属福利',
     'channel.console': '访问官方控制台',
@@ -1514,21 +1558,21 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.badgeNativeMessages': 'Messages 原生',
     // Provider labels & descriptions
     'channel.preset.deepseek.label': 'DeepSeek',
-    'channel.preset.deepseek.description': 'Messages 原生透传、Codex Responses、Chat 渠道透传三种用法。',
+    'channel.preset.deepseek.description': 'V4-Pro / V4-Flash 双旗舰推理模型，突破性成本。完全开源（MIT），以极具竞争力的价格提供前沿级性能。',
     'channel.preset.mimo.label': 'MiMo',
-    'channel.preset.mimo.description': 'Messages 原生透传、Codex Responses、Chat 渠道透传；内置按量与 token plan 入口。',
+    'channel.preset.mimo.description': '小米自研 AI 平台，面向 Agent 时代打造。旗舰 MiMo-V2.5-Pro 具备万亿参数与百万上下文窗口，赋能小米跨设备、车、家的智能生态。',
     'channel.preset.compshare.label': '优云智算套餐',
     'channel.preset.compshare.description': '优云智算是 UCloud 旗下 AI 云平台，提供高性价比国内 AI 模型 Agent Plan 套餐，支持包月订阅或按量付费（49 元/月起），同时提供官方海外模型稳定接入，支持 Claude Code、Codex 与 API 集成，具备企业级高并发、7×24 技术支持和自助开票能力；通过推广链接注册可领取 5 元平台试用金。',
     'channel.preset.runapi.label': 'RunAPI',
     'channel.preset.runapi.description': 'RunAPI 是高效稳定的API OpenRouter平替平台，一个 API Key 即可访问 OpenAI、Claude、Gemini、DeepSeek、Grok 等 150+ 主流模型，低至 1 折，极其稳定，可以无缝兼容 Claude Code、OpenClaw 等工具。RunAPI 为 CCX用户提供专属福利：注册联系管理员即可领取￥7的免费额度',
     'channel.preset.kimi.label': 'Kimi / Moonshot',
-    'channel.preset.kimi.description': 'Messages 原生透传、Codex Responses、Chat 渠道透传三种用法。',
+    'channel.preset.kimi.description': 'Moonshot AI 智能助手平台。旗舰 Kimi K2.6 支持原生多模态，以超长上下文和 Agent Swarm 能力著称。',
     'channel.preset.glm.label': 'GLM / BigModel',
-    'channel.preset.glm.description': 'Messages 原生透传、Codex Responses、Chat 渠道透传三种用法。',
+    'channel.preset.glm.description': '清华系智谱 AI MaaS 平台。旗舰 GLM-5.1 在编程领域达到前沿模型水平，港股上市，全栈华为昇腾芯片训练。',
     'channel.preset.minimax.label': 'MiniMax',
-    'channel.preset.minimax.description': 'Messages 原生透传、Codex Responses、Chat 渠道透传三种用法。',
+    'channel.preset.minimax.description': '全球多模态 AI 领导者（港股上市）。旗舰 M3 具备百万上下文、原生视觉与 Agent 能力；海螺视频/音频模型位居全球前列；超 70% 收入来自海外市场。',
     'channel.preset.dashscope.label': '阿里云 DashScope',
-    'channel.preset.dashscope.description': 'Messages 原生透传、Codex Responses、Chat 渠道透传三种用法。',
+    'channel.preset.dashscope.description': '阿里云一站式 LLM 平台，集成通义千问及第三方模型，全模态覆盖，提供按量、编程套餐与 Token Plan 选项。',
     'channel.preset.opencode-zen.label': 'OpenCode Zen',
     'channel.preset.opencode-zen.description': '按量付费精选模型网关，支持 Messages、Chat、Responses 三种协议。',
     'channel.preset.opencode-go.label': 'OpenCode Go',
@@ -1570,6 +1614,10 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.preset.kimi.plan.anthropic.description': 'Claude Messages 原生入口',
     'channel.preset.kimi.plan.openai-chat.label': 'OpenAI-compatible',
     'channel.preset.kimi.plan.openai-chat.description': 'Chat / Responses 通用入口',
+    'channel.preset.kimi.plan.coding-anthropic.label': 'Coding Plan (Anthropic)',
+    'channel.preset.kimi.plan.coding-anthropic.description': 'Coding Plan Claude Messages 原生入口',
+    'channel.preset.kimi.plan.coding-openai-chat.label': 'Coding Plan (OpenAI)',
+    'channel.preset.kimi.plan.coding-openai-chat.description': 'Coding Plan Chat / Responses 通用入口',
     // GLM plans
     'channel.preset.glm.plan.anthropic.label': 'Anthropic-compatible',
     'channel.preset.glm.plan.anthropic.description': 'Claude Messages 原生入口',
@@ -1616,6 +1664,10 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.preset.originrouter.plan.openai-chat.description': 'Chat / Responses 通用入口',
     'channel.preset.dashscope.plan.coding-openai-chat.label': 'Coding Plan (OpenAI)',
     'channel.preset.dashscope.plan.coding-openai-chat.description': 'Coding Plan Chat / Responses 通用入口',
+    'channel.preset.dashscope.plan.token-plan-anthropic.label': 'Token Plan (Anthropic)',
+    'channel.preset.dashscope.plan.token-plan-anthropic.description': 'Token Plan Claude Messages 原生入口',
+    'channel.preset.dashscope.plan.token-plan-openai-chat.label': 'Token Plan (OpenAI)',
+    'channel.preset.dashscope.plan.token-plan-openai-chat.description': 'Token Plan Chat / Responses 通用入口',
     // OpenCode Zen plans
     'channel.preset.opencode-zen.plan.anthropic.label': 'Anthropic-compatible',
     'channel.preset.opencode-zen.plan.anthropic.description': 'Claude Messages 原生入口',
@@ -1626,6 +1678,20 @@ export const messages: Record<SupportedLocale, Messages> = {
     'channel.preset.opencode-go.plan.anthropic.description': 'Claude Messages 原生入口',
     'channel.preset.opencode-go.plan.openai-chat.label': 'OpenAI-compatible',
     'channel.preset.opencode-go.plan.openai-chat.description': 'Chat / Responses 通用入口',
+    // ModelScope
+    'channel.preset.modelscope.label': 'ModelScope',
+    'channel.preset.modelscope.description': '阿里达摩院开源模型社区，涵盖文本、图像、语音等领域 10,000+ 模型，提供模型探索、推理与训练全链路支持。',
+    'channel.preset.modelscope.plan.anthropic.label': 'Anthropic-compatible',
+    'channel.preset.modelscope.plan.anthropic.description': 'Claude Messages 原生入口',
+    'channel.preset.modelscope.plan.openai-chat.label': 'OpenAI-compatible',
+    'channel.preset.modelscope.plan.openai-chat.description': 'Chat / Responses 通用入口',
+    // OpenRouter
+    'channel.preset.openrouter.label': 'OpenRouter',
+    'channel.preset.openrouter.description': '最大规模 AI 模型聚合平台，单个 API Key 即可访问数百款模型。OpenAI 兼容协议，内置安全治理与成本控制能力。',
+    'channel.preset.openrouter.plan.anthropic.label': 'Anthropic-compatible',
+    'channel.preset.openrouter.plan.anthropic.description': 'Claude Messages 原生入口',
+    'channel.preset.openrouter.plan.openai-chat.label': 'OpenAI-compatible',
+    'channel.preset.openrouter.plan.openai-chat.description': 'Chat / Responses 通用入口',
     // Targets (shared)
     'channel.target.messages.label': 'Claude Messages',
     'channel.target.messages.description': 'Claude 原生 Messages 协议，支持 Claude Code 直连或通过 CCX 代理',
