@@ -1,3 +1,26 @@
+## [v2.8.27] - 2026-06-10
+
+### 新增
+
+- **桌面端 MiniMax M3 渠道预设** - 新增 MiniMax M3 channel presets
+- **桌面端讯飞星辰 MAAS 直连支持** - 添加讯飞星辰 MAAS 桌面端 Agent 直连支持
+- **弹窗快捷键提示与确认交互** - 所有弹窗添加 ESC 取消与 Cmd/Ctrl+Enter 确认快捷键提示，提升操作效率
+
+### 修复
+
+- **Responses serviceType claude 路径认证修复** - serviceType claude 路径正确使用 x-api-key 认证头
+- **桌面端 OpenCode 讯飞星辰直连精确移除** - 仅移除 OpenCode 的讯飞星辰直连，保留 Claude/Codex 路径
+- **Fable reasoning 迁移补齐 model mapping** - migrate fable reasoning mapping with model mapping
+- **REWRITE_RESPONSE_MODEL 支持 Responses API** - Responses API 场景正确支持 REWRITE_RESPONSE_MODEL 重写
+
+### 重构
+
+- **统一 codex responses 预设 source key** - 统一 codex responses 预设 source key 为 codex/gpt/mini
+
+### 其他
+
+- **Responses provider 认证头 serviceType 分支测试** - 添加 Responses provider 认证头 serviceType 分支测试用例
+
 ## [v2.8.26] - 2026-06-10
 
 ### 新增
