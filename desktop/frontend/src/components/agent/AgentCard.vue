@@ -105,7 +105,7 @@ const codexKeyPlaceholder = computed(() => {
 // 支持快捷模式/插件模式切换的 provider 列表
 const codexHasMode = computed(() => {
   const p = props.selectedCodexProvider
-  return p === 'ccx' || p === 'dashscope' || p === 'runapi' || p === 'opencode-zen' || p === 'opencode-go'
+  return p === 'ccx' || p === 'dashscope' || p === 'runapi' || p === 'opencode-zen' || p === 'opencode-go' || p === 'xfyun'
 })
 
 const { t } = useLanguage()
@@ -245,6 +245,7 @@ const openFileInEditor = async (editorPath: string, filePath: string) => {
             <option value="runapi">{{ t('agent.provider.runapiDirect') }}</option>
             <option value="openrouter">{{ t('agent.provider.openrouterDirect') }}</option>
             <option value="dashscope">{{ t('agent.provider.dashscopeDirect') }}</option>
+            <option value="xfyun">{{ t('agent.provider.xfyunDirect') }}</option>
             <option value="opencode-zen">{{ t('agent.provider.opencodeZenDirect') }}</option>
             <option value="opencode-go">{{ t('agent.provider.opencodeGoDirect') }}</option>
           </select>
@@ -327,6 +328,7 @@ const openFileInEditor = async (editorPath: string, filePath: string) => {
             <option value="minimax">{{ t('agent.provider.minimaxDirect') }}</option>
             <option value="openrouter">{{ t('agent.provider.openrouterDirect') }}</option>
             <option value="modelscope">{{ t('agent.provider.modelscopeDirect') }}</option>
+            <option value="xfyun">{{ t('agent.provider.xfyunDirect') }}</option>
             <option value="opencode-zen">{{ t('agent.provider.opencodeZenDirect') }}</option>
             <option value="opencode-go">{{ t('agent.provider.opencodeGoDirect') }}</option>
           </select>

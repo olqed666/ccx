@@ -320,6 +320,7 @@ export type MessageKey =
   | 'agent.provider.openaiDirect'
   | 'agent.provider.openrouterDirect'
   | 'agent.provider.modelscopeDirect'
+  | 'agent.provider.xfyunDirect'
   | 'agent.hasOwnApiKey'
   | 'agent.promo'
   | 'agent.planPayAsYouGo'
@@ -1057,6 +1058,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.provider.openaiDirect': 'OpenAI direct',
     'agent.provider.openrouterDirect': 'OpenRouter direct',
     'agent.provider.modelscopeDirect': 'ModelScope direct',
+    'agent.provider.xfyunDirect': 'iFlytek Xinghuo MAAS direct',
     'agent.hasOwnApiKey': 'I have my own API key',
     'agent.promo': 'Register via promotion link to claim the exclusive perk',
     'agent.planPayAsYouGo': 'Pay-as-you-go',
@@ -1791,6 +1793,7 @@ export const messages: Record<SupportedLocale, Messages> = {
     'agent.provider.openaiDirect': 'OpenAI 直连',
     'agent.provider.openrouterDirect': 'OpenRouter 直连',
     'agent.provider.modelscopeDirect': 'ModelScope 直连',
+    'agent.provider.xfyunDirect': '讯飞星辰直连',
     'agent.hasOwnApiKey': '我有自己的 API Key',
     'agent.promo': '通过推广链接注册领取专属福利',
     'agent.planPayAsYouGo': '按量',

@@ -18,6 +18,7 @@ export const providerConsoleLinks: Record<string, string> = {
   openrouter: 'https://openrouter.ai/keys',
   modelscope: 'https://modelscope.cn/my/myaccesstoken',
   openai: 'https://platform.openai.com',
+  xfyun: 'https://console.xfyun.cn/',
 }
 
 export const providerPromotionLinks: Record<string, string> = {

@@ -39,6 +39,7 @@ const claudeProviderLabels: Record<AgentProvider | 'custom', string> = {
   'opencode-zen': 'OpenCode Zen',
   'opencode-go': 'OpenCode Go',
   openai: 'OpenAI',
+  xfyun: '讯飞星辰',
   custom: t('agent.custom'),
 }
 
@@ -62,6 +63,7 @@ const codexProviderLabels = computed<Record<AgentProvider | 'custom', string>>((
   modelscope: 'ModelScope',
   'opencode-zen': 'OpenCode Zen',
   'opencode-go': 'OpenCode Go',
+  xfyun: '讯飞星辰',
   custom: t('agent.custom'),
 }))
 
@@ -95,6 +97,7 @@ const claudeProviderKeys = ref<Record<AgentProvider, string>>({
   'opencode-zen': '',
   'opencode-go': '',
   openai: '',
+  xfyun: '',
 })
 const savedProviderKeys = ref<Record<string, string>>({})
 const codexOpenAIKey = ref('')
@@ -121,12 +124,12 @@ const migrateResult = ref<MigrateCodexSessionsResult | null>(null)
 const migrateError = ref('')
 
 const isClaudeProvider = (value?: string): value is AgentProvider => {
-  return value === 'ccx' || value === 'deepseek' || value === 'mimo' || value === 'compshare' || value === 'runapi' || value === 'tencent-lkeap' || value === 'kimi' || value === 'glm' || value === 'minimax' || value === 'dashscope' || value === 'openrouter' || value === 'modelscope' || value === 'opencode-zen' || value === 'opencode-go'
+  return value === 'ccx' || value === 'deepseek' || value === 'mimo' || value === 'compshare' || value === 'runapi' || value === 'tencent-lkeap' || value === 'kimi' || value === 'glm' || value === 'minimax' || value === 'dashscope' || value === 'openrouter' || value === 'modelscope' || value === 'opencode-zen' || value === 'opencode-go' || value === 'xfyun'
 }
 
 // Codex 支持快捷模式/插件模式切换的第三方 provider
 const isCodexThirdPartyWithMode = (provider?: string) => {
-  return provider === 'dashscope' || provider === 'runapi' || provider === 'opencode-zen' || provider === 'opencode-go'
+  return provider === 'dashscope' || provider === 'runapi' || provider === 'opencode-zen' || provider === 'opencode-go' || provider === 'xfyun'
 }
 
 const claudeProviderLabel = (value?: string) => {
@@ -172,6 +175,8 @@ const claudeTargetBaseUrl = () => {
       return 'https://opencode.ai/zen'
     case 'opencode-go':
       return 'https://opencode.ai/zen/go'
+    case 'xfyun':
+      return 'https://maas-api.cn-huabei-1.xf-yun.com/anthropic'
     default:
       return ''
   }
@@ -193,6 +198,8 @@ const codexTargetBaseUrl = () => {
       return 'https://opencode.ai/zen/v1'
     case 'opencode-go':
       return 'https://opencode.ai/zen/go/v1'
+    case 'xfyun':
+      return 'https://maas-api.cn-huabei-1.xf-yun.com/v2'
     default:
       return ''
   }
@@ -220,6 +227,8 @@ const openCodeTargetBaseUrl = () => {
       return 'https://opencode.ai/zen/v1'
     case 'opencode-go':
       return 'https://opencode.ai/zen/go/v1'
+    case 'xfyun':
+      return 'https://maas-api.cn-huabei-1.xf-yun.com/v2'
     default:
       return ''
   }

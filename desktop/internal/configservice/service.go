@@ -33,6 +33,7 @@ const (
 	ProviderOpenCodeGo  = "opencode-go"
 	ProviderCustom      = "custom"
 	ProviderOpenAI      = "openai"
+	ProviderXFyun       = "xfyun"
 
 	deepSeekClaudeBaseURL            = "https://api.deepseek.com/anthropic"
 	defaultMiMoBaseURL               = "https://api.xiaomimimo.com/anthropic"
@@ -45,6 +46,8 @@ const (
 	dashScopeCodingPlanClaudeBaseURL = "https://coding.dashscope.aliyuncs.com/apps/anthropic"
 	openCodeZenClaudeBaseURL         = "https://opencode.ai/zen"
 	openCodeGoClaudeBaseURL          = "https://opencode.ai/zen/go"
+	xfyunClaudeBaseURL               = "https://maas-api.cn-huabei-1.xf-yun.com/anthropic"
+	xfyunCodexBaseURL                = "https://maas-api.cn-huabei-1.xf-yun.com/v2"
 	stateVersion                     = 1
 
 	openCodeZenBaseURL = "https://opencode.ai/zen/v1"
@@ -244,7 +247,7 @@ func (s *Service) GetSavedProviderKeys() map[string]string {
 		planID := asset.PlanID
 		keys["channel:"+provider] = asset.APIKey
 		switch provider {
-		case ProviderDeepSeek, ProviderMiMo, ProviderCompshare, ProviderRunAPI:
+		case ProviderDeepSeek, ProviderMiMo, ProviderCompshare, ProviderRunAPI, ProviderXFyun:
 			if planID != "" {
 				keys[PlatformClaude+":"+provider+":"+planID] = asset.APIKey
 			}
@@ -303,7 +306,7 @@ func (s *Service) SaveProviderKeyAsset(asset ProviderKeyAsset) error {
 	store.Assets[assetKey] = asset
 	store.Keys["channel:"+provider] = key
 	switch provider {
-	case ProviderDeepSeek, ProviderMiMo, ProviderCompshare, ProviderRunAPI:
+	case ProviderDeepSeek, ProviderMiMo, ProviderCompshare, ProviderRunAPI, ProviderXFyun:
 		store.Keys[PlatformClaude+":"+provider] = key
 	case ProviderOpenAI:
 		store.Keys[PlatformCodex+":"+provider] = key
@@ -344,7 +347,7 @@ func (s *Service) getClaudeStatus(port int) (AgentConfigStatus, error) {
 	status.CurrentBaseURL = baseURL
 	status.Provider = detectClaudeProvider(baseURL)
 	status.MatchesCurrentPort = baseURL == target
-	status.Configured = status.MatchesCurrentPort || status.Provider == ProviderDeepSeek || status.Provider == ProviderMiMo || status.Provider == ProviderCompshare || status.Provider == ProviderRunAPI
+	status.Configured = status.MatchesCurrentPort || status.Provider == ProviderDeepSeek || status.Provider == ProviderMiMo || status.Provider == ProviderCompshare || status.Provider == ProviderRunAPI || status.Provider == ProviderXFyun
 	status.NeedsUpdate = baseURL != "" && isLocalBaseURL(baseURL) && !status.MatchesCurrentPort
 	return status, nil
 }
@@ -824,6 +827,8 @@ func codexResponsesBaseURL(provider string) (string, bool) {
 		return "https://opencode.ai/zen/v1", true
 	case ProviderOpenCodeGo:
 		return "https://opencode.ai/zen/go/v1", true
+	case ProviderXFyun:
+		return xfyunCodexBaseURL, true
 	default:
 		return "", false
 	}
@@ -905,6 +910,8 @@ func codexThirdPartyQuickBaseURL(baseURL string) (string, bool) {
 		return ProviderOpenCodeGo, true
 	case strings.Contains(baseURL, "opencode.ai/zen"):
 		return ProviderOpenCodeZen, true
+	case strings.Contains(baseURL, "maas-api.cn-huabei-1.xf-yun.com") || strings.Contains(baseURL, "xfyun.com"):
+		return ProviderXFyun, true
 	default:
 		return "", false
 	}
@@ -1043,7 +1050,7 @@ func resolveCodexSessionModelProvider(req MigrateCodexSessionsRequest) (string, 
 			return ProviderCCX, nil
 		}
 		return ProviderOpenAI, nil
-	case ProviderDashScope, ProviderRunAPI, ProviderOpenCodeZen, ProviderOpenCodeGo:
+	case ProviderDashScope, ProviderRunAPI, ProviderOpenCodeZen, ProviderOpenCodeGo, ProviderXFyun:
 		if mode == "plugin" {
 			return provider, nil
 		}
@@ -1387,6 +1394,8 @@ func normalizeClaudeProvider(provider string) string {
 		return ProviderOpenCodeZen
 	case ProviderOpenCodeGo:
 		return ProviderOpenCodeGo
+	case ProviderXFyun:
+		return ProviderXFyun
 	default:
 		return provider
 	}
@@ -1406,13 +1415,15 @@ func normalizeCodexProvider(provider string) string {
 		return ProviderOpenCodeZen
 	case ProviderOpenCodeGo:
 		return ProviderOpenCodeGo
+	case ProviderXFyun:
+		return ProviderXFyun
 	default:
 		return ProviderCustom
 	}
 }
 
 func isCodexThirdPartyProvider(provider string) bool {
-	return provider == ProviderDashScope || provider == ProviderRunAPI || provider == ProviderOpenCodeZen || provider == ProviderOpenCodeGo
+	return provider == ProviderDashScope || provider == ProviderRunAPI || provider == ProviderOpenCodeZen || provider == ProviderOpenCodeGo || provider == ProviderXFyun
 }
 
 func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey string) (string, string, string, error) {
@@ -1518,6 +1529,12 @@ func resolveClaudeProvider(req ApplyAgentConfigRequest, port int, accessKey stri
 			return "", "", "", fmt.Errorf("OpenCode Go API Key 不能为空")
 		}
 		return openCodeGoClaudeBaseURL, apiKey, "", nil
+	case ProviderXFyun:
+		apiKey := strings.TrimSpace(req.APIKey)
+		if apiKey == "" {
+			return "", "", "", fmt.Errorf("讯飞星辰 API Key 不能为空")
+		}
+		return xfyunClaudeBaseURL, apiKey, "", nil
 	default:
 		return "", "", "", fmt.Errorf("不支持的 Claude Code provider: %s", provider)
 	}
@@ -1550,6 +1567,8 @@ func detectClaudeProvider(baseURL string) string {
 		return ProviderOpenCodeGo
 	case strings.Contains(value, "opencode.ai/zen"):
 		return ProviderOpenCodeZen
+	case strings.Contains(value, "maas-api.cn-huabei-1.xf-yun.com") || strings.Contains(value, "xfyun.com"):
+		return ProviderXFyun
 	default:
 		return ProviderCustom
 	}
@@ -2495,6 +2514,8 @@ func normalizeOpenCodeProvider(provider string) string {
 		return ProviderOpenCodeZen
 	case ProviderOpenCodeGo:
 		return ProviderOpenCodeGo
+	case ProviderXFyun:
+		return ProviderXFyun
 	default:
 		return provider
 	}
@@ -2502,7 +2523,7 @@ func normalizeOpenCodeProvider(provider string) string {
 
 func isOpenCodeDirectProvider(provider string) bool {
 	switch provider {
-	case ProviderDeepSeek, ProviderMiMo, ProviderCompshare, ProviderRunAPI, ProviderKimi, ProviderGLM, ProviderMiniMax, ProviderDashScope, ProviderOpenCodeZen, ProviderOpenCodeGo:
+	case ProviderDeepSeek, ProviderMiMo, ProviderCompshare, ProviderRunAPI, ProviderKimi, ProviderGLM, ProviderMiniMax, ProviderDashScope, ProviderOpenCodeZen, ProviderOpenCodeGo, ProviderXFyun:
 		return true
 	default:
 		return false
@@ -2531,6 +2552,8 @@ func openCodeDirectBaseURL(provider string) (string, bool) {
 		return openCodeZenBaseURL, true
 	case ProviderOpenCodeGo:
 		return openCodeGoBaseURL, true
+	case ProviderXFyun:
+		return xfyunCodexBaseURL, true
 	default:
 		return "", false
 	}
@@ -2558,6 +2581,8 @@ func openCodeDirectLabel(provider string) string {
 		return "OpenCode Zen"
 	case ProviderOpenCodeGo:
 		return "OpenCode Go"
+	case ProviderXFyun:
+		return "讯飞星辰"
 	default:
 		return provider
 	}
