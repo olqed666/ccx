@@ -42,9 +42,17 @@ OpenRouter `:free` 变体模型被路由到受限 provider 池，这些 provider
 2. 错误识别与降级提示：识别 OpenRouter tool_use 404 错误，返回友好中文提示
 3. Prompt-based 降级回退（不建议：实现复杂且可靠性差）
 
-## [ ] 火山 coding plan 模型列表与功能 Bug (#204)
+## [x] 火山 coding plan 模型列表与功能 Bug (#204)
 
 火山引擎（Volcano/Ark）的 coding plan 渠道一直有问题：模型列表不正确，存在 bug。需要排查火山 coding plan 渠道的模型映射、预设配置与上游 API 的对齐情况。
+
+**关键提交：**
+- `5f470512` fix(preset): 火山方舟 Coding Plan 渠道补充模型映射与特性配置 (#204)
+- `8abacd11` fix(preset): 千帆 Coding Plan 渠道补充模型映射与特性配置
+
+**关键变更：**
+- `desktop/internal/channelpreset/preset.go`
+- `desktop/internal/channelpreset/preset_test.go`
 
 ## [ ] 磁铁图标背景不透明 + 黄色光圈
 
