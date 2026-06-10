@@ -3271,11 +3271,21 @@ watch(
   }
 )
 
-// ESC键监听
+// ESC键监听 & Cmd/Ctrl+Enter 确认
 const handleKeydown = (event: Event) => {
   const keyboardEvent = event as KeyboardEvent
-  if (keyboardEvent.key === 'Escape' && props.show) {
+  if (!props.show) return
+
+  if (keyboardEvent.key === 'Escape') {
+    keyboardEvent.preventDefault()
     handleCancel()
+    return
+  }
+
+  // Cmd/Ctrl+Enter 确认提交
+  if (keyboardEvent.key === 'Enter' && (keyboardEvent.metaKey || keyboardEvent.ctrlKey) && !keyboardEvent.shiftKey) {
+    keyboardEvent.preventDefault()
+    handleSubmit()
   }
 }
 
