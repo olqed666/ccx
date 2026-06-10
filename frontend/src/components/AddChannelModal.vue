@@ -285,6 +285,15 @@
                     >
                       DeepSeek
                     </v-btn>
+                    <v-btn
+                      size="small"
+                      variant="tonal"
+                      color="secondary"
+                      prepend-icon="mdi-lightning-bolt"
+                      @click="applyClaudeChannelPreset('minimax')"
+                    >
+                      MiniMax
+                    </v-btn>
                   </div>
 
                   <div v-if="showCodexResponsesChannelPresets" class="d-flex align-center flex-wrap ga-2 mb-4">
@@ -306,6 +315,15 @@
                       @click="applyCodexResponsesChannelPreset('deepseek')"
                     >
                       DeepSeek
+                    </v-btn>
+                    <v-btn
+                      size="small"
+                      variant="tonal"
+                      color="secondary"
+                      prepend-icon="mdi-lightning-bolt"
+                      @click="applyCodexResponsesChannelPreset('minimax')"
+                    >
+                      MiniMax
                     </v-btn>
                   </div>
 
@@ -1878,7 +1896,7 @@ const showClaudeChannelPresets = computed(() => {
 })
 
 const claudeChannelPresets: Record<
-  'mimo' | 'deepseek',
+  'mimo' | 'deepseek' | 'minimax',
   {
     passbackReasoningContent: boolean
     passbackThinkingBlocks: boolean
@@ -1922,6 +1940,22 @@ const claudeChannelPresets: Record<
       opus: 'deepseek-v4-pro',
       sonnet: 'deepseek-v4-pro'
     }
+  },
+  minimax: {
+    passbackReasoningContent: true,
+    passbackThinkingBlocks: false,
+    stripEmptyTextBlocks: false,
+    normalizeSystemRoleToTopLevel: false,
+    stripImageGenerationTool: false,
+    noVision: true,
+    noVisionModels: [],
+    visionFallbackModel: '',
+    modelMapping: {
+      fable: 'MiniMax-M3',
+      haiku: 'MiniMax-M2.7',
+      opus: 'MiniMax-M3',
+      sonnet: 'MiniMax-M3'
+    }
   }
 }
 
@@ -1946,7 +1980,7 @@ const showCodexResponsesChannelPresets = computed(() => {
 })
 
 const codexResponsesChannelPresets: Record<
-  'mimo' | 'deepseek',
+  'mimo' | 'deepseek' | 'minimax',
   {
     modelMapping: Record<string, string>
     reasoningMapping: Record<string, 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'>
@@ -1989,6 +2023,23 @@ const codexResponsesChannelPresets: Record<
     reasoningParamStyle: 'reasoning',
     codexNativeToolPassthrough: true,
     codexToolCompat: false,
+    stripCodexClientTools: false,
+    stripImageGenerationTool: false,
+    normalizeNonstandardChatRoles: true,
+    noVision: true,
+    noVisionModels: [],
+    visionFallbackModel: ''
+  },
+  minimax: {
+    modelMapping: {
+      codex: 'MiniMax-M2.7',
+      gpt: 'MiniMax-M3',
+      mini: 'MiniMax-M2.7'
+    },
+    reasoningMapping: {},
+    reasoningParamStyle: 'reasoning',
+    codexNativeToolPassthrough: false,
+    codexToolCompat: true,
     stripCodexClientTools: false,
     stripImageGenerationTool: false,
     normalizeNonstandardChatRoles: true,
@@ -2093,10 +2144,12 @@ const modelPriorityPatterns: RegExp[] = [
   // Moonshot Kimi / MiniMax（带版本号 → 通用简写）
   /kimi-?k2\.6/i,
   /kimi-?k2\.5/i,
+  /minimax-?m3/i,
   /minimax-?m2\.7/i,
   /minimax-?m2\.5/i,
   /k2\.6/i,
   /k2\.5/i,
+  /m3/i,
   /m2\.7/i,
   /m2\.5/i,
 

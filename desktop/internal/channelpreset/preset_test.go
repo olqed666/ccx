@@ -33,10 +33,10 @@ func TestBuildPayload(t *testing.T) {
 			wantVision:   true,
 			wantPassback: true,
 			wantModelMap: map[string]string{
-				"fable":   "deepseek-v4-pro",
-				"haiku":   "deepseek-v4-flash",
-				"opus":    "deepseek-v4-pro",
-				"sonnet":  "deepseek-v4-pro",
+				"fable":  "deepseek-v4-pro",
+				"haiku":  "deepseek-v4-flash",
+				"opus":   "deepseek-v4-pro",
+				"sonnet": "deepseek-v4-pro",
 			},
 		},
 		{
@@ -68,10 +68,10 @@ func TestBuildPayload(t *testing.T) {
 			wantService:  "claude",
 			wantPassback: true,
 			wantModelMap: map[string]string{
-				"fable":   "mimo-v2.5-pro",
-				"haiku":   "mimo-v2.5-pro",
-				"opus":    "mimo-v2.5-pro",
-				"sonnet":  "mimo-v2.5-pro",
+				"fable":  "mimo-v2.5-pro",
+				"haiku":  "mimo-v2.5-pro",
+				"opus":   "mimo-v2.5-pro",
+				"sonnet": "mimo-v2.5-pro",
 			},
 			wantNoVisionModels: []string{"mimo-v2.5-pro"},
 			wantFallback:       "mimo-v2.5",
@@ -83,10 +83,10 @@ func TestBuildPayload(t *testing.T) {
 			wantService:  "claude",
 			wantPassback: true,
 			wantModelMap: map[string]string{
-				"fable":   "mimo-v2.5-pro",
-				"haiku":   "mimo-v2.5-pro",
-				"opus":    "mimo-v2.5-pro",
-				"sonnet":  "mimo-v2.5-pro",
+				"fable":  "mimo-v2.5-pro",
+				"haiku":  "mimo-v2.5-pro",
+				"opus":   "mimo-v2.5-pro",
+				"sonnet": "mimo-v2.5-pro",
 			},
 			wantNoVisionModels: []string{"mimo-v2.5-pro"},
 			wantFallback:       "mimo-v2.5",
@@ -120,10 +120,10 @@ func TestBuildPayload(t *testing.T) {
 			wantVision:   false,
 			wantPassback: true,
 			wantModelMap: map[string]string{
-				"fable":   "glm-5.1",
-				"haiku":   "deepseek-v4-flash",
-				"opus":    "glm-5.1",
-				"sonnet":  "glm-5.1",
+				"fable":  "glm-5.1",
+				"haiku":  "deepseek-v4-flash",
+				"opus":   "glm-5.1",
+				"sonnet": "glm-5.1",
 			},
 			wantNoVisionModels: []string{"deepseek-v4-flash"},
 			wantFallback:       "MiniMax-M2.7",
@@ -225,7 +225,7 @@ func TestBuildPayload(t *testing.T) {
 			wantCodex:      false,
 			wantStripCodex: false,
 			wantNativeTool: true,
-			wantModelMap:   map[string]string{"gpt-5": "MiniMax-M2.7", "codex-auto-review": "MiniMax-M2.7"},
+			wantModelMap:   map[string]string{"codex": "MiniMax-M2.7", "gpt": "MiniMax-M3", "mini": "MiniMax-M2.7"},
 			wantNormalize:  true,
 		},
 		{
@@ -469,8 +469,15 @@ func TestResponsesTargetMustIncludeCodexAutoReview(t *testing.T) {
 		if len(config.ModelMapping) == 0 {
 			continue
 		}
-		if _, found := config.ModelMapping["codex-auto-review"]; !found {
-			t.Fatalf("provider %q responses config missing codex-auto-review mapping", provider)
+		hasCodexReview := false
+		for key := range config.ModelMapping {
+			if key == "codex-auto-review" || key == "codex" {
+				hasCodexReview = true
+				break
+			}
+		}
+		if !hasCodexReview {
+			t.Fatalf("provider %q responses config missing codex-auto-review or codex mapping", provider)
 		}
 	}
 }

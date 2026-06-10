@@ -658,10 +658,10 @@ var channelTargetConfigs = map[string]map[string]channelTargetConfig{
 	TargetMessages: {
 		ProviderDeepSeek: {
 			ModelMapping: map[string]string{
-				"fable":   "deepseek-v4-pro",
-					"haiku":   "deepseek-v4-flash",
-					"opus":    "deepseek-v4-pro",
-					"sonnet":  "deepseek-v4-pro",
+				"fable":  "deepseek-v4-pro",
+				"haiku":  "deepseek-v4-flash",
+				"opus":   "deepseek-v4-pro",
+				"sonnet": "deepseek-v4-pro",
 			},
 			ReasoningParamStyle:      "reasoning",
 			PassbackReasoningContent: true,
@@ -670,10 +670,10 @@ var channelTargetConfigs = map[string]map[string]channelTargetConfig{
 		},
 		ProviderMiMo: {
 			ModelMapping: map[string]string{
-				"fable":   "mimo-v2.5-pro",
-					"haiku":   "mimo-v2.5-pro",
-					"opus":    "mimo-v2.5-pro",
-					"sonnet":  "mimo-v2.5-pro",
+				"fable":  "mimo-v2.5-pro",
+				"haiku":  "mimo-v2.5-pro",
+				"opus":   "mimo-v2.5-pro",
+				"sonnet": "mimo-v2.5-pro",
 			},
 			ReasoningParamStyle:      "reasoning",
 			PassbackReasoningContent: true,
@@ -683,10 +683,10 @@ var channelTargetConfigs = map[string]map[string]channelTargetConfig{
 		},
 		ProviderCompshare: {
 			ModelMapping: map[string]string{
-				"fable":   "glm-5.1",
-					"haiku":   "deepseek-v4-flash",
-					"opus":    "glm-5.1",
-					"sonnet":  "glm-5.1",
+				"fable":  "glm-5.1",
+				"haiku":  "deepseek-v4-flash",
+				"opus":   "glm-5.1",
+				"sonnet": "glm-5.1",
 			},
 			ReasoningParamStyle:      "reasoning",
 			PassbackReasoningContent: true,
@@ -696,59 +696,59 @@ var channelTargetConfigs = map[string]map[string]channelTargetConfig{
 		ProviderRunAPI: {},
 		ProviderKimi: {
 			ModelMapping: map[string]string{
-				"fable":   "kimi-k2.6",
-					"haiku":   "kimi-k2.6",
-					"opus":    "kimi-k2.6",
-					"sonnet":  "kimi-k2.6",
+				"fable":  "kimi-k2.6",
+				"haiku":  "kimi-k2.6",
+				"opus":   "kimi-k2.6",
+				"sonnet": "kimi-k2.6",
 			},
 		},
 		ProviderGLM: {
-				ModelMapping: map[string]string{
-					"fable":   "glm-5.1",
-					"haiku":   "glm-5.1",
-					"opus":    "glm-5.1",
-					"sonnet":  "glm-5.1",
+			ModelMapping: map[string]string{
+				"fable":  "glm-5.1",
+				"haiku":  "glm-5.1",
+				"opus":   "glm-5.1",
+				"sonnet": "glm-5.1",
 			},
 		},
 		ProviderMiniMax: {
-				ModelMapping: map[string]string{
-					"fable":   "MiniMax-M2.7",
-					"haiku":   "MiniMax-M2.7",
-					"opus":    "MiniMax-M2.7",
-					"sonnet":  "MiniMax-M2.7",
+			ModelMapping: map[string]string{
+				"fable":  "MiniMax-M3",
+				"haiku":  "MiniMax-M2.7",
+				"opus":   "MiniMax-M3",
+				"sonnet": "MiniMax-M3",
 			},
 			PassbackReasoningContent: true,
 		},
 		ProviderDashScope: {
-				ModelMapping: map[string]string{
-					"fable":   "glm-5.1",
-					"haiku":   "glm-5.1",
-					"opus":    "glm-5.1",
-					"sonnet":  "glm-5.1",
+			ModelMapping: map[string]string{
+				"fable":  "glm-5.1",
+				"haiku":  "glm-5.1",
+				"opus":   "glm-5.1",
+				"sonnet": "glm-5.1",
 			},
 		},
 		ProviderOpenCodeZen: {
-				ModelMapping: map[string]string{
-					"fable":   "glm-5.1",
-					"haiku":   "glm-5.1",
-					"opus":    "glm-5.1",
-					"sonnet":  "glm-5.1",
+			ModelMapping: map[string]string{
+				"fable":  "glm-5.1",
+				"haiku":  "glm-5.1",
+				"opus":   "glm-5.1",
+				"sonnet": "glm-5.1",
 			},
 		},
 		ProviderOpenCodeGo: {
-				ModelMapping: map[string]string{
-					"fable":   "glm-5.1",
-					"haiku":   "glm-5.1",
-					"opus":    "glm-5.1",
-					"sonnet":  "glm-5.1",
+			ModelMapping: map[string]string{
+				"fable":  "glm-5.1",
+				"haiku":  "glm-5.1",
+				"opus":   "glm-5.1",
+				"sonnet": "glm-5.1",
 			},
 		},
 		ProviderModelScope: {
 			ModelMapping: map[string]string{
-				"fable":   "ZhipuAI/GLM-5.1",
-					"haiku":   "deepseek-ai/DeepSeek-V4-Flash",
-					"sonnet":  "ZhipuAI/GLM-5.1",
-					"opus":    "ZhipuAI/GLM-5.1",
+				"fable":  "ZhipuAI/GLM-5.1",
+				"haiku":  "deepseek-ai/DeepSeek-V4-Flash",
+				"sonnet": "ZhipuAI/GLM-5.1",
+				"opus":   "ZhipuAI/GLM-5.1",
 			},
 			NoVisionModels:      []string{"deepseek-ai/DeepSeek-V4-Flash"},
 			VisionFallbackModel: "MiniMax/MiniMax-M2.7",
@@ -770,8 +770,8 @@ var channelTargetConfigs = map[string]map[string]channelTargetConfig{
 			NoVisionModels:      []string{"deepseek-v4-flash"},
 			VisionFallbackModel: "MiniMax-M2.7",
 		},
-		ProviderRunAPI:      {},
-		ProviderOpenRouter:  {},
+		ProviderRunAPI:     {},
+		ProviderOpenRouter: {},
 		ProviderModelScope: {
 			NormalizeNonstandardChatRoles: true,
 		},
@@ -823,7 +823,7 @@ var channelTargetConfigs = map[string]map[string]channelTargetConfig{
 			StripCodexClientTools: boolRef(false),
 		},
 		ProviderMiniMax: {
-			ModelMapping:                  map[string]string{"gpt-5": "MiniMax-M2.7", "codex-auto-review": "MiniMax-M2.7"},
+			ModelMapping:                  map[string]string{"codex": "MiniMax-M2.7", "gpt": "MiniMax-M3", "mini": "MiniMax-M2.7"},
 			CodexToolCompat:               boolRef(false),
 			StripCodexClientTools:         boolRef(false),
 			CodexNativeToolPassthrough:    true,

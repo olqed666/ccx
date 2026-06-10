@@ -674,6 +674,21 @@ const claudeChannelPresets: Record<string, {
     noVisionModels: [],
     visionFallbackModel: '',
   },
+  minimax: {
+    mapping: [
+      { source: 'fable', target: 'MiniMax-M3' },
+      { source: 'opus', target: 'MiniMax-M3' },
+      { source: 'sonnet', target: 'MiniMax-M3' },
+      { source: 'haiku', target: 'MiniMax-M2.7' },
+    ],
+    passbackReasoningContent: true,
+    passbackThinkingBlocks: false,
+    stripEmptyTextBlocks: false,
+    normalizeSystemRoleToTopLevel: false,
+    noVision: true,
+    noVisionModels: [],
+    visionFallbackModel: '',
+  },
 }
 
 const codexResponsesPresets: Record<string, {
@@ -737,8 +752,9 @@ const codexResponsesPresets: Record<string, {
   },
   minimax: {
     mapping: [
-      { source: 'gpt-5', target: 'MiniMax-M2.7' },
-      { source: 'codex-auto-review', target: 'MiniMax-M2.7' },
+      { source: 'codex', target: 'MiniMax-M2.7' },
+      { source: 'gpt', target: 'MiniMax-M3' },
+      { source: 'mini', target: 'MiniMax-M2.7' },
     ],
     reasoningParamStyle: '',
     codexNativeToolPassthrough: true,
@@ -1370,11 +1386,13 @@ function buildCurrentPayload() {
                     </Button>
                     <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
                     <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('deepseek')"><Zap class="mr-1 h-3 w-3" />DeepSeek</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('minimax')"><Zap class="mr-1 h-3 w-3" />MiniMax</Button>
                   </div>
                   <div v-if="showClaudeChannelPresets" class="flex flex-wrap items-center gap-1.5">
                     <span class="text-[10px] text-muted-foreground">{{ tf('addChannel.oneClickSetup', '一键配置') }}</span>
                     <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
                     <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('deepseek')"><Zap class="mr-1 h-3 w-3" />DeepSeek</Button>
+                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('minimax')"><Zap class="mr-1 h-3 w-3" />MiniMax</Button>
                   </div>
                   <div v-if="showCodexResponsesPresets" class="flex flex-wrap items-center gap-1.5">
                     <span class="text-[10px] text-muted-foreground">{{ tf('addChannel.oneClickSetup', '一键配置') }}</span>
