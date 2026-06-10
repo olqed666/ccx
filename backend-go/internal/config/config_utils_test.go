@@ -94,6 +94,35 @@ func TestIsValidSupportedModelPattern(t *testing.T) {
 	}
 }
 
+func TestMigrateFableReasoningMapping(t *testing.T) {
+	cm := &ConfigManager{}
+	cm.config.Upstream = []UpstreamConfig{
+		{
+			Name: "demo",
+			ReasoningMapping: map[string]string{
+				"opus": "high",
+			},
+		},
+	}
+
+	if !cm.migrateFableReasoningMapping() {
+		t.Fatalf("expected migrateFableReasoningMapping to return true")
+	}
+
+	if got := cm.config.Upstream[0].ReasoningMapping["fable"]; got != "high" {
+		t.Fatalf("ReasoningMapping[fable] = %q, want high", got)
+	}
+
+	// 已有 fable 配置时不应覆盖
+	cm.config.Upstream[0].ReasoningMapping["fable"] = "medium"
+	if cm.migrateFableReasoningMapping() {
+		t.Fatalf("expected migrateFableReasoningMapping to return false when fable already exists")
+	}
+	if got := cm.config.Upstream[0].ReasoningMapping["fable"]; got != "medium" {
+		t.Fatalf("ReasoningMapping[fable] = %q, want medium", got)
+	}
+}
+
 func TestParseSupportedModelInput(t *testing.T) {
 	tests := []struct {
 		name string
