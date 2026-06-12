@@ -373,12 +373,75 @@
                                 </v-btn>
                               </template>
                             </v-tooltip>
+                            <v-tooltip text="编辑映射" location="top" :open-delay="150" content-class="key-tooltip">
+                              <template #activator="{ props: tip }">
+                                <v-btn
+                                  v-bind="tip"
+                                  size="small"
+                                  icon
+                                  variant="text"
+                                  @click="startEditMapping(source)"
+                                >
+                                  <v-icon size="small">mdi-pencil</v-icon>
+                                </v-btn>
+                              </template>
+                            </v-tooltip>
                             <v-btn size="small" color="error" icon variant="text" @click="removeModelMapping(source)">
                               <v-icon size="small" color="error">mdi-close</v-icon>
                             </v-btn>
                           </div>
                         </template>
                       </v-list-item>
+
+                      <!-- 编辑面板 -->
+                      <v-expand-transition>
+                        <div v-if="editingMapping === source" class="mb-2 pa-3" style="background: rgba(var(--v-theme-surface-variant), 0.5); border-radius: 12px;">
+                          <div class="d-flex flex-column ga-3">
+                            <v-combobox
+                              v-model="editMappingForm.targetModel"
+                              :items="targetModelOptions"
+                              label="目标模型"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                            />
+                            <v-select
+                              v-if="supportsOpenAIAdvancedOptions"
+                              v-model="editMappingForm.reasoning"
+                              :items="[
+                                { title: '无', value: '' },
+                                { title: 'Off', value: 'off' },
+                                { title: 'Low', value: 'low' },
+                                { title: 'Medium', value: 'medium' },
+                                { title: 'High', value: 'high' },
+                                { title: 'X-High', value: 'xhigh' }
+                              ]"
+                              label="Reasoning 级别"
+                              density="compact"
+                              variant="outlined"
+                              hide-details
+                            />
+                            <div class="d-flex ga-2 justify-end">
+                              <v-btn
+                                size="small"
+                                variant="text"
+                                @click="cancelEditMapping"
+                              >
+                                取消
+                              </v-btn>
+                              <v-btn
+                                size="small"
+                                color="primary"
+                                variant="flat"
+                                :disabled="!editMappingForm.targetModel"
+                                @click="saveEditMapping"
+                              >
+                                保存
+                              </v-btn>
+                            </div>
+                          </div>
+                        </div>
+                      </v-expand-transition>
                       </template>
                     </v-list>
                   </div>
@@ -2270,6 +2333,13 @@ const newMapping = reactive({
   reasoningEffort: '' as 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' | ''
 })
 
+// 模型映射编辑状态
+const editingMapping = ref<string | null>(null) // 当前正在编辑的 source pattern
+const editMappingForm = reactive({
+  targetModel: '',
+  reasoning: '' as '' | 'off' | 'low' | 'medium' | 'high' | 'xhigh'
+})
+
 // 自定义请求头输入
 const newHeaderKey = ref('')
 const newHeaderValue = ref('')
@@ -3016,6 +3086,77 @@ const removeModelMapping = (source: string) => {
   if (target) {
     const idx = form.noVisionModels.indexOf(target)
     if (idx >= 0) form.noVisionModels.splice(idx, 1)
+  }
+}
+
+// 开始编辑模型映射
+const startEditMapping = (source: string) => {
+  editingMapping.value = source
+  editMappingForm.targetModel = form.modelMapping[source] || ''
+  editMappingForm.reasoning = (form.reasoningMapping[source] || '') as '' | 'off' | 'low' | 'medium' | 'high' | 'xhigh'
+}
+
+// 取消编辑模型映射
+const cancelEditMapping = () => {
+  editingMapping.value = null
+  editMappingForm.targetModel = ''
+  editMappingForm.reasoning = ''
+}
+
+// 保存编辑的模型映射（调用后端 API）
+const saveEditMapping = async () => {
+  if (!editingMapping.value || !editMappingForm.targetModel) return
+
+  try {
+    const channelId = props.channel?.index
+    if (channelId === undefined) {
+      // 如果是新建渠道，直接更新本地状态
+      form.modelMapping[editingMapping.value] = editMappingForm.targetModel
+      if (editMappingForm.reasoning) {
+        form.reasoningMapping[editingMapping.value] = editMappingForm.reasoning
+      } else {
+        delete form.reasoningMapping[editingMapping.value]
+      }
+      cancelEditMapping()
+      return
+    }
+
+    // 编辑模式：调用后端 API
+    const apiService = new ApiService()
+    const updateMethod = {
+      messages: apiService.updateChannelModelMapping.bind(apiService),
+      responses: apiService.updateResponsesChannelModelMapping.bind(apiService),
+      chat: apiService.updateChatChannelModelMapping.bind(apiService),
+      gemini: apiService.updateGeminiChannelModelMapping.bind(apiService),
+      images: apiService.updateImagesChannelModelMapping.bind(apiService)
+    }[props.channelType]
+
+    if (!updateMethod) {
+      throw new Error('Unsupported channel type')
+    }
+
+    await updateMethod(
+      channelId,
+      editingMapping.value,
+      editMappingForm.targetModel,
+      editMappingForm.reasoning
+    )
+
+    // 更新本地状态
+    form.modelMapping[editingMapping.value] = editMappingForm.targetModel
+    if (editMappingForm.reasoning) {
+      form.reasoningMapping[editingMapping.value] = editMappingForm.reasoning
+    } else {
+      delete form.reasoningMapping[editingMapping.value]
+    }
+
+    cancelEditMapping()
+
+    // 触发刷新
+    emit('refresh')
+  } catch (error) {
+    console.error('Failed to update model mapping:', error)
+    alert(error instanceof Error ? error.message : 'Failed to update model mapping')
   }
 }
 
