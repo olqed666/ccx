@@ -2555,6 +2555,9 @@ const buildSubmitPayload = () => {
   if (isEditing.value && props.channel?.rateLimitRpm && !payload.rateLimitRpm) {
     payload.rateLimitRpm = 0
   }
+  if (isEditing.value && props.channel?.rateLimitWindowMinutes && !payload.rateLimitWindowMinutes) {
+    payload.rateLimitWindowMinutes = 0
+  }
   if (isEditing.value && props.channel?.rateLimitMaxConcurrent && !payload.rateLimitMaxConcurrent) {
     payload.rateLimitMaxConcurrent = 0
   }
