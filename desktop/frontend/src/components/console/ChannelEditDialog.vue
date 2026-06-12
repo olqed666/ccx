@@ -1400,7 +1400,7 @@ function buildCurrentPayload() {
                   </div>
                 </section>
 
-                <section class="space-y-4 overflow-hidden rounded-2xl border border-primary/15 bg-glass p-4 shadow-sm dark:bg-glass-dark lg:col-span-2">
+                <section class="space-y-4 overflow-visible rounded-2xl border border-primary/15 bg-glass p-4 shadow-sm dark:bg-glass-dark lg:col-span-2">
                   <div class="flex flex-wrap items-center justify-between gap-3">
                     <div class="space-y-1">
                       <h4 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
@@ -1482,7 +1482,7 @@ function buildCurrentPayload() {
                           <!-- 下拉建议列表 -->
                           <div 
                             v-if="showTargetSuggestions && activeTargetInputId === `row-${index}` && getFilteredTargetModels(targetInputFilter).length"
-                            class="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-auto rounded-lg border border-border/70 bg-card shadow-lg"
+                            class="absolute left-0 right-0 top-full z-[100] mt-1 max-h-48 overflow-auto rounded-lg border border-border/70 bg-card shadow-2xl"
                           >
                             <div
                               v-for="model in getFilteredTargetModels(targetInputFilter)"
@@ -1540,7 +1540,7 @@ function buildCurrentPayload() {
                         <!-- 下拉建议列表 -->
                         <div 
                           v-if="showTargetSuggestions && activeTargetInputId === 'new' && getFilteredTargetModels(targetInputFilter).length"
-                          class="absolute left-0 right-0 top-full z-50 mt-1 max-h-48 overflow-auto rounded-lg border border-primary/30 bg-card shadow-lg"
+                          class="absolute left-0 right-0 top-full z-[100] mt-1 max-h-48 overflow-auto rounded-lg border border-primary/30 bg-card shadow-2xl"
                         >
                           <div
                             v-for="model in getFilteredTargetModels(targetInputFilter)"
