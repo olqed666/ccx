@@ -622,6 +622,8 @@ export type MessageKey =
   | 'console.form.noVisionHint'
   | 'console.form.historicalImageTurnLimit'
   | 'console.form.historicalImageTurnLimitHint'
+  | 'console.form.compactModel'
+  | 'console.form.compactModelHint'
   | 'console.form.passbackReasoningHint'
   | 'console.form.passbackThinkingHint'
   | 'console.form.stripThoughtSignatureHint'
@@ -1385,6 +1387,8 @@ export const messages: Record<SupportedLocale, Messages> = {
     'console.form.noVisionHint': 'When enabled, requests containing images skip this channel and failover to the next one.',
     'console.form.historicalImageTurnLimit': 'Historical Image Turn Limit',
     'console.form.historicalImageTurnLimitHint': '0 = inherit global; backend applies a minimum of 3 for values > 0.',
+    'console.form.compactModel': 'Compact Model',
+    'console.form.compactModelHint': 'Upstream model name for local compact (compression/summary), bypassing model mapping. Only applies to non-Responses protocol channels (Claude/OpenAI/Gemini). Leave empty to use the original request model.',
     'console.form.passbackReasoningHint': 'Convert thinking blocks into reasoning_content for passback, compatible with Claude-protocol upstreams that expect OpenAI-style reasoning_content such as MiMo.',
     'console.form.passbackThinkingHint': 'Project real reasoning_content into Claude content[].thinking, compatible with strict thinking-mode upstreams such as DeepSeek/GLM.',
     'console.form.stripThoughtSignatureHint': 'Remove the thought_signature field from functionCall, compatible with older Gemini APIs that do not support it.',
@@ -2140,6 +2144,8 @@ export const messages: Record<SupportedLocale, Messages> = {
     'console.form.noVisionHint': '启用后，包含图片的请求将跳过此渠道并 failover 到下一个渠道',
     'console.form.historicalImageTurnLimit': '历史图片轮次限制',
     'console.form.historicalImageTurnLimitHint': '0 = 继承全局；后端会对 >0 的值应用最低 3 约束',
+    'console.form.compactModel': 'Compact 专用模型',
+    'console.form.compactModelHint': '本地 compact（压缩摘要）时使用的上游模型名，不经过模型映射。仅对非 Responses 协议渠道（Claude/OpenAI/Gemini）生效。留空则使用原始请求的模型。',
     'console.form.passbackReasoningHint': '将 thinking 块转为 reasoning_content 回传，兼容 mimo 等要求 OpenAI 风格 reasoning_content 的 Claude 协议上游',
     'console.form.passbackThinkingHint': '将真实 reasoning_content 投影为 Claude 的 content[].thinking，兼容 DeepSeek/GLM 等严格 thinking mode 上游',
     'console.form.stripThoughtSignatureHint': '移除 functionCall 的 thought_signature 字段，兼容不支持该字段的旧版 Gemini API',
