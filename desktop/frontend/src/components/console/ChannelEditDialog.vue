@@ -1367,104 +1367,128 @@ function buildCurrentPayload() {
                   </div>
                 </section>
 
-                <section class="space-y-3 border border-border bg-background/40 p-4 lg:col-span-2">
-                  <h4 class="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {{ tf('console.form.modelRedirect', '模型重定向') }}
-                  </h4>
+                <section class="space-y-4 overflow-hidden rounded-2xl border border-primary/15 bg-glass p-4 shadow-sm dark:bg-glass-dark lg:col-span-2">
+                  <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="space-y-1">
+                      <h4 class="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-foreground">
+                        <span class="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary))]"></span>
+                        {{ tf('console.form.modelRedirect', '模型重定向') }}
+                      </h4>
+                      <p class="text-[10px] leading-relaxed text-muted-foreground">
+                        source model → upstream model
+                      </p>
+                    </div>
+                    <Button v-if="channel" type="button" variant="ghost" size="sm" class="h-7 rounded-full border border-border/70 bg-background/45 px-3 text-[10px] hover:border-primary/30 hover:bg-primary/10" :disabled="fetchingModels" @click="fetchTargetModels">
+                      <Loader2 v-if="fetchingModels" class="mr-1 h-3 w-3 animate-spin" />
+                      {{ fetchingModels ? tf('console.form.fetchingModels', '拉取中...') : tf('console.form.fetchModels', '获取模型列表') }}
+                    </Button>
+                  </div>
 
                   <!-- 预设按钮 -->
-                  <div v-if="showModelMappingPresets" class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-[10px] text-muted-foreground">{{ tf('addChannel.oneClickSetup', '一键配置') }}</span>
-                    <Button v-for="name in Object.keys(modelMappingPresets)" :key="name" type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyModelMappingPreset(name)">
-                      <Zap class="mr-1 h-3 w-3" />
-                      {{ name }}
-                    </Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('deepseek')"><Zap class="mr-1 h-3 w-3" />DeepSeek</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('minimax')"><Zap class="mr-1 h-3 w-3" />MiniMax</Button>
-                  </div>
-                  <div v-if="showClaudeChannelPresets" class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-[10px] text-muted-foreground">{{ tf('addChannel.oneClickSetup', '一键配置') }}</span>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('deepseek')"><Zap class="mr-1 h-3 w-3" />DeepSeek</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyClaudePreset('minimax')"><Zap class="mr-1 h-3 w-3" />MiniMax</Button>
-                  </div>
-                  <div v-if="showCodexResponsesPresets" class="flex flex-wrap items-center gap-1.5">
-                    <span class="text-[10px] text-muted-foreground">{{ tf('addChannel.oneClickSetup', '一键配置') }}</span>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('mimo')"><Zap class="mr-1 h-3 w-3" />MiMo</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('deepseek')"><Zap class="mr-1 h-3 w-3" />DeepSeek</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('compshare')"><Zap class="mr-1 h-3 w-3" />Compshare</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('minimax')"><Zap class="mr-1 h-3 w-3" />MiniMax</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('dashscope')"><Zap class="mr-1 h-3 w-3" />DashScope</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('kimi')"><Zap class="mr-1 h-3 w-3" />Kimi</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('glm')"><Zap class="mr-1 h-3 w-3" />GLM</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('opencode-zen')"><Zap class="mr-1 h-3 w-3" />OpenCode Zen</Button>
-                    <Button type="button" variant="outline" size="sm" class="h-6 text-[10px]" @click="applyCodexResponsesPreset('opencode-go')"><Zap class="mr-1 h-3 w-3" />OpenCode Go</Button>
-                  </div>
-
-                  <!-- 结构化模型映射行 -->
-                  <div class="space-y-2">
-                    <div class="flex items-center justify-between">
-                      <Label>{{ tf('console.form.modelMapping', '模型映射') }}</Label>
-                      <Button v-if="channel" type="button" variant="ghost" size="sm" class="h-6 text-[10px]" :disabled="fetchingModels" @click="fetchTargetModels">
-                        <Loader2 v-if="fetchingModels" class="mr-1 h-3 w-3 animate-spin" />
-                        {{ fetchingModels ? tf('console.form.fetchingModels', '拉取中...') : tf('console.form.fetchModels', '获取模型列表') }}
-                      </Button>
+                  <div v-if="showModelMappingPresets || showClaudeChannelPresets || showCodexResponsesPresets" class="rounded-xl border border-border/60 bg-background/35 p-2.5">
+                    <div class="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                      <Zap class="h-3 w-3 text-primary" />
+                      {{ tf('addChannel.oneClickSetup', '一键配置') }}
                     </div>
-                    <p v-if="fetchedModelsError" class="text-[10px] text-destructive">{{ fetchedModelsError }}</p>
+                    <div v-if="showModelMappingPresets" class="flex flex-wrap items-center gap-1.5">
+                      <Button v-for="name in Object.keys(modelMappingPresets)" :key="name" type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyModelMappingPreset(name)">
+                        {{ name }}
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyClaudePreset('mimo')">MiMo</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyClaudePreset('deepseek')">DeepSeek</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyClaudePreset('minimax')">MiniMax</Button>
+                    </div>
+                    <div v-if="showClaudeChannelPresets" class="flex flex-wrap items-center gap-1.5">
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyClaudePreset('mimo')">MiMo</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyClaudePreset('deepseek')">DeepSeek</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyClaudePreset('minimax')">MiniMax</Button>
+                    </div>
+                    <div v-if="showCodexResponsesPresets" class="flex flex-wrap items-center gap-1.5">
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('mimo')">MiMo</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('deepseek')">DeepSeek</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('compshare')">Compshare</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('minimax')">MiniMax</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('dashscope')">DashScope</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('kimi')">Kimi</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('glm')">GLM</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('opencode-zen')">OpenCode Zen</Button>
+                      <Button type="button" variant="outline" size="sm" class="h-6 rounded-full border-border/70 bg-background/50 px-2.5 text-[10px] hover:border-primary/40 hover:bg-primary/10" @click="applyCodexResponsesPreset('opencode-go')">OpenCode Go</Button>
+                    </div>
+                  </div>
 
-                    <!-- 已配置的重定向 -->
-                    <div v-if="modelMappingRows.length" class="space-y-2">
-                      <div class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                        {{ tf('console.form.modelMappingExisting', '已配置') }} ({{ modelMappingRows.length }})
-                      </div>
-                      <div v-for="(row, index) in modelMappingRows" :key="row.id" class="flex items-center gap-2 border border-border bg-background/60 px-2 py-1.5 text-xs">
-                        <Input v-model="row.source" class="h-7 flex-1 font-mono text-xs" placeholder="source-model" :list="`source-models-${index}`" />
-                        <datalist :id="`source-models-${index}`"><option v-for="m in sourceModelOptions" :key="m" :value="m" /></datalist>
-                        <ArrowRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <Input v-model="row.target" class="h-7 flex-1 font-mono text-xs" placeholder="target-model" :list="`target-models-${index}`" @focus="handleTargetFocus" />
-                        <datalist :id="`target-models-${index}`">
-                          <option v-for="m in targetModelDatalist" :key="m" :value="m" />
-                        </datalist>
+                  <p v-if="fetchedModelsError" class="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-[10px] text-destructive">{{ fetchedModelsError }}</p>
+
+                  <!-- 已配置的重定向 -->
+                  <div v-if="modelMappingRows.length" class="space-y-2">
+                    <div class="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                      <span>{{ tf('console.form.modelMappingExisting', '已配置') }}</span>
+                      <span class="rounded-full border border-border/60 bg-background/45 px-2 py-0.5 font-mono">{{ modelMappingRows.length }}</span>
+                    </div>
+                    <div class="space-y-2">
+                      <div v-for="(row, index) in modelMappingRows" :key="row.id" class="group grid grid-cols-[minmax(110px,0.58fr)_auto_minmax(0,1.42fr)_auto_auto_auto] items-center gap-2 rounded-xl border border-border/65 bg-background/45 p-2.5 text-xs shadow-sm transition-all hover:border-primary/30 hover:bg-background/65">
+                        <div class="min-w-0 rounded-lg border border-border/55 bg-secondary/40 px-3 py-2">
+                          <div class="mb-1 text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">SOURCE</div>
+                          <div class="truncate font-mono text-[11px] text-foreground" :title="row.source">{{ row.source || 'source-model' }}</div>
+                        </div>
+                        <div class="flex justify-center text-muted-foreground">
+                          <span class="flex h-7 w-7 items-center justify-center rounded-full border border-primary/20 bg-primary/10 text-primary transition-colors group-hover:border-primary/40 group-hover:bg-primary/15">
+                            <ArrowRight class="h-3.5 w-3.5" />
+                          </span>
+                        </div>
+                        <div class="min-w-0 space-y-1">
+                          <div class="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">TARGET</div>
+                          <Input v-model="row.target" class="h-8 rounded-lg border-border/70 bg-background/65 font-mono text-xs focus-visible:border-primary/50 focus-visible:ring-primary/20" placeholder="target-model" :list="`target-models-${index}`" @focus="handleTargetFocus" />
+                          <datalist :id="`target-models-${index}`">
+                            <option v-for="m in targetModelDatalist" :key="m" :value="m" />
+                          </datalist>
+                        </div>
                         <Select v-if="supportsOpenAIAdvanced" :model-value="toSelectValue(row.reasoning)" @update:model-value="row.reasoning = fromSelectValue($event) as ReasoningEffort | ''">
-                          <SelectTrigger class="h-7 w-28 text-xs"><SelectValue :placeholder="tf('console.form.reasoningEffort', '思考强度')" /></SelectTrigger>
+                          <SelectTrigger class="h-8 rounded-lg border-border/70 bg-background/55 text-xs"><SelectValue :placeholder="tf('console.form.reasoningEffort', '思考强度')" /></SelectTrigger>
                           <SelectContent>
                             <SelectItem v-for="opt in reasoningEffortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
                           </SelectContent>
                         </Select>
-                        <Button type="button" size="icon-sm" variant="ghost" :class="row.noVision ? 'text-amber-500' : 'text-muted-foreground'" :title="tf('console.form.noVision', '禁用视觉')" @click="row.noVision = !row.noVision">
+                        <Button type="button" size="icon-sm" variant="ghost" class="h-8 w-8 rounded-full border border-border/50 bg-background/35 hover:border-amber-500/40 hover:bg-amber-500/10" :class="row.noVision ? 'text-amber-500' : 'text-muted-foreground'" :title="tf('console.form.noVision', '禁用视觉')" @click="row.noVision = !row.noVision">
                           <EyeOff v-if="row.noVision" class="h-3.5 w-3.5" />
                           <Eye v-else class="h-3.5 w-3.5" />
                         </Button>
-                        <Button type="button" size="icon-sm" variant="ghost" class="text-destructive" @click="removeModelMappingRow(index)">
+                        <Button type="button" size="icon-sm" variant="ghost" class="h-8 w-8 rounded-full border border-border/50 bg-background/35 text-muted-foreground hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive" @click="removeModelMappingRow(index)">
                           <Trash2 class="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
+                  </div>
 
-                    <!-- 添加新重定向 -->
-                    <div class="space-y-2 border-t border-dashed border-border pt-3">
-                      <div class="text-[10px] font-bold uppercase tracking-wider text-primary">
-                        {{ tf('console.form.modelMappingAdd', '添加新重定向') }}
-                      </div>
-                      <div class="flex items-center gap-2 border border-primary/30 bg-primary/5 px-2 py-1.5 text-xs">
-                        <Input v-model="newModelMapping.source" class="h-7 flex-1 font-mono text-xs" placeholder="source" list="source-models-new" @keydown.enter.prevent="addModelMappingRow" />
+                  <!-- 添加新重定向 -->
+                  <div class="space-y-2 rounded-xl border border-dashed border-primary/30 bg-primary/[0.04] p-3">
+                    <div class="text-[10px] font-bold uppercase tracking-wider text-primary">
+                      {{ tf('console.form.modelMappingAdd', '添加新重定向') }}
+                    </div>
+                    <div class="grid grid-cols-[minmax(110px,0.58fr)_auto_minmax(0,1.42fr)_auto_auto] items-end gap-2">
+                      <div class="min-w-0 space-y-1">
+                        <div class="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">SOURCE</div>
+                        <Input v-model="newModelMapping.source" class="h-8 rounded-lg border-primary/25 bg-background/65 font-mono text-xs focus-visible:border-primary/60 focus-visible:ring-primary/20" placeholder="source-model" list="source-models-new" @keydown.enter.prevent="addModelMappingRow" />
                         <datalist id="source-models-new"><option v-for="m in sourceModelOptions" :key="m" :value="m" /></datalist>
-                        <ArrowRight class="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                        <Input v-model="newModelMapping.target" class="h-7 flex-1 font-mono text-xs" placeholder="target" list="target-models-new" @focus="handleTargetFocus" @keydown.enter.prevent="addModelMappingRow" />
+                      </div>
+                      <div class="flex h-8 items-center text-primary">
+                        <ArrowRight class="h-3.5 w-3.5" />
+                      </div>
+                      <div class="min-w-0 space-y-1">
+                        <div class="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">TARGET</div>
+                        <Input v-model="newModelMapping.target" class="h-8 rounded-lg border-primary/25 bg-background/65 font-mono text-xs focus-visible:border-primary/60 focus-visible:ring-primary/20" placeholder="target-model" list="target-models-new" @focus="handleTargetFocus" @keydown.enter.prevent="addModelMappingRow" />
                         <datalist id="target-models-new">
                           <option v-for="m in targetModelDatalist" :key="m" :value="m" />
                         </datalist>
-                        <Select v-if="supportsOpenAIAdvanced" :model-value="toSelectValue(newModelMapping.reasoning)" @update:model-value="newModelMapping.reasoning = fromSelectValue($event) as ReasoningEffort | ''">
-                          <SelectTrigger class="h-7 w-28 text-xs"><SelectValue :placeholder="tf('console.form.reasoningEffort', '思考强度')" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem v-for="opt in reasoningEffortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Button type="button" variant="outline" size="sm" :disabled="!newModelMapping.source.trim() || !newModelMapping.target.trim()" @click="addModelMappingRow">
-                          <Plus class="h-3.5 w-3.5" />
-                        </Button>
                       </div>
+                      <Select v-if="supportsOpenAIAdvanced" :model-value="toSelectValue(newModelMapping.reasoning)" @update:model-value="newModelMapping.reasoning = fromSelectValue($event) as ReasoningEffort | ''">
+                        <SelectTrigger class="h-8 rounded-lg border-primary/25 bg-background/55 text-xs"><SelectValue :placeholder="tf('console.form.reasoningEffort', '思考强度')" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem v-for="opt in reasoningEffortOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button type="button" variant="outline" size="sm" class="h-8 rounded-full border-primary/35 bg-primary/10 px-3 text-primary hover:bg-primary/15" :disabled="!newModelMapping.source.trim() || !newModelMapping.target.trim()" @click="addModelMappingRow">
+                        <Plus class="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </div>
                 </section>
