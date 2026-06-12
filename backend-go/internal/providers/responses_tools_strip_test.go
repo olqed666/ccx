@@ -42,7 +42,6 @@ func TestStripCodexClientOnlyTools(t *testing.T) {
 		req := map[string]interface{}{
 			"tools": []interface{}{
 				"exec_command",
-				map[string]interface{}{"type": "web_search"},
 				map[string]interface{}{"type": "namespace", "name": "mcp__chrome_devtools__"},
 				map[string]interface{}{"type": "custom", "name": "apply_patch"},
 			},
@@ -59,6 +58,28 @@ func TestStripCodexClientOnlyTools(t *testing.T) {
 		}
 		if _, ok := req["parallel_tool_calls"]; ok {
 			t.Fatalf("parallel_tool_calls 应当被删除")
+		}
+	})
+
+	t.Run("web_search 工具应被保留（Codex v0.139.0+ 官方支持）", func(t *testing.T) {
+		req := map[string]interface{}{
+			"tools": []interface{}{
+				map[string]interface{}{"type": "web_search"},
+				map[string]interface{}{"type": "function", "function": map[string]interface{}{"name": "lookup_user"}},
+			},
+			"tool_choice": "auto",
+		}
+		stripCodexClientOnlyTools(req)
+
+		tools, ok := req["tools"].([]interface{})
+		if !ok {
+			t.Fatalf("tools 被误删")
+		}
+		if len(tools) != 2 {
+			t.Fatalf("tools 长度=%d，期望 2（web_search + function）", len(tools))
+		}
+		if req["tool_choice"] != "auto" {
+			t.Fatalf("tool_choice 不应被删除")
 		}
 	})
 

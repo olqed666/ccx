@@ -1191,7 +1191,7 @@ func hasToolName(tools []interface{}, name string) bool {
 func shouldDropResponsesToolObject(tool map[string]interface{}) bool {
 	toolType := strings.ToLower(toString(tool["type"]))
 	switch toolType {
-	case "namespace", "custom", "web_search", "local_shell", "computer_use":
+	case "namespace", "custom", "local_shell", "computer_use":
 		return true
 	}
 	return false
