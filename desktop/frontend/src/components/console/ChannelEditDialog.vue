@@ -1514,9 +1514,9 @@ void fromSelectValue
 
           <!-- 底部按钮栏 -->
           <div class="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border bg-card/80 p-4 backdrop-blur-md">
-            <Button variant="ghost" @click="emit('close')">
+            <Button variant="outline" @click="emit('close')">
               {{ tf('common.cancel', '取消') }}
-              <span class="ml-2 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border bg-transparent px-1.5 font-mono text-[9px] font-medium text-muted-foreground/80">Esc</span>
+              <span class="ml-1.5 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border bg-transparent px-1.5 font-mono text-[9px] font-medium text-muted-foreground/80">Esc</span>
             </Button>
             <Button type="button" :disabled="!isValid || saving" @click="handleSubmit">
               <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
@@ -1524,7 +1524,7 @@ void fromSelectValue
                 ? tf('console.form.save', '保存')
                 : tf('console.form.create', '创建')
               }}
-              <span class="ml-2 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1.5 font-mono text-[9px] font-medium text-primary-foreground/90">{{ isMac ? '⌘ Enter' : 'Ctrl+Enter' }}</span>
+              <span class="ml-1.5 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1.5 font-mono text-[9px] font-medium text-primary-foreground/90">{{ isMac ? '⌘ Enter' : 'Ctrl+Enter' }}</span>
             </Button>
           </div>
         </div>
