@@ -251,7 +251,7 @@ function fromSelectValue(value: string): string {
         <div class="text-[10px] font-bold uppercase tracking-wider text-primary/80 border-b border-border/30 pb-1">
           Transport 代理路由网络
         </div>
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-3 gap-2">
           <div class="space-y-1">
             <Label class="text-[9px] font-bold text-muted-foreground">代理通道 URL</Label>
             <Input
@@ -259,6 +259,16 @@ function fromSelectValue(value: string): string {
               class="h-8 w-full font-mono text-xs"
               placeholder="socks5://..."
               @update:model-value="(val) => updateField('proxyUrl', val as string)"
+            />
+          </div>
+          <div class="space-y-1">
+            <Label class="text-[9px] font-bold text-muted-foreground">请求超时 (ms)</Label>
+            <Input
+              :model-value="form.requestTimeoutMs"
+              type="number"
+              class="h-8 w-full text-xs"
+              placeholder="60000"
+              @update:model-value="(val) => updateField('requestTimeoutMs', val)"
             />
           </div>
           <div class="space-y-1">
