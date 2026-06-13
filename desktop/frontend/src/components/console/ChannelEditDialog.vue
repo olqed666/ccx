@@ -1510,7 +1510,7 @@ void fromSelectValue
           <div class="flex shrink-0 flex-wrap items-center justify-end gap-3 border-t border-border bg-card/80 p-4 backdrop-blur-md">
             <Button variant="ghost" @click="emit('close')">
               {{ tf('common.cancel', '取消') }}
-              <span class="ml-2 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[9px] font-medium text-muted-foreground/80">Esc</span>
+              <span class="ml-2 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border bg-transparent px-1.5 font-mono text-[9px] font-medium text-muted-foreground/80">Esc</span>
             </Button>
             <Button type="button" :disabled="!isValid || saving" @click="handleSubmit">
               <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
