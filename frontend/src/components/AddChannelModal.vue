@@ -69,7 +69,7 @@
           </nav>
 
           <!-- 右侧内容面板 -->
-          <div class="content-area">
+          <v-form ref="formRef" class="content-area" @submit.prevent="handleSubmit">
             <!-- 基本信息 -->
             <section :ref="(el: any) => setSectionRef('basic', el)" data-section-id="basic" class="pa-6 scroll-mt-4">
               <BasicInfoSection
@@ -179,7 +179,7 @@
                 </template>
               </AdvancedOptionsSection>
             </section>
-          </div>
+          </v-form>
         </div>
       </v-card-text>
 
@@ -2896,5 +2896,15 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   overflow-y: auto;
+}
+
+@media (max-width: 960px) {
+  .content-row {
+    flex-direction: column;
+  }
+
+  .nav-sidebar {
+    display: none;
+  }
 }
 </style>
