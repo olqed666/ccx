@@ -222,6 +222,7 @@ const sortedModels = computed(() => {
   if (!models) return []
   return Object.entries(models)
     .map(([name, points]) => ({ name, points, total: points.reduce((s: number, p: ModelHistoryDataPoint) => s + p.requestCount, 0) }))
+    .filter(m => m.total > 0)
     .sort((a, b) => b.total - a.total)
 })
 

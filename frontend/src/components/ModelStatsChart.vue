@@ -126,6 +126,7 @@ const sortedModels = computed(() => {
       totalRequests: points.reduce((s, p) => s + p.requestCount, 0),
       totalTokens: points.reduce((s, p) => s + p.inputTokens + p.outputTokens, 0)
     }))
+    .filter(m => m.totalRequests > 0)
     .sort((a, b) => b.totalRequests - a.totalRequests)
 })
 
