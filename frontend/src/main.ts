@@ -8,6 +8,7 @@ import './assets/style.css'
 import { useAuthStore } from './stores/auth'
 import { usePreferencesStore } from './stores/preferences'
 import { applyDocumentLanguage, getRuntimeLocale, type SupportedLocale } from './i18n'
+import i18n from './i18n/vue-i18n'
 
 const app = createApp(App)
 
@@ -18,6 +19,7 @@ pinia.use(piniaPluginPersistedstate)
 app.use(pinia as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 app.use(vuetify as any) // eslint-disable-line @typescript-eslint/no-explicit-any
 app.use(router as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+app.use(i18n)
 
 // 初始化 AuthStore（从 localStorage 恢复状态）
 const authStore = useAuthStore()
@@ -26,5 +28,8 @@ authStore.initializeAuth()
 const preferencesStore = usePreferencesStore()
 preferencesStore.initializeUILanguage(getRuntimeLocale())
 applyDocumentLanguage(preferencesStore.uiLanguage as unknown as SupportedLocale)
+
+// 同步 vue-i18n locale 为 preferences store 中的持久化值
+;(i18n.global.locale as any).value = preferencesStore.uiLanguage
 
 app.mount('#app')

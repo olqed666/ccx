@@ -22,7 +22,7 @@ export default defineConfig(({ mode }) => {
         styles: {
           configFile: 'src/styles/settings.scss'
         }
-      })
+      }),
     ],
     resolve: {
       alias: {
@@ -30,7 +30,9 @@ export default defineConfig(({ mode }) => {
       }
     },
     define: {
-      __APP_UI_LANGUAGE__: JSON.stringify(uiLanguage)
+      __APP_UI_LANGUAGE__: JSON.stringify(uiLanguage),
+      __VUE_I18N_FULL_INSTALL__: false,
+      __VUE_I18N_LEGACY_API__: false,
     },
     server: {
       port: frontendPort,

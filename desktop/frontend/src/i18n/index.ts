@@ -1,4 +1,4 @@
-export { defaultLocale, languageOptions, messages } from './messages'
-export type { MessageKey, SupportedLocale } from './messages'
-export { applyDocumentLanguage, normalizeLocale, resolveInitialLocale, translate } from './core'
+export { defaultLocale, languageOptions } from './messages'
+export type { SupportedLocale } from './messages'
+export { applyDocumentLanguage, normalizeLocale, resolveInitialLocale } from './core'
 export { useLanguage as useI18n } from '@/composables/useLanguage'

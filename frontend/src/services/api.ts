@@ -1,5 +1,6 @@
 // API服务模块
-import { normalizeLocale, translate } from '@/i18n/core'
+import { normalizeLocale } from '@/i18n/core'
+import { translate } from '@/i18n'
 import { useAuthStore } from '@/stores/auth'
 import { usePreferencesStore } from '@/stores/preferences'
 import { API_BASE, ApiError } from './api-helpers'

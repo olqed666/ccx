@@ -1,4 +1,4 @@
-import { messages, type MessageKey, type SupportedLocale } from './messages'
+import type { SupportedLocale } from './messages'
 
 const SUPPORTED_LOCALE_MAP: Record<string, SupportedLocale> = {
   en: 'en',
@@ -31,23 +31,19 @@ export function resolveInitialLocale(
 }
 
 export function getRuntimeLocale(): SupportedLocale {
-  // Priority 1: server-injected runtime config
   if (typeof window !== 'undefined' && window.__CCX_RUNTIME_CONFIG__?.uiLanguage) {
     return normalizeLocale(window.__CCX_RUNTIME_CONFIG__.uiLanguage)
   }
 
-  // Priority 2: build-time global variable
   if (typeof globalThis.__APP_UI_LANGUAGE__ !== 'undefined') {
     return normalizeLocale(globalThis.__APP_UI_LANGUAGE__)
   }
 
-  // Priority 3: browser language detection (only accept supported locales)
   if (typeof navigator !== 'undefined' && navigator.language) {
     const detected = SUPPORTED_LOCALE_MAP[navigator.language.trim().toLowerCase()]
     if (detected) return detected
   }
 
-  // Priority 4: hardcoded default
   return DEFAULT_LOCALE
 }
 
@@ -58,22 +54,4 @@ export function getDocumentLanguage(locale: SupportedLocale): string {
 export function applyDocumentLanguage(locale: SupportedLocale) {
   if (typeof document === 'undefined') return
   document.documentElement.lang = getDocumentLanguage(locale)
-}
-
-export function translate(
-  locale: SupportedLocale,
-  key: MessageKey,
-  params?: Record<string, string | number>,
-): string {
-  const template = messages[locale][key] ?? messages.en[key] ?? key
-
-  if (!params) return template
-
-  return template.replace(/\{(\w+)\}/g, (_, paramKey: string) => {
-    return String(params[paramKey] ?? `{${paramKey}}`)
-  })
-}
-
-export function createTranslator(locale: SupportedLocale) {
-  return (key: MessageKey, params?: Record<string, string | number>) => translate(locale, key, params)
 }

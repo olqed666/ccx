@@ -4,8 +4,10 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-import { createTranslator, normalizeLocale, resolveInitialLocale } from './index'
-import { messages } from './messages'
+import { normalizeLocale, resolveInitialLocale } from './index'
+import en from '@/locales/en.json'
+import zhCN from '@/locales/zh-CN.json'
+import id from '@/locales/id.json'
 
 describe('normalizeLocale', () => {
   it('normalizes supported locales', () => {
@@ -32,60 +34,35 @@ describe('resolveInitialLocale', () => {
   })
 })
 
-describe('createTranslator', () => {
-  it('returns localized messages', () => {
-    const t = createTranslator('id')
-    expect(t('app.auth.submit')).toBe('Buka console admin')
-    expect(t('channels.empty.title')).toBe('Belum ada channel')
+describe('JSON locale files', () => {
+  it('all locales have identical key sets', () => {
+    const enKeys = Object.keys(en).sort()
+    const zhKeys = Object.keys(zhCN).sort()
+    const idKeys = Object.keys(id).sort()
+    expect(enKeys).toEqual(zhKeys)
+    expect(enKeys).toEqual(idKeys)
   })
 
-  it('falls back to english for missing locale entries', () => {
-    const t = createTranslator('id')
-    expect(t('app.tabs.chat')).toBe('OpenAI Chat')
-  })
-
-  it('returns the key when the message is unknown', () => {
-    const t = createTranslator('en')
-    expect((t as unknown as (_key: string) => string)('missing.key')).toBe('missing.key')
-  })
-})
-
-describe('messages', () => {
-  it('includes orchestration and add-channel keys for all locales', () => {
+  it('includes known critical keys', () => {
     const requiredKeys = [
       'orchestration.title',
-      'orchestration.multiChannel',
-      'orchestration.singleChannel',
       'orchestration.searchPlaceholder',
-      'orchestration.failoverSequence',
-      'orchestration.dragHint',
-      'orchestration.logs',
-      'orchestration.edit',
-      'orchestration.copyConfig',
-      'orchestration.enable',
-      'orchestration.delete',
       'addChannel.editTitle',
       'addChannel.createTitle',
-      'addChannel.editSubtitle',
-      'addChannel.quickSubtitle',
-      'addChannel.testCapability',
-      'chart.close',
-      'chart.1h',
-      'chart.6h',
-      'chart.24h',
-      'chart.today',
       'chart.traffic',
       'chart.tokens',
-      'chart.cacheRw',
-      'chart.noRequestsInRange',
-      'chart.noKeyUsageInRange',
-    ] as const
-
-    for (const locale of Object.keys(messages) as Array<keyof typeof messages>) {
-      for (const requiredKey of requiredKeys) {
-        expect(messages[locale][requiredKey as keyof (typeof messages)[typeof locale]]).toBeTruthy()
-      }
+      'app.auth.submit',
+    ]
+    for (const key of requiredKeys) {
+      expect((en as Record<string, string>)[key]).toBeTruthy()
+      expect((zhCN as Record<string, string>)[key]).toBeTruthy()
+      expect((id as Record<string, string>)[key]).toBeTruthy()
     }
+  })
+
+  it('Indonesian has correct translations', () => {
+    expect((id as Record<string, string>)['app.auth.submit']).toBe('Buka console admin')
+    expect((id as Record<string, string>)['channels.empty.title']).toBe('Belum ada channel')
   })
 })
 

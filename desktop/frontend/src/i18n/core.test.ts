@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { applyDocumentLanguage, normalizeLocale, resolveInitialLocale, translate, translateOrFallback } from './core'
+import { applyDocumentLanguage, normalizeLocale, resolveInitialLocale } from './core'
+import en from '@/locales/en.json'
+import zhCN from '@/locales/zh-CN.json'
 
 describe('normalizeLocale', () => {
   it('returns zh-CN for Chinese variants', () => {
@@ -36,47 +38,39 @@ describe('resolveInitialLocale', () => {
   })
 })
 
-describe('translate', () => {
-  it('returns locale message when available', () => {
-    expect(translate('zh-CN', 'nav.status')).toBe('网关监控')
+describe('JSON locale files', () => {
+  it('en and zh-CN have overlapping key sets', () => {
+    const enKeys = new Set(Object.keys(en))
+    const zhKeys = new Set(Object.keys(zhCN))
+    // zh-CN 的 preset keys 可能少于 en（故意留空 fallback 到 Go）
+    // 但所有 static keys 应一致
+    for (const key of zhKeys) {
+      expect(enKeys.has(key)).toBe(true)
+    }
   })
 
-  it('falls back to English message', () => {
-    expect(translate('en', 'nav.status')).toBe('Status')
+  it('includes known critical keys', () => {
+    const requiredKeys = [
+      'common.gatewayLabel',
+      'nav.status',
+      'env.fieldMin',
+    ]
+    for (const key of requiredKeys) {
+      expect((en as Record<string, string>)[key]).toBeTruthy()
+      expect((zhCN as Record<string, string>)[key]).toBeTruthy()
+    }
   })
 
-  it('substitutes parameters in messages', () => {
-    expect(translate('en', 'env.fieldMin', { field: 'Port', min: '1000' })).toBe('Port must be at least 1000')
+  it('zh-CN has correct translations', () => {
+    expect((zhCN as Record<string, string>)['nav.status']).toBe('网关监控')
   })
 
-  it('falls back to key when message missing', () => {
-    expect(translate('en', 'common.missing' as never)).toBe('common.missing')
-  })
-})
-
-describe('translateOrFallback', () => {
-  // 回归：zh-CN 的 presetMessages 故意留空，但 messages 表中有完整中文，
-  // 必须穷尽当前 locale 的两张表后再回落到默认 locale，否则会被英文 preset 截胡。
-  it('prefers zh-CN messages over en presetMessages for shared keys', () => {
-    expect(translateOrFallback('zh-CN', 'channel.preset.deepseek.description', 'fallback'))
-      .toBe('Messages 原生透传、Codex Responses、Chat 渠道透传三种用法。')
+  it('en has correct translations', () => {
+    expect((en as Record<string, string>)['nav.status']).toBe('Status')
   })
 
-  it('uses en presetMessages for keys only defined there', () => {
-    expect(translateOrFallback('en', 'channel.target.messages.label', 'fallback'))
-      .toBe('Messages native')
-  })
-
-  it('falls back to default locale when key missing in current locale', () => {
-    // zh-CN 的两张表都没有这个 key，应回落到 en 的 presetMessages
-    // 注：所有 preset key 目前在 messages.ts 中均有定义，此测试用虚构 key 验证回落逻辑
-    expect(translateOrFallback('zh-CN', 'channel.target.imaginary.label', 'fb'))
-      .toBe('fb')
-  })
-
-  it('returns fallback when key missing everywhere', () => {
-    expect(translateOrFallback('en', 'totally.unknown.key', 'fallback-text'))
-      .toBe('fallback-text')
+  it('en has preset keys with English content', () => {
+    expect((en as Record<string, string>)['channel.target.messages.label']).toBe('Messages native')
   })
 })
 
