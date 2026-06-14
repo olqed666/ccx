@@ -163,8 +163,8 @@ const AGGREGATION_INTERVALS: Record<string, number> = {
 const failureColor = computed(() => isDark.value ? 'rgba(239, 68, 68, 0.7)' : 'rgba(239, 68, 68, 0.85)')
 
 const getFailureOpacity = (failureRate: number): number => {
-  const minOpacity = 0.05
-  const maxOpacity = 0.35
+  const minOpacity = 0.03
+  const maxOpacity = 0.2
   const normalizedRate = Math.min((failureRate - FAILURE_RATE_THRESHOLD) / (1 - FAILURE_RATE_THRESHOLD), 1)
   return minOpacity + normalizedRate * (maxOpacity - minOpacity)
 }

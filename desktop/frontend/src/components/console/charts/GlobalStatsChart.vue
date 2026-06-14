@@ -331,8 +331,8 @@ const failureColor = computed(() => isDark.value ? 'rgba(239, 68, 68, 0.7)' : 'r
 
 // Calculate opacity based on failure rate
 const getFailureOpacity = (failureRate: number): number => {
-  const minOpacity = 0.05
-  const maxOpacity = 0.35
+  const minOpacity = 0.03
+  const maxOpacity = 0.2
   const normalizedRate = Math.min((failureRate - FAILURE_RATE_THRESHOLD) / (1 - FAILURE_RATE_THRESHOLD), 1)
   return minOpacity + normalizedRate * (maxOpacity - minOpacity)
 }
