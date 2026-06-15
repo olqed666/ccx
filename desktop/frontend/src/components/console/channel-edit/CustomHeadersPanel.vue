@@ -28,9 +28,14 @@ const { tf } = useLanguage()
 
 <template>
   <section class="space-y-4 rounded-xl border border-border/60 bg-card/40 p-5 shadow-xs">
-    <h4 class="text-xs font-bold uppercase tracking-wider text-primary border-b border-border/40 pb-2">
-      {{ tf('channelEditor.nav.custom', '自定义参数') }}
-    </h4>
+    <div class="border-b border-border/40 pb-2">
+      <h4 class="text-xs font-bold uppercase tracking-wider text-primary">
+        {{ tf('addChannel.customHeadersLabel', '自定义请求头 (可选)') }}
+      </h4>
+      <p class="mt-1 text-[10px] leading-4 text-muted-foreground">
+        {{ tf('addChannel.customHeadersHint', '添加或覆盖发送到上游的 HTTP 请求头') }}
+      </p>
+    </div>
 
     <!-- 已有 Headers 列表 -->
     <div v-if="headerRows.length" class="space-y-2">
@@ -42,17 +47,17 @@ const { tf } = useLanguage()
         :key="row.id"
         class="flex items-start gap-2 p-2 rounded-lg border border-border/60 bg-background/60 hover:bg-background transition-colors"
       >
-        <div class="flex-1 grid gap-2">
+        <div class="grid flex-1 gap-2 md:grid-cols-[1fr_2fr]">
           <Input
             :model-value="row.key"
             class="h-9 font-mono text-xs"
-            placeholder="Header-Name"
+            :placeholder="tf('addChannel.headerNameLabel', 'Header 名称')"
             @update:model-value="(val) => emit('updateHeaderRow', row.id, 'key', val as string)"
           />
           <Input
             :model-value="row.value"
             class="h-9 font-mono text-xs"
-            placeholder="Header Value"
+            :placeholder="tf('addChannel.headerValueLabel', '请求头值')"
             @update:model-value="(val) => emit('updateHeaderRow', row.id, 'value', val as string)"
           />
         </div>
@@ -73,18 +78,18 @@ const { tf } = useLanguage()
       <Label class="text-xs font-semibold text-muted-foreground mb-2 block">
         {{ tf('console.form.addNewHeader', '添加新标头') }}
       </Label>
-      <div class="grid gap-2">
+      <div class="grid gap-2 md:grid-cols-[1fr_2fr_auto] md:items-end">
         <Input
           :model-value="newHeader.key"
           class="h-9 w-full font-mono text-xs"
-          placeholder="Header-Name"
+          :placeholder="tf('addChannel.headerNameLabel', 'Header 名称')"
           @update:model-value="(val) => emit('update:newHeader', { key: val as string })"
           @keydown.enter.prevent="emit('addHeaderRow')"
         />
         <Input
           :model-value="newHeader.value"
-          class="h-9 flex-1 font-mono text-xs"
-          :placeholder="tf('console.form.headerValuePlaceholder', '标头携带对应的 Value 内容...')"
+          class="h-9 w-full font-mono text-xs"
+          :placeholder="tf('addChannel.headerValueLabel', '请求头值')"
           @update:model-value="(val) => emit('update:newHeader', { value: val as string })"
           @keydown.enter.prevent="emit('addHeaderRow')"
         />
@@ -92,7 +97,7 @@ const { tf } = useLanguage()
           type="button"
           variant="outline"
           size="sm"
-          class="h-9 justify-self-start px-3.5 shadow-3xs"
+          class="h-9 justify-self-start px-3.5 shadow-3xs md:justify-self-auto"
           :disabled="!newHeader.key.trim() || !newHeader.value.trim()"
           @click="emit('addHeaderRow')"
         >

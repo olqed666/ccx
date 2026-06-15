@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useLanguage } from '@/composables/useLanguage'
 
 interface FormData {
+  description: string
   fastMode: boolean
   historicalImageTurnLimit: number
   insecureSkipVerify: boolean
@@ -58,6 +60,18 @@ function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
     <h4 class="text-xs font-bold uppercase tracking-wider text-primary border-b border-border/40 pb-2">
       {{ tf('channelEditor.nav.advanced', '高级选项') }}
     </h4>
+
+    <div class="space-y-1.5">
+      <Label class="text-xs font-semibold text-muted-foreground">{{ tf('addChannel.descriptionLabel', '描述 (可选)') }}</Label>
+      <Textarea
+        :model-value="form.description"
+        rows="3"
+        class="min-h-[84px] resize-none"
+        :placeholder="tf('addChannel.descriptionHint', '可选的渠道描述...')"
+        @update:model-value="(val) => updateField('description', val as string)"
+      />
+      <p class="text-[10px] leading-4 text-muted-foreground">{{ tf('addChannel.descriptionHint', '可选的渠道描述...') }}</p>
+    </div>
 
     <div class="grid gap-3">
       <div class="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-background/40 p-4">
@@ -282,7 +296,7 @@ function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
           {{ t('channelEditor.rateLimit.title') }}
         </div>
         <p class="text-[10px] leading-4 text-muted-foreground">{{ t('channelEditor.rateLimit.section.hint') }}</p>
-        <div class="grid gap-3">
+        <div class="grid gap-3 md:grid-cols-3">
           <div class="space-y-1">
             <Label class="text-[10px] font-medium text-muted-foreground/80">{{ t('channelEditor.rateLimit.rpm.label') }}</Label>
             <Input

@@ -270,8 +270,8 @@ function detachScrollListener() {
 // 导航 section 定义（与桌面端保持一致）
 const sections = [
   { id: 'basic', label: t('channelEditor.nav.basic') },
-  { id: 'auth', label: t('channelEditor.nav.auth') },
   { id: 'redirect', label: t('channelEditor.nav.redirect') },
+  { id: 'auth', label: t('channelEditor.nav.auth') },
   { id: 'advanced', label: t('channelEditor.nav.advanced') },
   { id: 'custom', label: t('channelEditor.nav.custom') },
 ]
