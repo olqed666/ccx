@@ -190,7 +190,7 @@ function fromSelectValue(value: string): ReasoningEffort | '' {
           </div>
 
           <!-- TARGET -->
-          <div class="relative min-w-0 space-y-0.5">
+          <div class="relative min-w-0 space-y-0.5" data-target-model-picker>
             <span class="text-[8px] font-bold tracking-wider text-muted-foreground/50 block pl-1">TARGET</span>
             <Input
               :model-value="row.target"
@@ -201,7 +201,6 @@ function fromSelectValue(value: string): ReasoningEffort | '' {
               placeholder="target-model"
               @update:model-value="(val) => { emit('updateMappingRow', row.id, 'target', val as string); emit('showTargetDropdown', `row-${index}`, val as string) }"
               @focus="emit('handleTargetFocus'); emit('showTargetDropdown', `row-${index}`, row.target)"
-              @blur="emit('hideTargetDropdown')"
             />
             <div
               v-if="showTargetSuggestions && activeTargetInputId === `row-${index}` && filteredTargetModels.length"
@@ -269,14 +268,13 @@ function fromSelectValue(value: string): ReasoningEffort | '' {
       <Label class="text-xs font-semibold text-muted-foreground">
         {{ t('addChannel.visionFallbackLabel') }}
       </Label>
-      <div class="relative">
+      <div class="relative" data-target-model-picker>
         <Input
           :model-value="visionFallbackModel"
           :class="['h-9 w-full font-mono text-xs', stableInputFocusClass]"
           :placeholder="t('addChannel.visionFallbackPlaceholder')"
           @update:model-value="(val) => { emit('update:visionFallbackModel', val as string); emit('showTargetDropdown', 'vision-fallback', val as string) }"
           @focus="emit('handleTargetFocus'); emit('showTargetDropdown', 'vision-fallback', visionFallbackModel)"
-          @blur="emit('hideTargetDropdown')"
         />
         <div
           v-if="showTargetSuggestions && activeTargetInputId === 'vision-fallback' && filteredTargetModels.length"
@@ -301,7 +299,7 @@ function fromSelectValue(value: string): ReasoningEffort | '' {
 
     <div class="space-y-3 rounded-xl border border-primary/20 bg-primary/[0.02] p-4">
       <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)_auto_auto] items-end gap-3">
-        <div class="relative min-w-0 space-y-1">
+        <div class="relative min-w-0 space-y-1" data-target-model-picker>
           <Label class="text-xs font-semibold text-muted-foreground">
             {{ t('channelEditor.mapping.source.label') }}
           </Label>
@@ -335,7 +333,6 @@ function fromSelectValue(value: string): ReasoningEffort | '' {
             :placeholder="targetModelPlaceholder"
             @update:model-value="(val) => { emit('update:newModelMapping', { target: val as string }); emit('showTargetDropdown', 'new', val as string) }"
             @focus="emit('handleTargetFocus'); emit('showTargetDropdown', 'new', newModelMapping.target)"
-            @blur="emit('hideTargetDropdown')"
           />
           <div
             v-if="showTargetSuggestions && activeTargetInputId === 'new' && filteredTargetModels.length"

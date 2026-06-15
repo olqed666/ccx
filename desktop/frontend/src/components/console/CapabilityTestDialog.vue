@@ -238,7 +238,10 @@ onBeforeUnmount(() => {
               <Badge v-if="runMode !== 'fresh'" variant="secondary" class="text-[10px]">{{ getRunModeLabel(runMode) }}</Badge>
               <Badge v-if="displayOutcome === 'partial'" variant="outline" class="text-[10px] border-amber-500/30 text-amber-700 dark:text-amber-400">{{ tf('capability.partial', '部分成功') }}</Badge>
               <Badge v-else-if="displayOutcome === 'cancelled'" variant="outline" class="text-[10px]">{{ tf('capability.cancelled', '已取消') }}</Badge>
-              <Button variant="ghost" size="icon-sm" @click="emit('close')"><X class="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon-sm" @click="emit('close')" class="relative group">
+                <X class="h-4 w-4" />
+                <span class="absolute -bottom-6 right-0 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Esc</span>
+              </Button>
             </div>
           </div>
 

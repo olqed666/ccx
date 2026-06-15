@@ -200,8 +200,9 @@ function onKeyDown(e: KeyboardEvent) {
               <Button variant="ghost" size="icon-sm" :disabled="loading || refreshing" @click="fetchLogs()">
                 <RefreshCw class="h-3.5 w-3.5" :class="{ 'animate-spin': loading || refreshing }" />
               </Button>
-              <Button variant="ghost" size="icon-sm" @click="emit('close')">
+              <Button variant="ghost" size="icon-sm" @click="emit('close')" class="relative group">
                 <X class="h-4 w-4" />
+                <span class="absolute -bottom-6 right-0 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Esc</span>
               </Button>
             </div>
           </div>
