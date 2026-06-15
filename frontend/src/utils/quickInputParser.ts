@@ -226,6 +226,46 @@ const detectServiceTypeAndCleanUrl = (
       return { serviceType: rule.serviceType, cleanedUrl: result }
     }
 
+    const urlKey = `${parsed.origin}${path}`.replace(/\/$/, '')
+    const knownClaudeUrls = new Set([
+      'https://cp.compshare.cn',
+      'https://api.kimi.com/coding',
+      'https://ark.cn-beijing.volces.com/api/coding',
+      'https://openrouter.ai/api',
+      'https://api-inference.modelscope.cn',
+      'https://api.easytransnote.com/coding',
+    ])
+    const knownOpenAIUrls = new Set([
+      'https://api.deepseek.com/v1',
+      'https://api.xiaomimimo.com/v1',
+      'https://token-plan-cn.xiaomimimo.com/v1',
+      'https://token-plan-sgp.xiaomimimo.com/v1',
+      'https://token-plan-ams.xiaomimimo.com/v1',
+      'https://cp.compshare.cn/v1',
+      'https://api.moonshot.cn/v1',
+      'https://api.kimi.com/coding/v1',
+      'https://open.bigmodel.cn/api/coding/paas/v4',
+      'https://open.bigmodel.cn/api/paas/v4',
+      'https://api.minimax.chat/v1',
+      'https://dashscope.aliyuncs.com/compatible-mode/v1',
+      'https://coding.dashscope.aliyuncs.com/v1',
+      'https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1',
+      'https://opencode.ai/zen/v1',
+      'https://opencode.ai/zen/go/v1',
+      'https://api.lkeap.cloud.tencent.com/plan/v3',
+      'https://ark.cn-beijing.volces.com/api/coding/v3',
+      'https://qianfan.baidubce.com/v2/coding',
+      'https://openrouter.ai/api/v1',
+      'https://api-inference.modelscope.cn/v1',
+      'https://api.easytransnote.com/coding/v1',
+    ])
+    if (knownClaudeUrls.has(urlKey)) {
+      return { serviceType: 'claude', cleanedUrl: url }
+    }
+    if (knownOpenAIUrls.has(urlKey)) {
+      return { serviceType: 'openai', cleanedUrl: url }
+    }
+
     const hintText = `${parsed.hostname.toLowerCase()} ${path}`
     if (/\b(anthropic|claude)\b/.test(hintText) || /(^|\/)(anthropic|claude)(?:\/|$)/.test(path)) {
       return { serviceType: 'claude', cleanedUrl: url }

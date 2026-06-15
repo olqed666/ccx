@@ -322,6 +322,13 @@ describe('综合解析场景', () => {
     expect(result.detectedBaseUrl).toBe('https://relay.example.com/anthropic')
   })
 
+  it('应识别渠道中心内置但不包含协议关键词的常见入口', () => {
+    expect(parseQuickInput('https://cp.compshare.cn sk-key1234567890').detectedServiceType).toBe('claude')
+    expect(parseQuickInput('https://openrouter.ai/api sk-key1234567890').detectedServiceType).toBe('claude')
+    expect(parseQuickInput('https://openrouter.ai/api/v1 sk-key1234567890').detectedServiceType).toBe('openai')
+    expect(parseQuickInput('https://api.kimi.com/coding/v1 sk-key1234567890').detectedServiceType).toBe('openai')
+  })
+
   it('应正确解析 URL + 多个 API Key', () => {
     const input = `
       https://api.openai.com/v1
