@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useChannelPresets } from '@/composables/useChannelPresets'
+import { useDesktopActivity } from '@/composables/useDesktopActivity'
 import { useLanguage } from '@/composables/useLanguage'
 import { openProviderPromotion, openProviderConsole, providerConsoleLinks, providerPromotionLinks } from '@/lib/external-link'
 import compshareIcon from '@/assets/compshare.png'
@@ -12,6 +13,7 @@ import runapiIcon from '@/assets/runapi.svg'
 import type { ProviderPreset, ProviderPlan, ChannelTarget } from '@/types'
 
 const { t, tf } = useLanguage()
+const { isChannelPageActive } = useDesktopActivity()
 const emit = defineEmits<{
   created: [target: string]
 }>()
@@ -37,12 +39,19 @@ const selectedPlan = ref('')
 const apiKey = ref('')
 const channelName = ref('')
 const localError = ref('')
+let hasLoadedPresets = false
 
-onMounted(async () => {
+async function ensurePresetsLoaded() {
+  if (!isChannelPageActive.value) return
   await loadChannelPresets()
   if (!selectedProvider.value && orderedPresets.value.length > 0) {
     selectedProvider.value = orderedPresets.value[0].id
   }
+  hasLoadedPresets = true
+}
+
+onMounted(() => {
+  void ensurePresetsLoaded()
 })
 
 const presetOrder = [
@@ -138,7 +147,7 @@ watch(selectedProvider, (id) => {
 // target 变化时重新加载后端过滤后的 plans，尽量保留已选 plan；
 // 若当前 plan 被协议过滤掉，尝试切换同区域的协议变体（如 token-cn ↔ token-cn-anthropic）
 watch(selectedTarget, async (target) => {
-  if (!target) return
+  if (!target || !hasLoadedPresets || !isChannelPageActive.value) return
   result.value = null
   const prevPlan = selectedPlan.value
   await loadChannelPresets(target)
@@ -154,6 +163,10 @@ watch(selectedTarget, async (target) => {
     selectedPlan.value = match ? match.id : bestPlanForTarget(preset, target)
   }
   channelName.value = buildChannelName(preset, target, selectedPlan.value)
+})
+
+watch(isChannelPageActive, (active) => {
+  if (active && !hasLoadedPresets) void ensurePresetsLoaded()
 })
 
 // plan 变化时同步刷新 channel 名，确保不同套餐入口可以共存而非互相覆盖

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Plus, Search, Layers, Archive, Loader2, ShieldCheck, ShieldOff, Zap, ChevronDown, BarChart3 } from 'lucide-vue-next'
 import { useConsoleChannels } from '@/composables/useConsoleChannels'
 import { useAdminApi } from '@/composables/useAdminApi'
+import { useDesktopActivity } from '@/composables/useDesktopActivity'
 import { useStatus } from '@/composables/useStatus'
 import { useLanguage } from '@/composables/useLanguage'
 import ChannelCard from '@/components/console/ChannelCard.vue'
@@ -27,6 +28,7 @@ const props = defineProps<Props>()
 
 const { t, tf } = useLanguage()
 const { status } = useStatus()
+const { isConsoleChannelsActive } = useDesktopActivity()
 const {
   activeTab,
   channelsByType,
@@ -41,7 +43,6 @@ const {
 
 watch(() => props.type, (newType) => {
   activeTab.value = newType
-  void refreshChannels()
 }, { immediate: true })
 
 const channels = computed(() => channelsByType.value[props.type]?.channels || [])
@@ -408,13 +409,9 @@ function onDragEnd() {
   draggedIndex.value = null
 }
 
-onMounted(() => {
-  activeTab.value = props.type
-})
-
 // 服务状态变化时自动加载 Fuzzy 模式和统计数据
-watch(() => status.value.running, (running) => {
-  if (running) {
+watch([() => status.value.running, isConsoleChannelsActive], ([running, active]) => {
+  if (running && active) {
     loadFuzzyMode()
     loadGlobalStats()
   }
@@ -422,7 +419,7 @@ watch(() => status.value.running, (running) => {
 
 // 类型切换时重新加载统计
 watch(() => props.type, () => {
-  if (status.value.running) {
+  if (status.value.running && isConsoleChannelsActive.value) {
     loadGlobalStats()
   }
 })
