@@ -8,22 +8,24 @@ import (
 
 // ChannelLog 单次上游请求日志
 type ChannelLog struct {
-	RequestID     string    `json:"requestId"` // 请求唯一标识
-	ChannelIndex  int       `json:"-"`         // 创建时的渠道索引（不序列化，仅用于内部排查）
-	MetricsKey    string    `json:"-"`         // 指标身份键（不序列化，仅用于日志分桶）
-	Timestamp     time.Time `json:"timestamp"`
-	Model         string    `json:"model"`                   // 实际使用的模型（重定向后）
-	OriginalModel string    `json:"originalModel,omitempty"` // 原始请求模型（仅当重定向时有值）
-	Operation     string    `json:"operation,omitempty"`     // Images 端点（generations/edits/variations）
-	StatusCode    int       `json:"statusCode"`
-	DurationMs    int64     `json:"durationMs"`
-	Success       bool      `json:"success"`
-	KeyMask       string    `json:"keyMask"`
-	BaseURL       string    `json:"baseUrl"`
-	ErrorInfo     string    `json:"errorInfo"`
-	IsRetry       bool      `json:"isRetry"`
-	InterfaceType string    `json:"interfaceType"`           // 接口类型（Messages/Responses/Gemini）
-	RequestSource string    `json:"requestSource,omitempty"` // 请求来源（proxy/capability_test）
+	RequestID               string    `json:"requestId"` // 请求唯一标识
+	ChannelIndex            int       `json:"-"`         // 创建时的渠道索引（不序列化，仅用于内部排查）
+	MetricsKey              string    `json:"-"`         // 指标身份键（不序列化，仅用于日志分桶）
+	Timestamp               time.Time `json:"timestamp"`
+	Model                   string    `json:"model"`                             // 实际使用的模型（重定向后）
+	OriginalModel           string    `json:"originalModel,omitempty"`           // 原始请求模型（仅当重定向时有值）
+	Operation               string    `json:"operation,omitempty"`               // Images 端点（generations/edits/variations）
+	OriginalReasoningEffort string    `json:"originalReasoningEffort,omitempty"` // 原始请求的思考强度
+	ActualReasoningEffort   string    `json:"actualReasoningEffort,omitempty"`   // 实际发往上游的思考强度
+	StatusCode              int       `json:"statusCode"`
+	DurationMs              int64     `json:"durationMs"`
+	Success                 bool      `json:"success"`
+	KeyMask                 string    `json:"keyMask"`
+	BaseURL                 string    `json:"baseUrl"`
+	ErrorInfo               string    `json:"errorInfo"`
+	IsRetry                 bool      `json:"isRetry"`
+	InterfaceType           string    `json:"interfaceType"`           // 接口类型（Messages/Responses/Gemini）
+	RequestSource           string    `json:"requestSource,omitempty"` // 请求来源（proxy/capability_test）
 
 	// 请求生命周期状态
 	Status      string     `json:"status"`                // pending/connecting/first_byte/streaming/completed/failed/cancelled

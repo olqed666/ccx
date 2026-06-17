@@ -24,6 +24,7 @@ func CreatePendingLog(
 	metricsKey string,
 	channelIndex int,
 	model, originalModel string,
+	originalReasoningEffort, actualReasoningEffort string,
 	apiKey, baseURL, interfaceType, operation string,
 	requestSource string,
 ) string {
@@ -38,23 +39,25 @@ func CreatePendingLog(
 	now := time.Now()
 
 	channelLogStore.Record(metricsKey, &metrics.ChannelLog{
-		RequestID:     requestID,
-		ChannelIndex:  channelIndex, // 记录创建时的渠道索引，便于内部排查
-		Timestamp:     now,
-		StartTime:     now,
-		Model:         model,
-		OriginalModel: originalModel,
-		Operation:     operation,
-		StatusCode:    0,
-		DurationMs:    0,
-		Success:       false,
-		KeyMask:       utils.MaskAPIKey(apiKey),
-		BaseURL:       baseURL,
-		ErrorInfo:     "",
-		IsRetry:       false,
-		InterfaceType: interfaceType,
-		RequestSource: requestSource,
-		Status:        metrics.StatusPending,
+		RequestID:               requestID,
+		ChannelIndex:            channelIndex, // 记录创建时的渠道索引，便于内部排查
+		Timestamp:               now,
+		StartTime:               now,
+		Model:                   model,
+		OriginalModel:           originalModel,
+		Operation:               operation,
+		OriginalReasoningEffort: originalReasoningEffort,
+		ActualReasoningEffort:   actualReasoningEffort,
+		StatusCode:              0,
+		DurationMs:              0,
+		Success:                 false,
+		KeyMask:                 utils.MaskAPIKey(apiKey),
+		BaseURL:                 baseURL,
+		ErrorInfo:               "",
+		IsRetry:                 false,
+		InterfaceType:           interfaceType,
+		RequestSource:           requestSource,
+		Status:                  metrics.StatusPending,
 	})
 
 	return requestID
