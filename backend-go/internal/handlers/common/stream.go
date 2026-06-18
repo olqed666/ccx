@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -49,6 +50,8 @@ type StreamPreflightTimeouts struct {
 	InactivityTimeoutMs   int // 阶段B：首字后连续性确认窗口（ms，范围 1000-180000）
 	ToolCallIdleTimeoutMs int // 工具调用空闲超时（ms，范围 30000-300000）
 }
+
+const shortStreamEOFRetryTokenThreshold = 20
 
 // ResolveStreamFirstContentTimeout 解析首字等待超时：渠道 >0 覆盖全局，否则继承全局
 func ResolveStreamFirstContentTimeout(channelValue int, globalValue int) int {
@@ -187,6 +190,12 @@ func PreflightStreamEvents(eventChan <-chan string, errChan <-chan error, timeou
 				if hasNonTextContent {
 					return result // 有非文本内容，视为非空
 				}
+				if hasFirstContent && !seenMessageStop && isShortPreflightText(textBuf.String()) {
+					result.HasError = true
+					result.Error = fmt.Errorf("%w: short stream closed before message_stop (%d estimated tokens)",
+						ErrStreamStalled, estimatePreflightTextTokens(textBuf.String()))
+					return result
+				}
 				result.IsEmpty = isEmptyStreamContent(textBuf.String(), thinkingBuf.String())
 				result.UnknownEventType = unknownEventType
 				result.Diagnostic = buildClaudePreflightDiagnostic(seenEvent, seenMessageStop, seenUsageOnlyEvent, seenUnknownDataType, unknownEventType, textBuf.String(), thinkingBuf.String(), result.BufferedEvents)
@@ -275,8 +284,9 @@ func PreflightStreamEvents(eventChan <-chan string, errChan <-chan error, timeou
 			ExtractTextFromEvent(event, &textBuf)
 			ExtractThinkingFromEvent(event, &thinkingBuf)
 
+			outputText := textBuf.String()
 			// 检查是否有有效内容（非空且不是仅 "{"）
-			if !isEmptyStreamContent(textBuf.String(), thinkingBuf.String()) {
+			if !isEmptyStreamContent(outputText, thinkingBuf.String()) {
 				if !hasFirstContent {
 					// 阶段A→阶段B：首次检测到有效文本内容
 					if observer != nil {
@@ -295,8 +305,8 @@ func PreflightStreamEvents(eventChan <-chan string, errChan <-chan error, timeou
 					if timeouts.InactivityTimeoutMs <= 0 {
 						return result
 					}
-				} else {
-					// 阶段B中收到第二个有效内容事件：健康流，放行
+				} else if toolTracker.HasPendingToolCall() || !isShortPreflightText(outputText) {
+					// 阶段B中累计文本达到阈值：健康流，放行
 					if observer != nil {
 						observer.MarkStreamActivity(now)
 					}
@@ -344,7 +354,12 @@ func PreflightStreamEvents(eventChan <-chan string, errChan <-chan error, timeou
 			}
 			if err != nil {
 				result.HasError = true
-				result.Error = err
+				if hasFirstContent && isShortPreflightText(textBuf.String()) && isStreamEOFError(err) {
+					result.Error = fmt.Errorf("%w: short stream ended before message_stop (%d estimated tokens): %v",
+						ErrStreamStalled, estimatePreflightTextTokens(textBuf.String()), err)
+				} else {
+					result.Error = err
+				}
 				return result
 			}
 
@@ -385,6 +400,21 @@ func buildClaudePreflightDiagnostic(seenEvent, seenMessageStop, seenUsageOnlyEve
 	default:
 		return "检测到空流，但未匹配到明确类别"
 	}
+}
+
+func estimatePreflightTextTokens(text string) int {
+	return utils.EstimateTokens(text)
+}
+
+func isShortPreflightText(text string) bool {
+	return estimatePreflightTextTokens(text) < shortStreamEOFRetryTokenThreshold
+}
+
+func isStreamEOFError(err error) bool {
+	if err == nil {
+		return false
+	}
+	return errors.Is(err, io.ErrUnexpectedEOF) || strings.Contains(strings.ToLower(err.Error()), "unexpected eof")
 }
 
 func NewStreamToolCallTracker() *StreamToolCallTracker {

@@ -616,6 +616,79 @@ func TestPreflightStreamEvents_ThinkingThenTextNotEmpty(t *testing.T) {
 	}
 }
 
+func TestPreflightStreamEvents_ShortTextUnexpectedEOFIsRetryableStall(t *testing.T) {
+	eventChan := make(chan string)
+	errChan := make(chan error)
+
+	go func() {
+		eventChan <- "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":100,\"output_tokens\":0}}}\n\n"
+		eventChan <- "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n"
+		eventChan <- "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"## 新版本 v2.9\"}}\n\n"
+		errChan <- errors.New("unexpected EOF")
+		close(eventChan)
+		close(errChan)
+	}()
+
+	result := PreflightStreamEvents(eventChan, errChan, StreamPreflightTimeouts{
+		InactivityTimeoutMs: 200,
+	})
+
+	if !result.HasError {
+		t.Fatal("expected short stream EOF to be returned as a preflight error")
+	}
+	if !errors.Is(result.Error, ErrStreamStalled) {
+		t.Fatalf("expected ErrStreamStalled, got %v", result.Error)
+	}
+}
+
+func TestPreflightStreamEvents_ShortTextCloseBeforeMessageStopIsRetryableStall(t *testing.T) {
+	eventChan := make(chan string, 3)
+	errChan := make(chan error)
+
+	eventChan <- "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":100,\"output_tokens\":0}}}\n\n"
+	eventChan <- "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n"
+	eventChan <- "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"short answer\"}}\n\n"
+	close(eventChan)
+	close(errChan)
+
+	result := PreflightStreamEvents(eventChan, errChan, StreamPreflightTimeouts{
+		InactivityTimeoutMs: 200,
+	})
+
+	if !result.HasError {
+		t.Fatal("expected short stream close without message_stop to be returned as a preflight error")
+	}
+	if !errors.Is(result.Error, ErrStreamStalled) {
+		t.Fatalf("expected ErrStreamStalled, got %v", result.Error)
+	}
+}
+
+func TestPreflightStreamEvents_LongTextPassesThresholdBeforeMessageStop(t *testing.T) {
+	eventChan := make(chan string, 4)
+	errChan := make(chan error)
+
+	eventChan <- "event: message_start\ndata: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":100,\"output_tokens\":0}}}\n\n"
+	eventChan <- "event: content_block_start\ndata: {\"type\":\"content_block_start\",\"index\":0,\"content_block\":{\"type\":\"text\",\"text\":\"\"}}\n\n"
+	eventChan <- "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\"This is a normal streaming answer with enough text to pass the short EOF retry threshold.\"}}\n\n"
+	eventChan <- "event: content_block_delta\ndata: {\"type\":\"content_block_delta\",\"index\":0,\"delta\":{\"type\":\"text_delta\",\"text\":\" It should be released before message_stop so long streams keep low latency.\"}}\n\n"
+
+	result := PreflightStreamEvents(eventChan, errChan, StreamPreflightTimeouts{
+		InactivityTimeoutMs: 200,
+	})
+
+	if result.HasError {
+		t.Fatalf("expected no preflight error, got %v", result.Error)
+	}
+	if result.IsEmpty {
+		t.Fatal("expected long text stream to be non-empty")
+	}
+	if got := len(result.BufferedEvents); got != 4 {
+		t.Fatalf("BufferedEvents = %d, want 4", got)
+	}
+	close(eventChan)
+	close(errChan)
+}
+
 func TestPreflightStreamEvents_TrueEmptyStillDetected(t *testing.T) {
 	// 真正的空响应：有 message_start 和 message_stop 但没有任何 content block
 	events := []string{
