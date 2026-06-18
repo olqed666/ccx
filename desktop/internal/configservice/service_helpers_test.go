@@ -119,3 +119,20 @@ func openTestSQLite(t *testing.T, path string) *sql.DB {
 	}
 	return db
 }
+
+func assertThreadVisibilityRow(t *testing.T, db *sql.DB, id, wantProvider, wantPreview string, wantHasUserEvent int, wantThreadSource string) {
+	t.Helper()
+	var provider string
+	var preview string
+	var hasUserEvent int
+	var threadSource sql.NullString
+	err := db.QueryRow(`SELECT model_provider, preview, has_user_event, thread_source FROM threads WHERE id = ?`, id).
+		Scan(&provider, &preview, &hasUserEvent, &threadSource)
+	if err != nil {
+		t.Fatalf("query thread %s failed: %v", id, err)
+	}
+	if provider != wantProvider || preview != wantPreview || hasUserEvent != wantHasUserEvent || threadSource.String != wantThreadSource {
+		t.Fatalf("thread %s = provider:%q preview:%q has_user_event:%d thread_source:%q, want provider:%q preview:%q has_user_event:%d thread_source:%q",
+			id, provider, preview, hasUserEvent, threadSource.String, wantProvider, wantPreview, wantHasUserEvent, wantThreadSource)
+	}
+}

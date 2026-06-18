@@ -20,20 +20,20 @@ const (
 	PlatformCodex    = "codex"
 	PlatformOpenCode = "opencode"
 
-	ProviderCCX         = "ccx"
-	ProviderDeepSeek    = "deepseek"
-	ProviderMiMo        = "mimo"
-	ProviderCompshare   = "compshare"
-	ProviderRunAPI      = "runapi"
-	ProviderKimi        = "kimi"
-	ProviderGLM         = "glm"
-	ProviderMiniMax     = "minimax"
-	ProviderDashScope   = "dashscope"
-	ProviderOpenCodeZen = "opencode-zen"
-	ProviderOpenCodeGo  = "opencode-go"
-	ProviderCustom      = "custom"
-	ProviderOpenAI      = "openai"
-	ProviderXFyun       = "xfyun"
+	ProviderCCX          = "ccx"
+	ProviderDeepSeek     = "deepseek"
+	ProviderMiMo         = "mimo"
+	ProviderCompshare    = "compshare"
+	ProviderRunAPI       = "runapi"
+	ProviderKimi         = "kimi"
+	ProviderGLM          = "glm"
+	ProviderMiniMax      = "minimax"
+	ProviderDashScope    = "dashscope"
+	ProviderOpenCodeZen  = "opencode-zen"
+	ProviderOpenCodeGo   = "opencode-go"
+	ProviderCustom       = "custom"
+	ProviderOpenAI       = "openai"
+	ProviderXFyun        = "xfyun"
 	ProviderTencentLkeap = "tencent-lkeap"
 	ProviderVolcArk      = "volc-ark"
 	ProviderQianfan      = "qianfan"
@@ -115,6 +115,14 @@ type MigrateCodexSessionsResult struct {
 type Service struct {
 	homeDir  string
 	stateDir string
+}
+
+type codexThreadsColumns struct {
+	modelProvider    bool
+	preview          bool
+	firstUserMessage bool
+	hasUserEvent     bool
+	threadSource     bool
 }
 
 type ClaudeProxyState struct {
@@ -1206,7 +1214,23 @@ func (s *Service) migrateCodexStateDB(targetProvider string, result *MigrateCode
 	}
 	defer db.Close()
 	_, _ = db.Exec("PRAGMA busy_timeout = 500")
-	updateResult, err := db.Exec(`UPDATE threads SET model_provider = ? WHERE model_provider IS NULL OR model_provider <> ?`, targetProvider, targetProvider)
+	columns, err := readCodexThreadsColumns(db)
+	if err != nil {
+		result.SQLiteSkipped = true
+		result.SQLiteError = err.Error()
+		return
+	}
+	sqlText, usesProvider := buildCodexThreadsMigrationSQL(columns)
+	if sqlText == "" {
+		result.SQLiteSkipped = true
+		return
+	}
+	var updateResult sql.Result
+	if usesProvider {
+		updateResult, err = db.Exec(sqlText, targetProvider)
+	} else {
+		updateResult, err = db.Exec(sqlText)
+	}
 	if err != nil {
 		result.SQLiteSkipped = true
 		result.SQLiteError = err.Error()
@@ -1216,6 +1240,65 @@ func (s *Service) migrateCodexStateDB(targetProvider string, result *MigrateCode
 	if err == nil {
 		result.SQLiteRowsUpdated = rows
 	}
+}
+
+func readCodexThreadsColumns(db *sql.DB) (codexThreadsColumns, error) {
+	rows, err := db.Query(`PRAGMA table_info(threads)`)
+	if err != nil {
+		return codexThreadsColumns{}, err
+	}
+	defer rows.Close()
+
+	names := map[string]bool{}
+	for rows.Next() {
+		var cid int
+		var name string
+		var typ string
+		var notNull int
+		var defaultValue any
+		var pk int
+		if err := rows.Scan(&cid, &name, &typ, &notNull, &defaultValue, &pk); err != nil {
+			return codexThreadsColumns{}, err
+		}
+		names[name] = true
+	}
+	if err := rows.Err(); err != nil {
+		return codexThreadsColumns{}, err
+	}
+	return codexThreadsColumns{
+		modelProvider:    names["model_provider"],
+		preview:          names["preview"],
+		firstUserMessage: names["first_user_message"],
+		hasUserEvent:     names["has_user_event"],
+		threadSource:     names["thread_source"],
+	}, nil
+}
+
+func buildCodexThreadsMigrationSQL(columns codexThreadsColumns) (string, bool) {
+	assignments := make([]string, 0, 4)
+	predicates := make([]string, 0, 4)
+	usesProvider := false
+	if columns.modelProvider {
+		assignments = append(assignments, `model_provider = ?1`)
+		predicates = append(predicates, `model_provider IS NULL OR model_provider <> ?1`)
+		usesProvider = true
+	}
+	if columns.preview && columns.firstUserMessage {
+		assignments = append(assignments, `preview = CASE WHEN COALESCE(preview, '') = '' AND COALESCE(first_user_message, '') <> '' THEN first_user_message ELSE preview END`)
+		predicates = append(predicates, `COALESCE(preview, '') = '' AND COALESCE(first_user_message, '') <> ''`)
+	}
+	if columns.hasUserEvent && columns.firstUserMessage {
+		assignments = append(assignments, `has_user_event = CASE WHEN COALESCE(first_user_message, '') <> '' THEN 1 ELSE has_user_event END`)
+		predicates = append(predicates, `COALESCE(first_user_message, '') <> '' AND COALESCE(has_user_event, 0) <> 1`)
+	}
+	if columns.threadSource && columns.firstUserMessage {
+		assignments = append(assignments, `thread_source = CASE WHEN COALESCE(thread_source, '') = '' AND COALESCE(first_user_message, '') <> '' THEN 'user' ELSE thread_source END`)
+		predicates = append(predicates, `COALESCE(thread_source, '') = '' AND COALESCE(first_user_message, '') <> ''`)
+	}
+	if len(assignments) == 0 || len(predicates) == 0 {
+		return "", false
+	}
+	return fmt.Sprintf(`UPDATE threads SET %s WHERE %s`, strings.Join(assignments, ", "), strings.Join(predicates, " OR ")), usesProvider
 }
 
 func (s *Service) claudeSettingsPath() string {

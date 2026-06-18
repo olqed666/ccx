@@ -914,6 +914,46 @@ func TestMigrateCodexSessions_RewritesJSONLAndSQLite(t *testing.T) {
 	}
 }
 
+func TestMigrateCodexSessions_RepairsSQLiteVisibilityFields(t *testing.T) {
+	svc := newTestService(t)
+	db := openTestSQLite(t, svc.codexStateDBPath())
+	_, err := db.Exec(`CREATE TABLE threads (
+		id TEXT PRIMARY KEY,
+		model_provider TEXT,
+		preview TEXT NOT NULL DEFAULT '',
+		first_user_message TEXT NOT NULL DEFAULT '',
+		has_user_event INTEGER NOT NULL DEFAULT 0,
+		thread_source TEXT
+	)`)
+	if err != nil {
+		t.Fatalf("create threads failed: %v", err)
+	}
+	_, err = db.Exec(`INSERT INTO threads (id, model_provider, preview, first_user_message, has_user_event, thread_source) VALUES
+		('hidden-old-provider', 'openai', '', 'hello', 0, NULL),
+		('hidden-current-provider', 'ccx', '', 'already current', 0, NULL),
+		('visible-current-provider', 'ccx', 'visible', 'visible', 1, 'user'),
+		('provider-only', 'openai', 'existing preview', '', 0, NULL)`)
+	if err != nil {
+		t.Fatalf("insert threads failed: %v", err)
+	}
+	db.Close()
+
+	result, err := svc.MigrateCodexSessions(MigrateCodexSessionsRequest{Provider: ProviderCCX, Mode: "plugin"})
+	if err != nil {
+		t.Fatalf("MigrateCodexSessions failed: %v", err)
+	}
+	if result.SQLiteSkipped || result.SQLiteRowsUpdated != 3 {
+		t.Fatalf("unexpected sqlite result: %+v", result)
+	}
+
+	db = openTestSQLite(t, svc.codexStateDBPath())
+	defer db.Close()
+	assertThreadVisibilityRow(t, db, "hidden-old-provider", ProviderCCX, "hello", 1, "user")
+	assertThreadVisibilityRow(t, db, "hidden-current-provider", ProviderCCX, "already current", 1, "user")
+	assertThreadVisibilityRow(t, db, "visible-current-provider", ProviderCCX, "visible", 1, "user")
+	assertThreadVisibilityRow(t, db, "provider-only", ProviderCCX, "existing preview", 0, "")
+}
+
 func TestResolveCodexSessionModelProvider(t *testing.T) {
 	cases := []struct {
 		name string
