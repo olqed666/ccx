@@ -881,6 +881,21 @@ const claudeChannelPresets: Record<string, {
     noVisionModels: [],
     visionFallbackModel: '',
   },
+  compshare: {
+    mapping: [
+      { source: 'fable', target: 'glm-5.2' },
+      { source: 'opus', target: 'glm-5.2' },
+      { source: 'sonnet', target: 'glm-5.2' },
+      { source: 'haiku', target: 'deepseek-v4-flash' },
+    ],
+    passbackReasoningContent: true,
+    passbackThinkingBlocks: true,
+    stripEmptyTextBlocks: true,
+    normalizeSystemRoleToTopLevel: false,
+    noVision: false,
+    noVisionModels: ['glm-5.2', 'deepseek-v4-flash'],
+    visionFallbackModel: 'MiniMax-M2.7',
+  },
   minimax: {
     mapping: [
       { source: 'fable', target: 'MiniMax-M3' },
@@ -944,8 +959,8 @@ const codexResponsesPresets: Record<string, {
   compshare: {
     mapping: [
       { source: 'codex', target: 'deepseek-v4-flash' },
-      { source: 'gpt', target: 'glm-5.1' },
-      { source: 'mini', target: 'deepseek-v4-flash' },
+      { source: 'gpt', target: 'glm-5.2', reasoning: 'max' },
+      { source: 'mini', target: 'deepseek-v4-flash', reasoning: 'high' },
     ],
     reasoningParamStyle: 'reasoning',
     codexNativeToolPassthrough: true,
@@ -954,7 +969,7 @@ const codexResponsesPresets: Record<string, {
     stripImageGenerationTool: false,
     normalizeNonstandardChatRoles: true,
     noVision: false,
-    noVisionModels: ['deepseek-v4-flash'],
+    noVisionModels: ['glm-5.2', 'deepseek-v4-flash'],
     visionFallbackModel: 'MiniMax-M2.7',
   },
   minimax: {
