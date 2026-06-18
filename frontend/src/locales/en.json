@@ -200,6 +200,8 @@
   "addChannel.enterValidUrl": "Enter a valid Base URL",
   "addChannel.apiKeys": "API Keys",
   "addChannel.detectedKeys": "Detected {count} API key(s)",
+  "addChannel.newChannelPlacementLabel": "Append to end",
+  "addChannel.newChannelPlacementHint": "On: append to end. Off: top with 5-min promotion",
   "addChannel.enterApiKey": "Enter at least one API key",
   "addChannel.channelName": "Channel name",
   "addChannel.channelType": "Channel type",

@@ -631,7 +631,9 @@ async function persistCurrentDraft(options: { notifyParent?: boolean; close?: bo
   saving.value = true
   error.value = ''
   try {
-    await saveChannel(buildSubmitPayload(), props.channel?.index ?? null)
+    await saveChannel(buildSubmitPayload(), props.channel?.index ?? null, {
+      isQuickAdd: !isEditMode.value,
+    })
     if (options.notifyParent) emit('saved')
     if (options.close) emit('close')
     return true

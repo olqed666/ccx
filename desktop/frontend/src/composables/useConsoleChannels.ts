@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useAdminApi } from '@/composables/useAdminApi'
+import { useChannelPlacementPreference } from '@/composables/useChannelPlacementPreference'
 import { mergeChannelsWithLocalData } from '@/utils/channel-merge'
 import { getChannelTypeApi, type ManagedChannelType } from '@/utils/channel-type-api'
 import type {
@@ -130,6 +131,7 @@ async function refreshChannels() {
 async function saveChannel(
   payload: Omit<Channel, 'index' | 'latency' | 'status'>,
   editingIndex: number | null,
+  options?: { isQuickAdd?: boolean },
 ) {
   const typeApi = getChannelTypeApi(activeTab.value)
   if (editingIndex !== null) {
@@ -139,6 +141,35 @@ async function saveChannel(
   }
   await typeApi.addChannel(payload)
   await refreshChannels()
+
+  // 快速添加模式：根据用户偏好将新渠道放到队列顶部（含 5 分钟促销期）或末尾
+  if (options?.isQuickAdd) {
+    const { newChannelPlacement } = useChannelPlacementPreference()
+    const allChannels = channelsByType.value[activeTab.value].channels || []
+    // 后端 AddUpstream 把新渠道 prepend 到首位；通过 name 精确匹配定位
+    const newChannel = allChannels.find(ch => ch.name === payload.name && ch.status !== 'disabled')
+    if (newChannel) {
+      try {
+        const placeAtBottom = newChannelPlacement.value === 'bottom'
+        const otherIndexes = allChannels
+          .filter(ch => ch.index !== newChannel.index && ch.status !== 'disabled')
+          .sort((a, b) => (a.priority ?? a.index) - (b.priority ?? b.index))
+          .map(ch => ch.index)
+        const newOrder = placeAtBottom
+          ? [...otherIndexes, newChannel.index]
+          : [newChannel.index, ...otherIndexes]
+        await typeApi.reorder(newOrder)
+        if (!placeAtBottom) {
+          await typeApi.promote(newChannel.index, 300)
+        }
+        await refreshChannels()
+      } catch (err) {
+        console.warn('设置快速添加优先级失败:', err)
+        // 不影响主流程
+      }
+    }
+  }
+
   return { success: true, messageKey: 'channelEditor.toast.added' }
 }
 

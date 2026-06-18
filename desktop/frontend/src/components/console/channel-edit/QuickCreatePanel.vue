@@ -3,8 +3,11 @@ import { computed, type FunctionalComponent } from 'vue'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { AlertCircle, Bot, CheckCircle2, Gem, MessageSquare, Sparkles, Tag } from 'lucide-vue-next'
 import { useLanguage } from '@/composables/useLanguage'
+import { useChannelPlacementPreference } from '@/composables/useChannelPlacementPreference'
 
 const props = defineProps<{
   quickInput: string
@@ -23,6 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useLanguage()
+const { newChannelPlacement, setNewChannelPlacement } = useChannelPlacementPreference()
 
 // 上游类型品牌色 + 图标，与 ChannelCard 的服务类型视觉体系保持一致
 interface ServiceMeta {
@@ -127,18 +131,39 @@ const serviceMeta = computed<ServiceMeta>(() => serviceMetaMap[props.serviceType
           </div>
 
           <!-- 右栏：API Keys（5/12） -->
-          <div class="rounded-lg border border-border bg-background/70 p-3 md:col-span-5">
-            <div class="flex items-center gap-2 text-xs font-semibold mb-1.5">
-              <CheckCircle2 v-if="detectedApiKeys.length" class="h-4 w-4 text-emerald-500" />
-              <AlertCircle v-else class="h-4 w-4 text-muted-foreground" />
-              {{ t('addChannel.apiKeys') }}
+          <div class="space-y-2 md:col-span-5">
+            <div class="rounded-lg border border-border bg-background/70 p-3">
+              <div class="flex items-center gap-2 text-xs font-semibold mb-1.5">
+                <CheckCircle2 v-if="detectedApiKeys.length" class="h-4 w-4 text-emerald-500" />
+                <AlertCircle v-else class="h-4 w-4 text-muted-foreground" />
+                {{ t('addChannel.apiKeys') }}
+              </div>
+              <p v-if="detectedApiKeys.length" class="text-xs text-emerald-600">
+                {{ t('addChannel.detectedKeys', { count: String(detectedApiKeys.length) }) }}
+              </p>
+              <p v-else class="text-xs text-muted-foreground">
+                {{ t('addChannel.enterApiKey') }}
+              </p>
             </div>
-            <p v-if="detectedApiKeys.length" class="text-xs text-emerald-600">
-              {{ t('addChannel.detectedKeys', { count: String(detectedApiKeys.length) }) }}
-            </p>
-            <p v-else class="text-xs text-muted-foreground">
-              {{ t('addChannel.enterApiKey') }}
-            </p>
+
+            <TooltipProvider :delay-duration="200">
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <div class="flex items-center gap-2 px-1">
+                    <Switch
+                      :model-value="newChannelPlacement === 'bottom'"
+                      @update:model-value="(v) => setNewChannelPlacement(v ? 'bottom' : 'top')"
+                    />
+                    <span class="text-xs text-muted-foreground">
+                      {{ t('addChannel.newChannelPlacementLabel') }}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent class="max-w-[240px]">
+                  {{ t('addChannel.newChannelPlacementHint') }}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </div>
       </div>

@@ -34,6 +34,9 @@ export const usePreferencesStore = defineStore('preferences', () => {
   // 是否已看过新用户指引（首次登录自动弹出一次）
   const hasSeenGuide = ref(false)
 
+  // 新渠道插入位置偏好：'top' = 队列顶部（默认，带 5 分钟促销期），'bottom' = 队列末尾（无促销期）
+  const newChannelPlacement = ref<'top' | 'bottom'>('top')
+
   // ===== 操作方法 =====
 
   /**
@@ -104,6 +107,13 @@ export const usePreferencesStore = defineStore('preferences', () => {
     hasSeenGuide.value = true
   }
 
+  /**
+   * 设置新渠道插入位置偏好
+   */
+  function setNewChannelPlacement(placement: 'top' | 'bottom') {
+    newChannelPlacement.value = placement
+  }
+
   return {
     // 状态
     darkModePreference,
@@ -112,6 +122,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     uiLanguage,
     showGlobalStats,
     hasSeenGuide,
+    newChannelPlacement,
 
     // 方法
     setDarkMode,
@@ -123,6 +134,7 @@ export const usePreferencesStore = defineStore('preferences', () => {
     initializeUILanguage,
     toggleGlobalStats,
     markGuideSeen,
+    setNewChannelPlacement,
   }
 }, {
   // 持久化配置

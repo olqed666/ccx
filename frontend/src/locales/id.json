@@ -200,6 +200,8 @@
   "addChannel.enterValidUrl": "Masukkan Base URL yang valid",
   "addChannel.apiKeys": "API Keys",
   "addChannel.detectedKeys": "Terdeteksi {count} API Key",
+  "addChannel.newChannelPlacementLabel": "Ke akhir antrean",
+  "addChannel.newChannelPlacementHint": "Nyala: ke akhir. Mati: ke atas dengan promo 5 menit",
   "addChannel.enterApiKey": "Masukkan setidaknya satu API Key",
   "addChannel.channelName": "Nama channel",
   "addChannel.channelType": "Tipe channel",

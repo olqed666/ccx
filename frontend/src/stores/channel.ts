@@ -294,7 +294,7 @@ export const useChannelStore = defineStore('channel', () => {
         await api.addChannel(channel)
       }
 
-      // 快速添加模式：将新渠道设为第一优先级并设置5分钟促销期
+      // 快速添加模式：根据用户偏好将新渠道放到队列顶部（含 5 分钟促销期）或末尾
       if (options?.isQuickAdd) {
         await refreshChannels() // 先刷新获取新渠道的 index
         const data = isChat
@@ -311,12 +311,16 @@ export const useChannelStore = defineStore('channel', () => {
         const newChannel = allChannels.find(ch => ch.name === channel.name && ch.status !== 'disabled')
         if (newChannel) {
           try {
-            // 1. 重新排序：将新渠道放到第一位（其余渠道按既有 priority/index 升序）
+            const placeAtBottom = preferencesStore.newChannelPlacement === 'bottom'
+
+            // 1. 重新排序：根据偏好决定新渠道放首位还是末尾（其余渠道按既有 priority/index 升序）
             const otherIndexes = allChannels
               .filter(ch => ch.index !== newChannel.index && ch.status !== 'disabled')
               .sort((a, b) => (a.priority ?? a.index) - (b.priority ?? b.index))
               .map(ch => ch.index)
-            const newOrder = [newChannel.index, ...otherIndexes]
+            const newOrder = placeAtBottom
+              ? [...otherIndexes, newChannel.index]
+              : [newChannel.index, ...otherIndexes]
 
             if (isChat) {
               await api.reorderChatChannels(newOrder)
@@ -330,24 +334,31 @@ export const useChannelStore = defineStore('channel', () => {
               await api.reorderChannels(newOrder)
             }
 
-            // 2. 设置5分钟促销期（300秒）
-            if (isChat) {
-              await api.setChatChannelPromotion(newChannel.index, 300)
-            } else if (isImages) {
-              await api.setImagesChannelPromotion(newChannel.index, 300)
-            } else if (isGemini) {
-              await api.setGeminiChannelPromotion(newChannel.index, 300)
-            } else if (isResponses) {
-              await api.setResponsesChannelPromotion(newChannel.index, 300)
-            } else {
-              await api.setChannelPromotion(newChannel.index, 300)
+            // 2. 仅 top 模式设置 5 分钟促销期（300 秒）；bottom 模式不设促销期
+            if (!placeAtBottom) {
+              if (isChat) {
+                await api.setChatChannelPromotion(newChannel.index, 300)
+              } else if (isImages) {
+                await api.setImagesChannelPromotion(newChannel.index, 300)
+              } else if (isGemini) {
+                await api.setGeminiChannelPromotion(newChannel.index, 300)
+              } else if (isResponses) {
+                await api.setResponsesChannelPromotion(newChannel.index, 300)
+              } else {
+                await api.setChannelPromotion(newChannel.index, 300)
+              }
             }
 
-            return {
-              success: true,
-              message: t('store.channel.added'),
-              quickAddMessage: t('store.channel.quickAddPrioritized', { name: channel.name })
-            }
+            return placeAtBottom
+              ? {
+                  success: true,
+                  message: t('store.channel.added')
+                }
+              : {
+                  success: true,
+                  message: t('store.channel.added'),
+                  quickAddMessage: t('store.channel.quickAddPrioritized', { name: channel.name })
+                }
           } catch (err) {
             console.warn('设置快速添加优先级失败:', err)
             // 不影响主流程

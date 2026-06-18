@@ -97,23 +97,44 @@
                   </v-col>
 
                   <v-col cols="12" md="5">
-                    <div class="d-flex align-center ga-3">
-                      <v-icon :color="detectedApiKeys.length > 0 ? 'success' : 'error'" size="20">
-                        {{ detectedApiKeys.length > 0 ? 'mdi-check-circle' : 'mdi-alert-circle' }}
-                      </v-icon>
-                      <div class="flex-grow-1">
-                        <div class="text-body-2 font-weight-medium">{{ t('addChannel.apiKeys') }}</div>
-                        <div class="text-caption" :class="detectedApiKeys.length > 0 ? 'text-success' : 'text-error'">
-                          {{
-                            detectedApiKeys.length > 0
-                              ? t('addChannel.detectedKeys', { count: detectedApiKeys.length })
-                              : t('addChannel.enterApiKey')
-                          }}
+                    <div class="d-flex flex-column ga-2">
+                      <div class="d-flex align-center ga-3">
+                        <v-icon :color="detectedApiKeys.length > 0 ? 'success' : 'error'" size="20">
+                          {{ detectedApiKeys.length > 0 ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                        </v-icon>
+                        <div class="flex-grow-1">
+                          <div class="text-body-2 font-weight-medium">{{ t('addChannel.apiKeys') }}</div>
+                          <div class="text-caption" :class="detectedApiKeys.length > 0 ? 'text-success' : 'text-error'">
+                            {{
+                              detectedApiKeys.length > 0
+                                ? t('addChannel.detectedKeys', { count: detectedApiKeys.length })
+                                : t('addChannel.enterApiKey')
+                            }}
+                          </div>
                         </div>
+                        <v-chip v-if="detectedApiKeys.length > 0" size="x-small" color="success" variant="tonal">
+                          {{ t('addChannel.count', { count: detectedApiKeys.length }) }}
+                        </v-chip>
                       </div>
-                      <v-chip v-if="detectedApiKeys.length > 0" size="x-small" color="success" variant="tonal">
-                        {{ t('addChannel.count', { count: detectedApiKeys.length }) }}
-                      </v-chip>
+
+                      <v-tooltip :text="t('addChannel.newChannelPlacementHint')" location="top" max-width="240">
+                        <template #activator="{ props: tooltipProps }">
+                          <div v-bind="tooltipProps" class="d-flex align-center ga-2">
+                            <v-switch
+                              :model-value="preferencesStore.newChannelPlacement === 'bottom'"
+                              density="compact"
+                              hide-details
+                              color="primary"
+                              inset
+                              class="placement-switch ma-0 pa-0"
+                              @update:model-value="(v) => preferencesStore.setNewChannelPlacement(v ? 'bottom' : 'top')"
+                            />
+                            <span class="text-caption text-medium-emphasis">
+                              {{ t('addChannel.newChannelPlacementLabel') }}
+                            </span>
+                          </div>
+                        </template>
+                      </v-tooltip>
                     </div>
                   </v-col>
                 </v-row>
@@ -148,10 +169,11 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useTheme } from 'vuetify'
 import type { Channel } from '../services/api'
-import { buildExpectedRequestUrl } from '../utils/baseUrlSemantics'
+import { buildExpectedRequestUrls } from '../utils/expectedRequestUrls'
 import { extractChannelNamePrefix } from '../utils/add-channel-modal-state'
 import { parseQuickInput as parseQuickInputUtil } from '../utils/quickInputParser'
 import { useI18n } from '../i18n'
+import { usePreferencesStore } from '../stores/preferences'
 
 type ServiceType = 'openai' | 'gemini' | 'claude' | 'responses'
 type ChannelType = 'messages' | 'chat' | 'responses' | 'gemini' | 'images'
@@ -173,6 +195,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const theme = useTheme()
+const preferencesStore = usePreferencesStore()
 
 const quickInput = ref('')
 const detectedBaseUrl = ref('')
@@ -326,26 +349,8 @@ function parseQuickInput() {
 
 function getExpectedRequestUrl(inputBaseUrl: string): string {
   if (!inputBaseUrl) return ''
-
-  const serviceType = props.channelType === 'images'
-    ? 'openai'
-    : quickServiceType.value
-  const endpoint =
-    props.channelType === 'images'
-      ? '/images/generations'
-      : props.channelType === 'responses'
-        ? serviceType === 'responses'
-          ? '/responses'
-          : serviceType === 'claude'
-            ? '/messages'
-            : '/chat/completions'
-        : serviceType === 'claude'
-          ? '/messages'
-          : serviceType === 'gemini'
-            ? '/models/{model}:generateContent'
-            : '/chat/completions'
-
-  return buildExpectedRequestUrl(serviceType, endpoint, inputBaseUrl)
+  const serviceType = props.channelType === 'images' ? 'openai' : quickServiceType.value
+  return buildExpectedRequestUrls(props.channelType, serviceType, inputBaseUrl)[0]?.expectedUrl || ''
 }
 
 function resetQuickState() {
@@ -461,6 +466,16 @@ onUnmounted(() => {
 
 .upstream-select {
   min-width: 160px;
+}
+
+.placement-switch {
+  flex-shrink: 0;
+}
+.placement-switch :deep(.v-selection-control) {
+  min-height: auto;
+}
+.placement-switch :deep(.v-switch__track) {
+  opacity: 0.6;
 }
 
 .shortcut-hint {

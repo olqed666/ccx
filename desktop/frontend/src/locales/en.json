@@ -566,6 +566,8 @@
   "addChannel.apiKeys": "API Keys",
   "addChannel.detectedKeys": "Detected {count} API key(s)",
   "addChannel.enterApiKey": "Enter at least one API key",
+  "addChannel.newChannelPlacementLabel": "Append to end",
+  "addChannel.newChannelPlacementHint": "On: append to end. Off: top with 5-min promotion",
   "addChannel.expectedRequest": "Expected request",
   "addChannel.apiKeyLoadBalance": "Multiple keys can be added as failover candidates",
   "addChannel.checking": "Checking...",

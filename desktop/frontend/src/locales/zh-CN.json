@@ -566,6 +566,8 @@
   "addChannel.apiKeys": "API Keys",
   "addChannel.detectedKeys": "已检测到 {count} 个 API Key",
   "addChannel.enterApiKey": "请输入至少一个 API Key",
+  "addChannel.newChannelPlacementLabel": "添加到末尾",
+  "addChannel.newChannelPlacementHint": "开启则追加到末尾，关闭则置顶并享 5 分钟促销",
   "addChannel.expectedRequest": "预期请求",
   "addChannel.apiKeyLoadBalance": "可添加多个密钥作为故障转移备用",
   "addChannel.checking": "检测中...",
