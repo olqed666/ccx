@@ -15,7 +15,7 @@ const emit = defineEmits<{
   (e: 'test-capability'): void
 }>()
 
-const { tf } = useLanguage()
+const { t } = useLanguage()
 </script>
 
 <template>
@@ -26,8 +26,8 @@ const { tf } = useLanguage()
       </div>
       <h3 class="text-xl font-bold tracking-tight">
         {{ isEditMode
-          ? tf('channelEditor.title.edit', '编辑渠道')
-          : tf('channelEditor.title.create', '添加渠道')
+          ? t('channelEditor.title.edit')
+          : t('channelEditor.title.create')
         }}
       </h3>
     </div>
@@ -38,7 +38,7 @@ const { tf } = useLanguage()
         variant="ghost"
         size="icon-sm"
         class="h-8 w-8 rounded-full text-muted-foreground transition-all hover:bg-primary/10 hover:text-primary"
-        :title="noVision ? tf('channelEditor.compat.visionDisabled', '视觉已禁用') : tf('channelEditor.compat.visionEnabled', '视觉已启用')"
+        :title="noVision ? t('channelEditor.compat.visionDisabled') : t('channelEditor.compat.visionEnabled')"
         @click="emit('toggle-no-vision')"
       >
         <EyeOff v-if="noVision" class="h-3.5 w-3.5 text-amber-500" />
@@ -53,7 +53,7 @@ const { tf } = useLanguage()
         @click="emit('test-capability')"
       >
         <Zap class="mr-1 h-3.5 w-3.5 fill-amber-500/20 text-amber-500" />
-        {{ tf('capability.startTest', '能力测试') }}
+        {{ t('capability.startTest') }}
       </Button>
     </div>
   </div>

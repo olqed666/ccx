@@ -31,7 +31,7 @@ const emit = defineEmits<{
   'update:form': [value: Partial<FormData>]
 }>()
 
-const { t, tf } = useLanguage()
+const { t } = useLanguage()
 
 function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
   emit('update:form', { [key]: value } as Partial<FormData>)
@@ -50,7 +50,7 @@ function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
         <Input
           :model-value="form.name"
           class="h-9"
-          :placeholder="tf('channelEditor.basic.name.placeholder', 'e.g. OpenAI Production')"
+          :placeholder="t('channelEditor.basic.name.placeholder')"
           :class="{ 'border-destructive': errors.name }"
           @update:model-value="(val) => updateField('name', val as string)"
         />
@@ -62,7 +62,7 @@ function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
         </Label>
         <Select :model-value="form.serviceType" @update:model-value="updateField('serviceType', $event as any)">
           <SelectTrigger class="h-9 w-full" :class="{ 'border-destructive': errors.serviceType }">
-            <SelectValue :placeholder="tf('channelEditor.basic.serviceType.placeholder', '选择服务类型')" />
+            <SelectValue :placeholder="t('channelEditor.basic.serviceType.placeholder')" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="opt in serviceTypeOptions" :key="opt.value" :value="opt.value">
@@ -79,7 +79,7 @@ function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
         <Label class="text-xs font-semibold text-muted-foreground">
           {{ t('channelEditor.basic.baseUrl.label') }} <span class="text-destructive">*</span>
         </Label>
-        <span class="origin-right scale-95 text-[10px] text-muted-foreground/80">{{ tf('channelEditor.basic.multiLineFailover', '多行实现故障轮换') }}</span>
+        <span class="origin-right scale-95 text-[10px] text-muted-foreground/80">{{ t('channelEditor.basic.multiLineFailover') }}</span>
       </div>
       <Textarea
         :model-value="form.baseUrlsText"
@@ -96,7 +96,7 @@ function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
         >
           <span class="mt-1.5 inline-block size-1.5 shrink-0 animate-pulse rounded-full bg-emerald-500"></span>
           <span class="block min-w-0 break-all font-mono">
-            {{ tf('addChannel.expectedRequest', '预期请求') }} {{ item.expectedUrl }}
+            {{ t('addChannel.expectedRequest') }} {{ item.expectedUrl }}
           </span>
         </div>
       </div>
@@ -108,21 +108,21 @@ function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
       <Input
         :model-value="form.website"
         class="h-9"
-        :placeholder="tf('channelEditor.basic.website.placeholder', 'https://openai.com')"
+        :placeholder="t('channelEditor.basic.website.placeholder')"
         @update:model-value="(val) => updateField('website', val as string)"
       />
     </div>
 
     <div class="space-y-1.5">
-      <Label class="text-xs font-semibold text-muted-foreground">{{ tf('addChannel.descriptionLabel', '描述 (可选)') }}</Label>
+      <Label class="text-xs font-semibold text-muted-foreground">{{ t('addChannel.descriptionLabel') }}</Label>
       <Textarea
         :model-value="form.description"
         rows="3"
         class="min-h-[84px] resize-none"
-        :placeholder="tf('addChannel.descriptionHint', '可选的渠道描述...')"
+        :placeholder="t('addChannel.descriptionHint')"
         @update:model-value="(val) => updateField('description', val as string)"
       />
-      <p class="text-[10px] leading-4 text-muted-foreground">{{ tf('addChannel.descriptionHint', '可选的渠道描述...') }}</p>
+      <p class="text-[10px] leading-4 text-muted-foreground">{{ t('addChannel.descriptionHint') }}</p>
     </div>
   </section>
 </template>

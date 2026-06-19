@@ -19,7 +19,7 @@ const emit = defineEmits<{
   retryModel: [protocol: string, model: string]
 }>()
 
-const { tf } = useLanguage()
+const { t } = useLanguage()
 
 const modelResults = computed(() => props.test.modelResults ?? [])
 
@@ -64,8 +64,8 @@ function canRetry(result: CapabilityModelJobResult) {
 
 function getRetryHint(result: CapabilityModelJobResult) {
   return result.status === 'idle'
-    ? tf('capability.testModel', '点击测试')
-    : tf('capability.retryModel', '重试')
+    ? t('capability.testModel')
+    : t('capability.retryModel')
 }
 
 function isRedirected(result: CapabilityModelJobResult) {
@@ -79,8 +79,8 @@ function getModelTooltipView(result: CapabilityModelJobResult) {
 }
 
 function formatStreaming(result: CapabilityModelJobResult) {
-  if (result.streamingSupported === true) return tf('capability.supported', 'Yes')
-  if (result.streamingSupported === false) return tf('capability.unsupported', 'No')
+  if (result.streamingSupported === true) return t('capability.supported')
+  if (result.streamingSupported === false) return t('capability.unsupported')
   return '—'
 }
 
@@ -100,12 +100,12 @@ function handleBadgeClick(result: CapabilityModelJobResult) {
     <!-- pending placeholder -->
     <div v-if="shouldShowPendingPlaceholder" class="flex items-center gap-2 py-2">
       <Loader2 class="h-4 w-4 animate-spin text-primary" />
-      <span class="text-xs text-muted-foreground">{{ pendingText || tf('capability.modelQueued', '模型排队中...') }}</span>
+      <span class="text-xs text-muted-foreground">{{ pendingText || t('capability.modelQueued') }}</span>
     </div>
 
     <!-- details unavailable -->
     <div v-else-if="shouldShowDetailsUnavailable" class="py-1 text-xs text-muted-foreground">
-      {{ tf('capability.modelDetailsUnavailable', '模型详情暂不可用') }}
+      {{ t('capability.modelDetailsUnavailable') }}
     </div>
 
     <!-- model badges -->

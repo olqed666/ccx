@@ -89,10 +89,10 @@ const visibleDisabledKeys = computed(() => {
   <section class="space-y-4 rounded-xl border bg-card/40 p-5 shadow-xs" :class="errors.apiKeys ? 'border-destructive/40' : 'border-border/60'">
     <div class="flex items-center justify-between gap-3 border-b border-border/40 pb-2">
       <h4 class="text-xs font-bold uppercase tracking-wider text-primary">
-        {{ tf('channelCard.apiKeyManagement', 'API key management') }} *
+        {{ t('channelCard.apiKeyManagement') }} *
       </h4>
       <span class="text-[10px] bg-primary/10 border border-primary/20 text-primary font-semibold px-2 py-0.5 rounded-full">
-        {{ tf('addChannel.apiKeyLoadBalance', 'Multiple keys can be added as failover candidates') }}
+        {{ t('addChannel.apiKeyLoadBalance') }}
       </span>
     </div>
 
@@ -131,7 +131,7 @@ const visibleDisabledKeys = computed(() => {
             v-if="findDuplicateKeyIndex(key) !== index && existingApiKeys.indexOf(key) !== index"
             class="text-[10px] text-amber-600 shrink-0"
           >
-            {{ tf('addChannel.duplicateKey', '重复') }}
+            {{ t('addChannel.duplicateKey') }}
           </span>
         </div>
         <div class="flex shrink-0 items-center gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
@@ -141,7 +141,7 @@ const visibleDisabledKeys = computed(() => {
             variant="ghost"
             class="h-7 w-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
             :class="copiedKeyIndex === index ? 'text-emerald-500' : ''"
-            :title="tf('common.copy', '复制密钥')"
+            :title="t('channelEditor.auth.copyKey')"
             @click="emit('copyApiKey', key, index)"
           >
             <CheckCircle2 v-if="copiedKeyIndex === index" class="h-3.5 w-3.5" />
@@ -172,7 +172,7 @@ const visibleDisabledKeys = computed(() => {
             size="icon-sm"
             variant="ghost"
             class="h-7 w-7 rounded-md text-destructive hover:bg-destructive/10"
-            :title="tf('common.delete', '删除密钥')"
+            :title="t('channelEditor.auth.deleteKey')"
             @click="emit('removeExistingApiKey', index)"
           >
             <Trash2 class="h-3.5 w-3.5" />
@@ -186,7 +186,7 @@ const visibleDisabledKeys = computed(() => {
       <Input
         :model-value="newApiKeysText"
         class="h-9 flex-1 rounded-lg border border-input bg-background/40 px-3 font-mono text-xs placeholder:text-muted-foreground/60 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/20"
-        :placeholder="tf('channelEditor.auth.addNewApiKey.placeholder', 'Enter new API key')"
+        :placeholder="t('channelEditor.auth.addNewApiKey.placeholder')"
         @update:model-value="(val) => emit('update:newApiKeysText', val as string)"
         @keydown.enter.prevent="emit('addNewApiKeys')"
       />
@@ -199,14 +199,14 @@ const visibleDisabledKeys = computed(() => {
         @click="emit('addNewApiKeys')"
       >
         <Plus class="h-4 w-4 mr-1" />
-        {{ tf('common.add', '添加 Key') }}
+        {{ t('channelEditor.auth.addKey') }}
       </Button>
     </div>
 
     <!-- Disabled Keys -->
     <div v-if="hasDisabledKeys && visibleDisabledKeys.length" class="space-y-2 border border-amber-500/20 bg-amber-500/10 p-3 rounded-lg">
       <div class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-300">
-        {{ tf('channelEditor.auth.disabledKeys.label', 'Disabled keys') }} ({{ visibleDisabledKeys.length }})
+        {{ t('channelEditor.auth.disabledKeys.label') }} ({{ visibleDisabledKeys.length }})
       </div>
       <div v-for="item in visibleDisabledKeys" :key="item.key" class="flex items-center justify-between gap-2 text-xs">
         <div class="min-w-0 space-y-0.5">
@@ -230,7 +230,7 @@ const visibleDisabledKeys = computed(() => {
         >
           <Loader2 v-if="restoringKey === item.key" class="h-3 w-3 animate-spin" />
           <RotateCcw v-else class="h-3 w-3" />
-          {{ tf('channelEditor.auth.restoreKey', 'Restore') }}
+          {{ t('channelEditor.auth.restoreKey') }}
         </Button>
       </div>
     </div>

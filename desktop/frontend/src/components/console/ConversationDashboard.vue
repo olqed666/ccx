@@ -15,7 +15,7 @@ import type { ChannelSequenceEntry } from '@/services/admin-api'
 
 const api = useAdminApi()
 const { status } = useStatus()
-const { tf } = useLanguage()
+const { t } = useLanguage()
 const {
   conversations,
   channelsByKind,
@@ -85,15 +85,15 @@ const overrideCount = computed(() => Object.keys(overrides.value).length)
 const shouldRefresh = computed(() => status.value.running)
 
 const durationOptions = computed(() => [
-  { label: tf('cockpit.durationDefault', '30 分钟（默认）'), value: '1800' },
-  { label: tf('cockpit.duration15min', '15 分钟'), value: '900' },
-  { label: tf('cockpit.duration1hour', '1 小时'), value: '3600' },
-  { label: tf('cockpit.duration2hours', '2 小时'), value: '7200' },
-  { label: tf('cockpit.duration4hours', '4 小时'), value: '14400' },
-  { label: tf('cockpit.duration8hours', '8 小时'), value: '28800' },
-  { label: tf('cockpit.duration12hours', '12 小时'), value: '43200' },
-  { label: tf('cockpit.duration24hours', '24 小时'), value: '86400' },
-  { label: tf('cockpit.durationNever', '永不恢复'), value: '-1' },
+  { label: t('cockpit.durationDefault'), value: '1800' },
+  { label: t('cockpit.duration15min'), value: '900' },
+  { label: t('cockpit.duration1hour'), value: '3600' },
+  { label: t('cockpit.duration2hours'), value: '7200' },
+  { label: t('cockpit.duration4hours'), value: '14400' },
+  { label: t('cockpit.duration8hours'), value: '28800' },
+  { label: t('cockpit.duration12hours'), value: '43200' },
+  { label: t('cockpit.duration24hours'), value: '86400' },
+  { label: t('cockpit.durationNever'), value: '-1' },
 ])
 
 function overrideDurationAsNumber(): number {
@@ -359,14 +359,14 @@ watch(overrideDuration, async (newDuration) => {
         <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           v-model="searchQuery"
-          :placeholder="tf('cockpit.searchPlaceholder', '搜索...')"
+          :placeholder="t('cockpit.searchPlaceholder')"
           class="h-9 pl-9"
         />
       </div>
 
       <Select v-model="overrideDuration">
         <SelectTrigger class="h-9 w-[160px] shrink-0">
-          <SelectValue :placeholder="tf('cockpit.overrideDuration', '空闲自动恢复')" />
+          <SelectValue :placeholder="t('cockpit.overrideDuration')" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem v-for="opt in durationOptions" :key="opt.value" :value="opt.value">
@@ -376,9 +376,9 @@ watch(overrideDuration, async (newDuration) => {
       </Select>
 
       <span class="text-xs text-muted-foreground">
-        {{ tf('cockpit.active', '活跃: {count}').replace('{count}', String(visibleConversations.length)) }}
+        {{ t('cockpit.active', { count: String(visibleConversations.length) }) }}
         <span v-if="overrideCount > 0" class="ml-2 text-amber-500">
-          {{ tf('cockpit.override', '覆盖: {count}').replace('{count}', String(overrideCount)) }}
+          {{ t('cockpit.override', { count: String(overrideCount) }) }}
         </span>
       </span>
     </div>
@@ -390,13 +390,13 @@ watch(overrideDuration, async (newDuration) => {
     <div v-else-if="!conversations.length" class="border border-border bg-card/60 px-6 py-12 text-center">
       <MessageSquare class="mx-auto h-12 w-12 text-muted-foreground/70" />
       <div class="mt-4 text-sm text-muted-foreground">
-        {{ tf('cockpit.empty', '暂无活跃会话。请求经过网关后，会话会出现在驾驶舱雷达上。') }}
+        {{ t('cockpit.empty') }}
       </div>
     </div>
 
     <template v-else>
       <div v-if="!visibleConversations.length" class="mb-4 border border-border bg-card/60 px-6 py-8 text-center text-sm text-muted-foreground">
-        {{ tf('cockpit.noMatches', '没有匹配当前过滤条件的会话') }}
+        {{ t('cockpit.noMatches') }}
       </div>
 
       <div

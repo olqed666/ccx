@@ -26,7 +26,7 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const { t, tf } = useLanguage()
+const { t } = useLanguage()
 const { status } = useStatus()
 const { isConsoleChannelsActive } = useDesktopActivity()
 const {
@@ -247,7 +247,7 @@ function canDeleteChannel(channel: Channel) {
 async function handleDelete(channel: Channel) {
   clearActionError()
   if (!canDeleteChannel(channel)) {
-    actionError.value = tf('orchestration.deleteActiveGuard', '至少保留一个活跃渠道')
+    actionError.value = t('orchestration.deleteActiveGuard')
     return
   }
 
@@ -442,14 +442,14 @@ watch(() => props.type, () => {
           <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             v-model="searchQuery"
-            :placeholder="tf('orchestration.searchPlaceholder', '搜索频道...')"
+            :placeholder="t('orchestration.searchPlaceholder')"
             class="pl-9"
           />
         </div>
         <!-- 批量测速按钮：桌面端暂不展示，放不下 -->
         <Button size="sm" @click="handleAdd">
           <Plus class="h-3.5 w-3.5" />
-          {{ tf('app.actions.addChannel', '添加频道') }}
+          {{ t('app.actions.addChannel') }}
         </Button>
         <div class="flex-1" />
         <Button
@@ -488,7 +488,7 @@ watch(() => props.type, () => {
         <div class="border border-border bg-background/60 px-3 py-2">
           <div class="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Mode</div>
           <div class="truncate text-sm font-semibold text-foreground">
-            {{ stats?.multiChannelMode ? tf('orchestration.multiChannel', 'Multi-channel') : tf('orchestration.singleChannel', 'Single-channel') }}
+            {{ stats?.multiChannelMode ? t('orchestration.multiChannel') : t('orchestration.singleChannel') }}
           </div>
         </div>
       </div>
@@ -502,7 +502,7 @@ watch(() => props.type, () => {
         >
           <div class="flex items-center gap-2">
             <BarChart3 class="h-4 w-4" />
-            <span>{{ tf('chart.globalStats', 'Usage Stats') }}</span>
+            <span>{{ t('chart.globalStats') }}</span>
           </div>
           <ChevronDown class="h-4 w-4 transition-transform" :class="{ '-rotate-180': showGlobalStats }" />
         </button>
@@ -524,8 +524,8 @@ watch(() => props.type, () => {
     <div v-else-if="activeChannels.length === 0 && inactiveChannels.length === 0" class="border border-dashed border-border bg-card/50 py-12 text-center">
       <p class="text-sm text-muted-foreground">
         {{ searchQuery
-          ? tf('orchestration.searchPlaceholder', '没有匹配的频道')
-          : tf('orchestration.noActiveChannels', '暂无频道，点击上方按钮添加')
+          ? t('orchestration.noMatchingChannels')
+          : t('orchestration.noActiveChannels')
         }}
       </p>
     </div>
@@ -534,7 +534,7 @@ watch(() => props.type, () => {
       <div v-if="actionLoading" class="absolute inset-0 z-10 flex items-center justify-center bg-background/60 backdrop-blur-[1px]">
         <div class="flex items-center gap-2 border border-border bg-card px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
           <Loader2 class="h-3.5 w-3.5 animate-spin" />
-          {{ tf('console.actions.deleting', '正在删除...') }}
+          {{ t('console.actions.deleting') }}
         </div>
       </div>
       <section class="border border-border bg-card/50">
@@ -542,7 +542,7 @@ watch(() => props.type, () => {
           <div class="flex items-center gap-2">
             <Layers class="h-4 w-4 text-primary" />
             <span class="text-xs font-bold uppercase tracking-[0.18em] text-foreground">
-              {{ tf('orchestration.failoverSequence', 'Failover Sequence') }}
+              {{ t('orchestration.failoverSequence') }}
             </span>
           </div>
         </div>
@@ -598,7 +598,7 @@ watch(() => props.type, () => {
         <div class="flex items-center gap-2 border-b border-border px-3 py-2">
           <Archive class="h-4 w-4 text-muted-foreground" />
           <span class="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-            {{ tf('orchestration.standbyPool', 'Standby Pool') }}
+            {{ t('orchestration.standbyPool') }}
           </span>
         </div>
         <div class="divide-y divide-border">

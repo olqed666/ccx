@@ -24,7 +24,7 @@ const emit = defineEmits<{
   (e: 'copyToTab', targetProtocol: string, serviceProtocol: string): void
 }>()
 
-const { tf } = useLanguage()
+const { t } = useLanguage()
 const {
   activeJob,
   snapshot,
@@ -133,13 +133,13 @@ function isProtocolFailed(test: CapabilityProtocolJobResult): boolean {
 
 function getProtocolStatusLabel(test: CapabilityProtocolJobResult): string {
   switch (getProtocolDisplayState(test)) {
-    case 'idle': return tf('capability.notStarted', '未开始')
-    case 'pending': return tf('capability.modelQueued', '排队中')
-    case 'running': return tf('capability.protocolRunning', '测试中')
-    case 'success': return tf('capability.success', '成功')
-    case 'partial': return tf('capability.partial', '部分可用')
-    case 'cancelled': return tf('capability.cancelled', '已取消')
-    default: return test.error || tf('capability.failed', '失败')
+    case 'idle': return t('capability.notStarted')
+    case 'pending': return t('capability.modelQueued')
+    case 'running': return t('capability.protocolRunning')
+    case 'success': return t('capability.success')
+    case 'partial': return t('capability.partial')
+    case 'cancelled': return t('capability.cancelled')
+    default: return test.error || t('capability.failed')
   }
 }
 
@@ -226,10 +226,10 @@ function handleRpmBlur() {
 function getRunModeLabel(mode: string): string {
   const map: Record<string, string> = {
     fresh: '',
-    reused_running: tf('capability.runModeReusedRunning', '复用运行'),
-    resumed_cancelled: tf('capability.runModeResumedCancelled', '恢复取消'),
-    cache_hit: tf('capability.runModeCacheHit', '缓存命中'),
-    reused_previous_results: tf('capability.runModeReusedPreviousResults', '复用上次结果'),
+    reused_running: t('capability.runModeReusedRunning'),
+    resumed_cancelled: t('capability.runModeResumedCancelled'),
+    cache_hit: t('capability.runModeCacheHit'),
+    reused_previous_results: t('capability.runModeReusedPreviousResults'),
   }
   return map[mode] ?? mode
 }
@@ -258,13 +258,13 @@ onBeforeUnmount(() => {
             <div class="flex items-center gap-2">
               <Play class="h-4 w-4 text-primary" />
               <h3 class="text-sm font-semibold">
-                {{ tf('capability.title', '能力测试 - {channel}', { channel: channelName }) }}
+                {{ t('capability.title', { channel: channelName }) }}
               </h3>
             </div>
             <div class="flex items-center gap-2">
               <Badge v-if="runMode !== 'fresh'" variant="secondary" class="text-[10px]">{{ getRunModeLabel(runMode) }}</Badge>
-              <Badge v-if="displayOutcome === 'partial'" variant="outline" class="text-[10px] border-amber-500/30 text-amber-700 dark:text-amber-400">{{ tf('capability.partial', '部分成功') }}</Badge>
-              <Badge v-else-if="displayOutcome === 'cancelled'" variant="outline" class="text-[10px]">{{ tf('capability.cancelled', '已取消') }}</Badge>
+              <Badge v-if="displayOutcome === 'partial'" variant="outline" class="text-[10px] border-amber-500/30 text-amber-700 dark:text-amber-400">{{ t('capability.partial') }}</Badge>
+              <Badge v-else-if="displayOutcome === 'cancelled'" variant="outline" class="text-[10px]">{{ t('capability.cancelled') }}</Badge>
               <Button variant="ghost" size="icon-sm" @click="emit('close')" class="relative group">
                 <X class="h-4 w-4" />
                 <span class="absolute -bottom-6 right-0 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap">Esc</span>
@@ -281,35 +281,35 @@ onBeforeUnmount(() => {
               <!-- Initializing -->
               <div v-if="state === 'initializing'" class="flex flex-col items-center py-8 gap-3">
                 <Loader2 class="h-8 w-8 animate-spin text-primary" />
-                <p class="text-sm text-muted-foreground">{{ tf('capability.loadingTitle', '正在测试协议兼容性...') }}</p>
+                <p class="text-sm text-muted-foreground">{{ t('capability.loadingTitle') }}</p>
               </div>
 
               <!-- 状态栏 -->
               <div v-if="state !== 'initializing' && state !== 'error'" class="flex items-center gap-2 flex-wrap border border-border bg-secondary/30 px-3 py-2">
                 <Badge v-for="proto in compatibleProtocols" :key="proto" variant="outline" :class="['text-[10px]', getProtocolColor(proto)]">{{ getProtocolDisplayName(proto) }}</Badge>
-                <Badge v-if="hasNoCompatibleProtocolsYet && (state === 'completed' || state === 'cancelled')" variant="outline" class="text-[10px] text-muted-foreground">{{ tf('capability.noCompatibleProtocols', '无兼容协议') }}</Badge>
+                <Badge v-if="hasNoCompatibleProtocolsYet && (state === 'completed' || state === 'cancelled')" variant="outline" class="text-[10px] text-muted-foreground">{{ t('capability.noCompatibleProtocols') }}</Badge>
                 <div v-else-if="hasNoCompatibleProtocolsYet && state !== 'idle'" class="flex items-center gap-1.5 text-[10px] text-muted-foreground">
                   <Loader2 v-if="state === 'pending' || state === 'running'" class="h-3 w-3 animate-spin text-primary" />
-                  <span>{{ state === 'pending' ? tf('capability.modelQueued', '模型排队中') : tf('capability.protocolRunning', '协议测试中') }}</span>
+                  <span>{{ state === 'pending' ? t('capability.modelQueued') : t('capability.protocolRunning') }}</span>
                 </div>
 
                 <div class="flex items-center gap-1.5 text-[10px] text-muted-foreground ml-auto">
                   <Gauge class="h-3 w-3" />
-                  <span>{{ tf('capability.rpmLabel', 'RPM') }}</span>
+                  <span>{{ t('capability.rpmLabel') }}</span>
                   <Input v-model.number="rpmValue" type="number" min="1" max="60" step="1" class="h-6 w-14 text-[11px] font-mono px-1.5" @blur="handleRpmBlur" />
                 </div>
 
                 <span v-if="progress?.totalModels && isActive" class="text-[10px] text-muted-foreground">
-                  {{ progress?.completedModels || 0 }}/{{ progress?.totalModels || 0 }} {{ tf('capability.models', '模型') }}
+                  {{ progress?.completedModels || 0 }}/{{ progress?.totalModels || 0 }} {{ t('capability.models') }}
                 </span>
 
                 <span v-if="currentJob?.snapshotUpdatedAt" class="text-[10px] text-muted-foreground">
-                  {{ tf('capability.snapshotUpdated', '更新时间：{time}', { time: currentJob.snapshotUpdatedAt }) }}
+                  {{ t('capability.snapshotUpdated', { time: currentJob.snapshotUpdatedAt }) }}
                 </span>
 
                 <Button v-if="state === 'pending' || state === 'running'" variant="destructive" size="sm" :disabled="cancelling" @click="handleCancel">
                   <Square class="h-3 w-3 mr-1" />
-                  {{ cancelling ? tf('capability.cancelling', '取消中...') : tf('capability.cancel', '取消') }}
+                  {{ cancelling ? t('capability.cancelling') : t('capability.cancel') }}
                 </Button>
               </div>
 
@@ -320,8 +320,8 @@ onBeforeUnmount(() => {
 
               <!-- 无任务 -->
               <div v-if="state === 'idle' && !isActive && sortedTests.length === 0" class="flex flex-col items-center py-6 gap-3">
-                <p v-if="protocolResults.length > 0" class="text-sm text-muted-foreground">{{ tf('capability.lastResults', '上次测试结果') }}</p>
-                <p v-else class="text-sm text-muted-foreground">{{ tf('capability.noResults', '尚未进行能力测试') }}</p>
+                <p v-if="protocolResults.length > 0" class="text-sm text-muted-foreground">{{ t('capability.lastResults') }}</p>
+                <p v-else class="text-sm text-muted-foreground">{{ t('capability.noResults') }}</p>
               </div>
 
               <!-- 协议表格 -->
@@ -329,12 +329,12 @@ onBeforeUnmount(() => {
                 <table class="w-full text-xs">
                   <thead class="bg-secondary/40 border-b border-border">
                     <tr>
-                      <th class="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">{{ tf('capability.table.protocol', '协议') }}</th>
-                      <th class="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">{{ tf('capability.table.status', '状态') }}</th>
-                      <th class="px-3 py-2 text-center font-semibold uppercase tracking-wider text-muted-foreground">{{ tf('capability.table.successCount', '成功') }}</th>
-                      <th class="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">{{ tf('capability.table.latency', '延迟') }}</th>
-                      <th class="px-3 py-2 text-center font-semibold uppercase tracking-wider text-muted-foreground">{{ tf('capability.table.streaming', 'SSE') }}</th>
-                      <th class="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">{{ tf('capability.table.actions', '操作') }}</th>
+                      <th class="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">{{ t('capability.table.protocol') }}</th>
+                      <th class="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">{{ t('capability.table.status') }}</th>
+                      <th class="px-3 py-2 text-center font-semibold uppercase tracking-wider text-muted-foreground">{{ t('capability.table.successCount') }}</th>
+                      <th class="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">{{ t('capability.table.latency') }}</th>
+                      <th class="px-3 py-2 text-center font-semibold uppercase tracking-wider text-muted-foreground">{{ t('capability.table.streaming') }}</th>
+                      <th class="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">{{ t('capability.table.actions') }}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -365,25 +365,25 @@ onBeforeUnmount(() => {
                         </td>
                         <td class="px-3 py-2 text-center">
                           <div v-if="test.success && test.streamingSupported" class="flex items-center justify-center gap-1">
-                            <CheckCircle2 class="h-3.5 w-3.5 text-emerald-500" /><span class="text-emerald-600 dark:text-emerald-400">{{ tf('capability.supported', '支持') }}</span>
+                            <CheckCircle2 class="h-3.5 w-3.5 text-emerald-500" /><span class="text-emerald-600 dark:text-emerald-400">{{ t('capability.supported') }}</span>
                           </div>
                           <div v-else-if="test.success" class="flex items-center justify-center gap-1">
-                            <XCircle class="h-3.5 w-3.5 text-amber-500" /><span class="text-amber-600 dark:text-amber-400">{{ tf('capability.unsupported', '不支持') }}</span>
+                            <XCircle class="h-3.5 w-3.5 text-amber-500" /><span class="text-amber-600 dark:text-amber-400">{{ t('capability.unsupported') }}</span>
                           </div>
                           <span v-else class="text-muted-foreground">—</span>
                         </td>
                         <td class="px-3 py-2 text-right">
                           <div class="flex items-center justify-end gap-1 flex-wrap">
                             <Button v-if="shouldShowTestProtocolButton(test)" variant="outline" size="sm" class="h-5 text-[10px]" :disabled="isStarting || isProtocolBusy(test)" @click="handleTestProtocol(test.protocol)">
-                              <Play class="h-3 w-3" />{{ tf('capability.startTest', '开始测试') }}
+                              <Play class="h-3 w-3" />{{ t('capability.startTest') }}
                             </Button>
                             <Button v-if="test.success && !isCurrentTabProtocol(test.protocol)" variant="outline" size="sm" class="h-5 text-[10px]" @click="handleCopyToTab(test.protocol, test.protocol)">
-                              <ArrowRight class="h-3 w-3" />{{ tf('capability.copyToTab', '复制到当前 Tab') }}
+                              <ArrowRight class="h-3 w-3" />{{ t('capability.copyToTab') }}
                             </Button>
-                            <Badge v-else-if="isCurrentTabProtocol(test.protocol)" variant="secondary" class="text-[10px]">{{ tf('capability.currentTab', '当前 Tab') }}</Badge>
+                            <Badge v-else-if="isCurrentTabProtocol(test.protocol)" variant="secondary" class="text-[10px]">{{ t('capability.currentTab') }}</Badge>
                             <template v-else-if="!test.success && !isCurrentTabProtocol(test.protocol)">
                               <Button v-for="successProto in getSuccessfulProtocols()" :key="successProto" variant="outline" size="sm" :class="['h-5 text-[10px]', getProtocolColor(successProto)]" @click="handleCopyToTab(test.protocol, successProto)">
-                                {{ tf('capability.convert', '转换') }} → {{ getProtocolDisplayName(successProto) }}
+                                {{ t('capability.convert', { protocol: getProtocolDisplayName(successProto) }) }}
                               </Button>
                             </template>
                           </div>
@@ -391,7 +391,7 @@ onBeforeUnmount(() => {
                       </tr>
                       <tr class="border-b border-border/50 bg-background/30">
                         <td colspan="6" class="px-3 py-2">
-                          <CapabilityModelResultBadge :test="test" :pending-text="tf('capability.modelQueued', '模型排队中')" :retry-enabled="!isProtocolBusy(test)" @retry-model="handleRetryModel" />
+                          <CapabilityModelResultBadge :test="test" :pending-text="t('capability.modelQueued')" :retry-enabled="!isProtocolBusy(test)" @retry-model="handleRetryModel" />
                         </td>
                       </tr>
                     </template>
@@ -401,7 +401,7 @@ onBeforeUnmount(() => {
 
               <!-- 总耗时 -->
               <div v-if="currentJob?.totalDuration || snapshot?.totalDuration" class="text-xs text-muted-foreground text-right">
-                {{ tf('capability.duration', '总耗时') }}: {{ ((currentJob?.totalDuration || snapshot?.totalDuration || 0) / 1000).toFixed(1) }}s
+                {{ t('capability.duration') }}: {{ ((currentJob?.totalDuration || snapshot?.totalDuration || 0) / 1000).toFixed(1) }}s
               </div>
             </div>
           </ScrollArea>

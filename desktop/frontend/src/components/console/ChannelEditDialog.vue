@@ -50,7 +50,7 @@ const emit = defineEmits<{
   (e: 'test-capability', channel: Channel): void
 }>()
 
-const { t, tf } = useLanguage()
+const { t } = useLanguage()
 const { saveChannel, restoreApiKey } = useConsoleChannels()
 
 const isEditMode = computed(() => !!props.channel)
@@ -240,7 +240,7 @@ const textVerbosityOptions = [
 const DEFAULT_SELECT_VALUE = 'default'
 
 const reasoningEffortOptions = computed(() => [
-  { label: tf('channelEditor.compat.selectDefault', '默认'), value: DEFAULT_SELECT_VALUE },
+  { label: t('channelEditor.compat.selectDefault'), value: DEFAULT_SELECT_VALUE },
   { label: 'None', value: 'none' },
   { label: 'Low', value: 'low' },
   { label: 'Medium', value: 'medium' },
@@ -522,22 +522,22 @@ const hasConfigurableKeys = computed(() => {
 
 const errors = computed(() => {
   const errs: Record<string, string> = {}
-  if (isEditMode.value && !form.name.trim()) errs.name = tf('channelEditor.basic.name.required', '渠道名称必填')
-  if (!isEditMode.value && !generatedChannelName.value.trim()) errs.name = tf('channelEditor.basic.name.required', '渠道名称必填')
-  if (!form.serviceType) errs.serviceType = tf('channelEditor.basic.serviceType.required', '请选择服务类型')
-  if (!form.baseUrlsText.trim()) errs.baseUrl = tf('channelEditor.basic.baseUrl.required', '至少需要一个 Base URL')
+  if (isEditMode.value && !form.name.trim()) errs.name = t('channelEditor.basic.name.required')
+  if (!isEditMode.value && !generatedChannelName.value.trim()) errs.name = t('channelEditor.basic.name.required')
+  if (!form.serviceType) errs.serviceType = t('channelEditor.basic.serviceType.required')
+  if (!form.baseUrlsText.trim()) errs.baseUrl = t('channelEditor.basic.baseUrl.required')
   // API Key 必填：现有 key + 新增 key，编辑模式下可恢复的 disabled key 也算
-  if (!hasConfigurableKeys.value) errs.apiKeys = tf('channelEditor.auth.apiKeyRequired', '至少需要一个 API Key')
+  if (!hasConfigurableKeys.value) errs.apiKeys = t('channelEditor.auth.apiKeyRequired')
   if (String(form.requestTimeoutMs).trim()) {
     const timeout = Number(form.requestTimeoutMs)
     if (!Number.isInteger(timeout) || timeout < 1000 || timeout > 300000) {
-      errs.requestTimeoutMs = tf('channelEditor.transport.requestTimeout.invalid', '请求超时必须是 1000-300000 之间的毫秒整数')
+      errs.requestTimeoutMs = t('channelEditor.transport.requestTimeout.invalid')
     }
   }
   if (String(form.responseHeaderTimeoutMs).trim()) {
     const timeout = Number(form.responseHeaderTimeoutMs)
     if (!Number.isInteger(timeout) || timeout < 1000 || timeout > 300000) {
-      errs.responseHeaderTimeoutMs = tf('channelEditor.transport.responseHeaderTimeout.invalid', '响应头等待超时必须是 1000-300000 之间的毫秒整数')
+      errs.responseHeaderTimeoutMs = t('channelEditor.transport.responseHeaderTimeout.invalid')
     }
   }
   if (modelCapabilityRowsToRecord(modelCapabilityRows.value) === null) {
@@ -1147,7 +1147,7 @@ const recommendedServiceType = computed<string | null>(() => {
 
 // 头部选择器选项：给推荐项的标签追加「· 推荐」后缀
 const headerServiceTypeItems = computed(() => {
-  const suffix = tf('addChannel.serviceTypeRecommendedSuffix', ' · 推荐')
+  const suffix = t('addChannel.serviceTypeRecommendedSuffix')
   return serviceTypeOptions.value.map(option =>
     option.value === recommendedServiceType.value
       ? { ...option, label: `${option.label}${suffix}` }
@@ -1163,27 +1163,27 @@ const supportsChatRoleNormalization = computed(() => {
 })
 const modelMappingHint = computed(() => {
   if (props.channelType === 'chat' || props.channelType === 'images') {
-    return tf('addChannel.modelMappingHintChat', '配置模型名称映射，将请求中的模型名重定向到目标模型。')
+    return t('addChannel.modelMappingHintChat')
   }
   if (props.channelType === 'gemini') {
-    return tf('addChannel.modelMappingHintGemini', '配置模型名称映射，将请求中的模型名重定向到目标模型。')
+    return t('addChannel.modelMappingHintGemini')
   }
   if (props.channelType === 'responses') {
-    return tf('addChannel.modelMappingHintResponses', '配置模型名称映射，将请求中的模型名重定向到目标模型。')
+    return t('addChannel.modelMappingHintResponses')
   }
-  return tf('addChannel.modelMappingHintMessages', '配置模型名称映射，将请求中的模型名重定向到目标模型。')
+  return t('addChannel.modelMappingHintMessages')
 })
 const targetModelPlaceholder = computed(() => {
   if (props.channelType === 'chat' || props.channelType === 'images') {
-    return tf('addChannel.targetModelPlaceholderChat', '例如：gpt-5.4')
+    return t('addChannel.targetModelPlaceholderChat')
   }
   if (props.channelType === 'responses') {
-    return tf('addChannel.targetModelPlaceholderResponses', '例如：gpt-5.4')
+    return t('addChannel.targetModelPlaceholderResponses')
   }
   if (props.channelType === 'gemini') {
-    return tf('addChannel.targetModelPlaceholderGemini', '例如：gemini-3.5-flash')
+    return t('addChannel.targetModelPlaceholderGemini')
   }
-  return tf('addChannel.targetModelPlaceholderMessages', '例如：claude-opus-4-6')
+  return t('addChannel.targetModelPlaceholderMessages')
 })
 const showModelMappingPresets = computed(() => props.channelType === 'messages' && supportsOpenAIAdvanced.value)
 const showMessagesOpenAIChannelPresets = computed(() => props.channelType === 'messages' && supportsOpenAIAdvanced.value)
@@ -1766,7 +1766,7 @@ void toggleSupportedModelFilter
           <div v-else class="min-h-0 flex-1 flex">
             <!-- 左侧导航 -->
             <nav class="flex w-[180px] shrink-0 flex-col items-stretch gap-1 rounded-none border-r border-border/50 bg-card/20 p-4">
-              <div class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 mb-2">{{ tf('channelEditor.nav.outline', '配置大纲') }}</div>
+              <div class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 px-3 mb-2">{{ t('channelEditor.nav.outline') }}</div>
               <button
                 v-for="s in sections"
                 :key="s.id"
@@ -1914,14 +1914,14 @@ void toggleSupportedModelFilter
           <!-- 底部按钮栏 -->
           <div class="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-border bg-card/80 p-4 backdrop-blur-md">
             <Button variant="outline" class="hover:bg-muted hover:text-foreground dark:hover:bg-muted/50 hover:scale-[1.02] active:scale-[0.98]" @click="emit('close')">
-              {{ tf('common.cancel', '取消') }}
+              {{ t('common.cancel') }}
               <span class="ml-1 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border bg-transparent px-1.5 font-mono text-[9px] font-medium text-muted-foreground/80">Esc</span>
             </Button>
             <Button type="button" class="hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]" :disabled="!isValid || saving" @click="handleSubmit">
               <Loader2 v-if="saving" class="mr-2 h-4 w-4 animate-spin" />
               {{ isEditMode
-                ? tf('channelEditor.actions.save', '保存')
-                : tf('channelEditor.actions.create', '创建')
+                ? t('channelEditor.actions.save')
+                : t('channelEditor.actions.create')
               }}
               <span class="ml-1 hidden sm:inline-flex h-4 select-none items-center gap-1 rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1.5 font-mono text-[9px] font-medium text-primary-foreground/90">{{ isMac ? '⌘ Enter' : 'Ctrl+Enter' }}</span>
             </Button>

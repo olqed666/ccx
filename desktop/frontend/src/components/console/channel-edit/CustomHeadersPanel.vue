@@ -23,17 +23,17 @@ const emit = defineEmits<{
   'updateHeaderRow': [id: number, field: 'key' | 'value', value: string]
 }>()
 
-const { tf } = useLanguage()
+const { t } = useLanguage()
 </script>
 
 <template>
   <section class="space-y-4 rounded-xl border border-border/60 bg-card/40 p-5 shadow-xs">
     <div class="border-b border-border/40 pb-2">
       <h4 class="text-xs font-bold uppercase tracking-wider text-primary">
-        {{ tf('addChannel.customHeadersLabel', '自定义请求头 (可选)') }}
+        {{ t('addChannel.customHeadersLabel') }}
       </h4>
       <p class="mt-1 text-[10px] leading-4 text-muted-foreground">
-        {{ tf('addChannel.customHeadersHint', '添加或覆盖发送到上游的 HTTP 请求头') }}
+        {{ t('addChannel.customHeadersHint') }}
       </p>
     </div>
 
@@ -63,24 +63,24 @@ const { tf } = useLanguage()
     <div class="grid gap-2 md:grid-cols-[1fr_2fr_auto] md:items-end">
       <div class="space-y-1">
         <Label class="text-xs font-semibold text-muted-foreground">
-          {{ tf('addChannel.headerNameLabel', 'Header 名称') }}
+          {{ t('addChannel.headerNameLabel') }}
         </Label>
         <Input
           :model-value="newHeader.key"
           class="h-9 w-full font-mono text-xs"
-          :placeholder="tf('addChannel.headerNameLabel', 'Header 名称')"
+          :placeholder="t('addChannel.headerNameLabel')"
           @update:model-value="(val) => emit('update:newHeader', { key: val as string })"
           @keydown.enter.prevent="emit('addHeaderRow')"
         />
       </div>
       <div class="space-y-1">
         <Label class="text-xs font-semibold text-muted-foreground">
-          {{ tf('addChannel.headerValueLabel', '请求头值') }}
+          {{ t('addChannel.headerValueLabel') }}
         </Label>
         <Input
           :model-value="newHeader.value"
           class="h-9 w-full font-mono text-xs"
-          :placeholder="tf('addChannel.headerValueLabel', '请求头值')"
+          :placeholder="t('addChannel.headerValueLabel')"
           @update:model-value="(val) => emit('update:newHeader', { value: val as string })"
           @keydown.enter.prevent="emit('addHeaderRow')"
         />

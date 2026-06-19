@@ -20,7 +20,7 @@ interface Props {
 const props = defineProps<Props>()
 const emit = defineEmits<{ (e: 'close'): void }>()
 
-const { tf } = useLanguage()
+const { t } = useLanguage()
 const api = useAdminApi()
 const visibility = useDocumentVisibility()
 
@@ -84,14 +84,14 @@ function requestStatusClass(status: string) {
 
 function requestStatusText(status: string) {
   switch (status) {
-    case 'pending': return tf('channelLogs.status.pending', '等待中')
-    case 'connecting': return tf('channelLogs.status.connecting', '连接中')
-    case 'first_byte': return tf('channelLogs.status.firstByte', '首字节')
-    case 'streaming': return tf('channelLogs.status.streaming', '流式传输')
-    case 'completed': return tf('channelLogs.status.completed', '已完成')
-    case 'failed': return tf('channelLogs.status.failed', '失败')
+    case 'pending': return t('channelLogs.status.pending')
+    case 'connecting': return t('channelLogs.status.connecting')
+    case 'first_byte': return t('channelLogs.status.firstByte')
+    case 'streaming': return t('channelLogs.status.streaming')
+    case 'completed': return t('channelLogs.status.completed')
+    case 'failed': return t('channelLogs.status.failed')
     case 'cancelled':
-    case 'canceled': return tf('channelLogs.status.cancelled', '已取消')
+    case 'canceled': return t('channelLogs.status.cancelled')
     default: return status || '—'
   }
 }
@@ -219,14 +219,14 @@ onBeforeUnmount(() => {
           <div class="flex shrink-0 items-center justify-between border-b border-border p-4">
             <div class="flex min-w-0 items-center gap-2">
               <h3 class="truncate text-sm font-semibold">
-                {{ tf('channelLogs.title', '频道日志') }}: {{ channelName }}
+                {{ t('channelLogs.title') }}: {{ channelName }}
               </h3>
               <Badge variant="secondary" class="text-[10px]">
-                {{ logs.length }} {{ tf('console.logs.entries', '条') }}
+                {{ logs.length }} {{ t('console.logs.entries') }}
               </Badge>
               <Badge v-if="refreshing" variant="outline" class="text-[10px]">
                 <Loader2 class="h-3 w-3 animate-spin" />
-                {{ tf('common.refreshing', '刷新中') }}
+                {{ t('common.refreshing') }}
               </Badge>
             </div>
             <div class="flex items-center gap-2">
@@ -251,7 +251,7 @@ onBeforeUnmount(() => {
 
             <div v-else-if="logs.length === 0" class="flex flex-col items-center gap-2 p-8 text-center text-sm text-muted-foreground">
               <List class="h-10 w-10" />
-              {{ tf('channelLogs.empty', '暂无日志') }}
+              {{ t('channelLogs.empty') }}
             </div>
 
             <ScrollArea v-else class="h-full">
@@ -290,7 +290,7 @@ onBeforeUnmount(() => {
                       {{ log.operation }}
                     </span>
                     <span v-if="log.requestSource === 'capability_test'" class="inline-flex border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                      {{ tf('channelLogs.sourceCapabilityTest', '能力测试') }}
+                      {{ t('channelLogs.sourceCapabilityTest') }}
                     </span>
                     <span v-if="log.originalModel" class="text-muted-foreground">{{ log.originalModel }} →</span>
                     <span class="font-medium">{{ log.model }}</span>
@@ -309,7 +309,7 @@ onBeforeUnmount(() => {
                         :class="reasoningEffortClass(log.originalReasoningEffort)"
                         :title="log.originalReasoningEffort"
                       >
-                        {{ tf('channelLogs.reasoning.original', '原始') }} {{ formatReasoningEffort(log.originalReasoningEffort) }}
+                        {{ t('channelLogs.reasoning.original') }} {{ formatReasoningEffort(log.originalReasoningEffort) }}
                       </span>
                       <span
                         v-if="log.actualReasoningEffort"
@@ -317,7 +317,7 @@ onBeforeUnmount(() => {
                         :class="reasoningEffortClass(log.actualReasoningEffort)"
                         :title="log.actualReasoningEffort"
                       >
-                        {{ tf('channelLogs.reasoning.actual', '发出') }} {{ formatReasoningEffort(log.actualReasoningEffort) }}
+                        {{ t('channelLogs.reasoning.actual') }} {{ formatReasoningEffort(log.actualReasoningEffort) }}
                       </span>
                     </template>
                     <code class="max-w-[130px] truncate bg-secondary px-1 py-0.5 font-mono text-[10px] text-muted-foreground">{{ log.keyMask }}</code>
@@ -325,17 +325,17 @@ onBeforeUnmount(() => {
                       {{ log.baseUrl }}
                     </code>
                     <span v-if="log.isRetry" class="inline-flex border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-300">
-                      {{ tf('channelLogs.retry', '重试') }}
+                      {{ t('channelLogs.retry') }}
                     </span>
                     <template v-if="calculateDurations(log)">
                       <span v-if="calculateDurations(log)!.connectMs !== null" class="text-muted-foreground">
-                        {{ tf('channelLogs.duration.connect', '连接') }} {{ formatDurationSeconds(calculateDurations(log)!.connectMs!) }}
+                        {{ t('channelLogs.duration.connect') }} {{ formatDurationSeconds(calculateDurations(log)!.connectMs!) }}
                       </span>
                       <span v-if="calculateDurations(log)!.firstByteMs !== null" class="text-muted-foreground">
-                        {{ tf('channelLogs.duration.firstByte', '首字节') }} {{ formatDurationSeconds(calculateDurations(log)!.firstByteMs!) }}
+                        {{ t('channelLogs.duration.firstByte') }} {{ formatDurationSeconds(calculateDurations(log)!.firstByteMs!) }}
                       </span>
                       <span v-if="calculateDurations(log)!.totalMs !== null" class="text-muted-foreground">
-                        {{ tf('channelLogs.duration.total', '总耗时') }} {{ formatDurationSeconds(calculateDurations(log)!.totalMs!) }}
+                        {{ t('channelLogs.duration.total') }} {{ formatDurationSeconds(calculateDurations(log)!.totalMs!) }}
                       </span>
                     </template>
                     <span v-else class="text-muted-foreground">{{ formatDurationSeconds(log.durationMs) }}</span>

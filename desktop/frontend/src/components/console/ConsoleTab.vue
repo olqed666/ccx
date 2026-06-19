@@ -31,7 +31,7 @@ const emit = defineEmits<{
 }>()
 
 const { status } = useStatus()
-const { t, tf } = useLanguage()
+const { t } = useLanguage()
 const { activeTab, refreshError } = useConsoleChannels()
 
 // 子 Tab 定义
@@ -115,10 +115,10 @@ watch(() => props.selection, (selection) => {
         >
           <TabsList class="h-7 border border-border bg-secondary/40 p-0.5">
             <TabsTrigger value="channels" class="px-2.5 py-0.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              {{ tf('app.tabs.messages', 'Channels') }}
+              {{ t('app.tabs.messages') }}
             </TabsTrigger>
             <TabsTrigger value="conversations" class="px-2.5 py-0.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              {{ tf('app.tabs.conversations', 'Cockpit') }}
+              {{ t('app.tabs.conversations') }}
             </TabsTrigger>
           </TabsList>
         </Tabs>

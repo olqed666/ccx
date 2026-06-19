@@ -34,7 +34,7 @@ const emit = defineEmits<{
   error: [message: string]
 }>()
 
-const { tf } = useLanguage()
+const { t } = useLanguage()
 const MAX_VISIBLE = 6
 
 const conversation = computed(() => props.conversation)
@@ -260,9 +260,9 @@ async function copyRawUserId() {
   if (!props.conversation.rawUserId) return
   try {
     await navigator.clipboard.writeText(props.conversation.rawUserId)
-    emit('success', tf('cockpit.rawUserIdCopied', '对话 ID 已复制'))
+    emit('success', t('cockpit.rawUserIdCopied'))
   } catch {
-    emit('error', tf('cockpit.rawUserIdCopyFailed', '复制失败'))
+    emit('error', t('cockpit.rawUserIdCopyFailed'))
   }
 }
 </script>
@@ -325,14 +325,14 @@ async function copyRawUserId() {
       <div class="flex items-center gap-2">
         <span class="alert-bang">[!]</span>
         <span v-if="override?.isPerpetual" class="text-xs text-amber-600 dark:text-amber-400">
-          {{ tf('cockpit.overrideActivePerpetual', '正在使用自定义渠道顺序（手动恢复前不会自动过期）') }}
+          {{ t('cockpit.overrideActivePerpetual') }}
         </span>
         <span v-else class="text-xs text-amber-600 dark:text-amber-400">
-          {{ tf('cockpit.overrideActive', '正在使用自定义渠道顺序，{time} 后自动恢复默认调度', { time: remainingTime }) }}
+          {{ t('cockpit.overrideActive', { time: remainingTime }) }}
         </span>
         <div class="flex-1" />
         <Button variant="ghost" size="sm" class="h-6 px-2 text-xs" @click.stop="emit('removeOverride', conversation.id)">
-          {{ tf('cockpit.restoreDefault', '恢复默认顺序') }}
+          {{ t('cockpit.restoreDefault') }}
         </Button>
       </div>
     </div>

@@ -52,7 +52,7 @@ const emit = defineEmits<{
   'update:form': [value: Partial<FormData>]
 }>()
 
-const { t, tf } = useLanguage()
+const { t } = useLanguage()
 const TEXT_VERBOSITY_DEFAULT_VALUE = 'default'
 const authHeaderOptions = [
   { label: t('channelEditor.advanced.authHeader.auto'), value: 'auto' },
@@ -78,21 +78,21 @@ function updateTextVerbosity(value: string) {
       <span class="flex h-5 w-5 items-center justify-center rounded-md bg-primary/10 text-primary">
         <ShieldCheck class="h-3 w-3" />
       </span>
-      {{ tf('channelEditor.nav.advanced', '高级选项') }}
+      {{ t('channelEditor.nav.advanced') }}
     </h4>
 
     <div class="grid gap-3">
       <div class="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-gradient-to-r from-background/60 to-background/40 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
         <div class="min-w-0 space-y-0.5">
-          <Label class="text-xs font-medium">{{ tf('addChannel.skipTlsLabel', '跳过 TLS 证书验证') }}</Label>
-          <p class="text-[10px] leading-4 text-muted-foreground">{{ tf('addChannel.skipTlsHint', '仅在自签名或域名不匹配时临时启用，生产环境请关闭') }}</p>
+          <Label class="text-xs font-medium">{{ t('addChannel.skipTlsLabel') }}</Label>
+          <p class="text-[10px] leading-4 text-muted-foreground">{{ t('addChannel.skipTlsHint') }}</p>
         </div>
         <Switch :model-value="form.insecureSkipVerify" @update:model-value="updateField('insecureSkipVerify', $event)" />
       </div>
       <div class="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-gradient-to-r from-background/60 to-background/40 p-4 shadow-sm backdrop-blur-sm transition-all hover:shadow-md">
         <div class="min-w-0 space-y-0.5">
-          <Label class="text-xs font-medium">{{ tf('addChannel.lowQualityLabel', '低质量渠道') }}</Label>
-          <p class="text-[10px] leading-4 text-muted-foreground">{{ tf('addChannel.lowQualityHint', '启用后强制本地估算 token 数量，偏差超过 5% 时使用本地值') }}</p>
+          <Label class="text-xs font-medium">{{ t('addChannel.lowQualityLabel') }}</Label>
+          <p class="text-[10px] leading-4 text-muted-foreground">{{ t('addChannel.lowQualityHint') }}</p>
         </div>
         <Switch :model-value="form.lowQuality" @update:model-value="updateField('lowQuality', $event)" />
       </div>
