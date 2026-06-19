@@ -10,7 +10,7 @@ ARG TARGETARCH
 
 WORKDIR /src
 
-RUN apk add --no-cache bash git make libstdc++ libgcc
+RUN apk add --no-cache bash git make nodejs libstdc++ libgcc
 
 COPY --from=bun-runtime /usr/local/bin/bun /usr/local/bin/bun
 COPY --from=bun-runtime /usr/local/bin/bunx /usr/local/bin/bunx
@@ -34,8 +34,8 @@ COPY VERSION ./
 
 # 构建：交叉编译目标平台，利用 Go build cache
 RUN --mount=type=cache,target=/root/.cache/go-build \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 \
-    VERSION=${VERSION} make build
+    GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 GOMAXPROCS=2 \
+    GOFLAGS="-buildvcs=false -p=1" VERSION=${VERSION} make build
 
 # --- 阶段 3: 运行时 ---
 FROM alpine:latest AS runtime
