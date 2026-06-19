@@ -253,6 +253,7 @@ const form = reactive({
   name: '',
   description: '',
   serviceType: '' as 'openai' | 'claude' | 'gemini' | 'responses' | '',
+  authHeader: 'auto' as 'auto' | 'bearer' | 'x-api-key' | '',
   baseUrl: '',
   baseUrlsText: '',
   website: '',
@@ -343,6 +344,7 @@ function resetForm() {
   form.name = ''
   form.description = ''
   form.serviceType = defaultServiceTypeForChannel()
+  form.authHeader = 'auto'
   form.baseUrl = ''
   form.baseUrlsText = ''
   form.website = ''
@@ -419,6 +421,7 @@ function populateFromChannel(ch: Channel) {
   form.name = ch.name || ''
   form.description = ch.description || ''
   form.serviceType = ch.serviceType || defaultServiceTypeForChannel()
+  form.authHeader = ch.authHeader || 'auto'
   // baseUrls 多 URL 时已包含主 URL；否则回退单个 baseUrl。form.baseUrl 由 watch 派生
   form.baseUrlsText = (ch.baseUrls?.length ? ch.baseUrls : [ch.baseUrl].filter(Boolean)).join('\n')
   form.website = ch.website || ''
@@ -598,6 +601,7 @@ function buildSubmitPayload() {
     : buildChannelPayload({
         name: generatedChannelName.value,
         serviceType: form.serviceType,
+        authHeader: form.authHeader,
         baseUrl: form.baseUrl,
         baseUrls: parseLines(form.baseUrlsText),
         website: form.website,
@@ -1399,6 +1403,7 @@ async function fetchTargetModels() {
           proxyUrl: form.proxyUrl,
           insecureSkipVerify: form.insecureSkipVerify,
           customHeaders: Object.keys(customHeaders).length ? customHeaders : undefined,
+          authHeader: form.authHeader && form.authHeader !== 'auto' ? form.authHeader : undefined,
         })
         const list: any[] = Array.isArray(resp) ? resp : (resp?.data ?? [])
         keyModelsStatus.value.set(key, {
@@ -1646,6 +1651,7 @@ function buildCurrentPayload() {
   return buildChannelPayload({
     name: form.name,
     serviceType: form.serviceType,
+    authHeader: form.authHeader,
     baseUrl: form.baseUrl,
     baseUrls: parseLines(form.baseUrlsText),
     website: form.website,

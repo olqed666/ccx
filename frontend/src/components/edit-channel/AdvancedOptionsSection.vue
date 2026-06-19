@@ -29,6 +29,33 @@
         </div>
       </v-col>
 
+      <!-- 认证头覆盖 -->
+      <v-col cols="12">
+        <v-row dense align="center">
+          <v-col cols="12" md="7">
+            <div class="d-flex align-center ga-2">
+              <v-icon color="primary">mdi-key</v-icon>
+              <div>
+                <div class="section-title section-title--soft">{{ t('channelEditor.advanced.authHeader.label') }}</div>
+                <div class="text-caption text-medium-emphasis">{{ t('channelEditor.advanced.authHeader.hint') }}</div>
+              </div>
+            </div>
+          </v-col>
+          <v-col cols="12" md="5">
+            <v-select
+              :model-value="form.authHeader || 'auto'"
+              :items="authHeaderOptions"
+              variant="outlined"
+              density="compact"
+              hide-details
+              eager
+              @update:model-value="updateField('authHeader', $event)"
+              @update:menu="$emit('menu-update', $event)"
+            />
+          </v-col>
+        </v-row>
+      </v-col>
+
       <!-- Runtime 运行期策略 -->
       <v-col cols="12">
         <RuntimeSwitchGroup :form="form" @update:field="updateField" />
@@ -96,6 +123,7 @@ interface FormData {
   normalizeSystemRoleToTopLevel?: boolean
   historicalImageTurnLimit?: number
   proxyUrl: string
+  authHeader?: 'auto' | 'bearer' | 'x-api-key' | ''
   requestTimeoutMs: string | number | null
   responseHeaderTimeoutMs: string | number | null
   rateLimitRpm: string | number | null
@@ -127,6 +155,12 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
+
+const authHeaderOptions = [
+  { title: t('channelEditor.advanced.authHeader.auto'), value: 'auto' },
+  { title: 'Authorization: Bearer', value: 'bearer' },
+  { title: 'x-api-key', value: 'x-api-key' },
+]
 
 const updateField = (field: keyof FormData, value: unknown) => {
   emit('update:form', { [field]: value })

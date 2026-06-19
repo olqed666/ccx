@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Clock, Globe, ShieldCheck, Zap } from 'lucide-vue-next'
+import { Clock, Globe, KeyRound, ShieldCheck, Zap } from 'lucide-vue-next'
 import { useLanguage } from '@/composables/useLanguage'
 
 interface FormData {
@@ -28,6 +28,7 @@ interface FormData {
   reasoningParamStyle: string
   textVerbosity: string
   serviceType: string
+  authHeader: 'auto' | 'bearer' | 'x-api-key' | ''
   proxyUrl: string
   routePrefix: string
   rateLimitRpm: string | number
@@ -53,6 +54,11 @@ const emit = defineEmits<{
 
 const { t, tf } = useLanguage()
 const TEXT_VERBOSITY_DEFAULT_VALUE = 'default'
+const authHeaderOptions = [
+  { label: t('channelEditor.advanced.authHeader.auto'), value: 'auto' },
+  { label: 'Authorization: Bearer', value: 'bearer' },
+  { label: 'x-api-key', value: 'x-api-key' },
+]
 
 function updateField<K extends keyof FormData>(key: K, value: FormData[K]) {
   emit('update:form', { [key]: value } as Partial<FormData>)
@@ -89,6 +95,28 @@ function updateTextVerbosity(value: string) {
           <p class="text-[10px] leading-4 text-muted-foreground">{{ tf('addChannel.lowQualityHint', '启用后强制本地估算 token 数量，偏差超过 5% 时使用本地值') }}</p>
         </div>
         <Switch :model-value="form.lowQuality" @update:model-value="updateField('lowQuality', $event)" />
+      </div>
+      <div class="grid gap-3 rounded-lg border border-border/60 bg-gradient-to-r from-background/60 to-background/40 p-4 shadow-sm backdrop-blur-sm md:grid-cols-[minmax(0,1fr)_220px]">
+        <div class="min-w-0 space-y-0.5">
+          <Label class="flex items-center gap-1.5 text-xs font-medium">
+            <KeyRound class="h-3 w-3 text-primary" />
+            {{ t('channelEditor.advanced.authHeader.label') }}
+          </Label>
+          <p class="text-[10px] leading-4 text-muted-foreground">{{ t('channelEditor.advanced.authHeader.hint') }}</p>
+        </div>
+        <Select
+          :model-value="form.authHeader || 'auto'"
+          @update:model-value="(val) => updateField('authHeader', String(val) as FormData['authHeader'])"
+        >
+          <SelectTrigger class="h-8 w-full text-xs">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="opt in authHeaderOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
     </div>
 

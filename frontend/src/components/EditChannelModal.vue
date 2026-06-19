@@ -907,6 +907,7 @@ type StreamTimeoutPresetKey = 'gentle' | 'balanced' | 'aggressive' | 'custom'
 const form = reactive({
   name: '',
   serviceType: '' as 'openai' | 'gemini' | 'claude' | 'responses' | '',
+  authHeader: 'auto' as 'auto' | 'bearer' | 'x-api-key' | '',
   baseUrl: '',
   baseUrls: [] as string[],
   website: '',
@@ -1311,6 +1312,7 @@ const resetForm = () => {
   resetTransientUiState()
   form.name = ''
   form.serviceType = props.channelType === 'images' ? 'openai' : ''
+  form.authHeader = 'auto'
   form.baseUrl = ''
   form.baseUrls = []
   form.website = ''
@@ -1385,6 +1387,7 @@ const loadChannelData = (channel: Channel) => {
   resetTransientUiState()
   form.name = channel.name
   form.serviceType = props.channelType === 'images' ? 'openai' : channel.serviceType
+  form.authHeader = channel.authHeader || 'auto'
   form.baseUrl = channel.baseUrl
   form.baseUrls = channel.baseUrls || []
   form.website = channel.website || ''
@@ -1652,6 +1655,7 @@ const fetchTargetModels = async () => {
     proxyUrl: form.proxyUrl || undefined,
     insecureSkipVerify: form.insecureSkipVerify || undefined,
     customHeaders: Object.keys(form.customHeaders).length > 0 ? { ...form.customHeaders } : undefined,
+    authHeader: form.authHeader && form.authHeader !== 'auto' ? form.authHeader : undefined,
   }
 
   // 每个 unchecked key 并发独立请求
@@ -1772,7 +1776,7 @@ const PAYLOAD_KEYS = [
   'lowQuality', 'injectDummyThoughtSignature', 'stripThoughtSignature', 'description',
   'apiKeys', 'modelMapping', 'modelCapabilities', 'defaultCapability', 'allowUnknownContext',
   'reasoningMapping', 'reasoningParamStyle', 'textVerbosity',
-  'fastMode', 'customHeaders', 'proxyUrl', 'requestTimeoutMs', 'responseHeaderTimeoutMs', 'streamFirstContentTimeoutMs', 'streamInactivityTimeoutMs', 'streamToolCallIdleTimeoutMs', 'routePrefix', 'supportedModels',
+  'fastMode', 'customHeaders', 'proxyUrl', 'authHeader', 'requestTimeoutMs', 'responseHeaderTimeoutMs', 'streamFirstContentTimeoutMs', 'streamInactivityTimeoutMs', 'streamToolCallIdleTimeoutMs', 'routePrefix', 'supportedModels',
   'rateLimitRpm', 'rateLimitWindowMinutes', 'rateLimitMaxConcurrent', 'rateLimitAutoFromHeaders',
   'autoBlacklistBalance', 'normalizeMetadataUserId', 'stripBillingHeader', 'passbackThinkingBlocks', 'stripEmptyTextBlocks', 'normalizeSystemRoleToTopLevel', 'codexNativeToolPassthrough',
   'codexToolCompat', 'normalizeNonstandardChatRoles', 'stripCodexClientTools', 'stripImageGenerationTool', 'convertImageUrlToB64Json'
@@ -1890,6 +1894,7 @@ watch(
     proxyUrl: form.proxyUrl,
     insecureSkipVerify: form.insecureSkipVerify,
     customHeaders: form.customHeaders,
+    authHeader: form.authHeader,
     serviceType: form.serviceType,
     routePrefix: form.routePrefix,
   }),

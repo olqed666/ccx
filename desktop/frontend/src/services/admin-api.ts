@@ -21,6 +21,7 @@ export interface TimeWindowStats {
 }
 
 export type CircuitState = 'closed' | 'open' | 'half_open'
+export type ChannelAuthHeader = 'auto' | 'bearer' | 'x-api-key'
 
 export interface ChannelMetrics {
   channelIndex: number
@@ -79,6 +80,7 @@ export interface ModelPricing {
 export interface Channel {
   name: string
   serviceType: 'openai' | 'gemini' | 'claude' | 'responses'
+  authHeader?: ChannelAuthHeader | ''
   baseUrl: string
   baseUrls?: string[]
   apiKeys: string[]

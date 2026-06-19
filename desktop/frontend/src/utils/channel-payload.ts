@@ -26,6 +26,7 @@ export interface ModelCapabilityRow {
 export interface ChannelFormLike {
   name: string
   serviceType: 'openai' | 'gemini' | 'claude' | 'responses' | ''
+  authHeader?: 'auto' | 'bearer' | 'x-api-key' | ''
   baseUrl: string
   baseUrls: string[]
   website: string
@@ -368,6 +369,10 @@ export function buildChannelPayload(form: ChannelFormLike): Omit<Channel, 'index
 
   if (deduplicatedUrls.length > 1) {
     channelData.baseUrls = deduplicatedUrls
+  }
+
+  if (form.authHeader) {
+    channelData.authHeader = form.authHeader
   }
 
   // 历史图片轮次限制：始终发送（含 0），使编辑场景能把渠道级覆盖清回 0（继承全局）。
