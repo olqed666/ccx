@@ -68,7 +68,11 @@ func (m *MetricsManager) ToResponseMultiURL(channelIndex int, baseURLs []string,
 		Latency:      latency,
 	}
 
-	if len(activeKeys) == 0 {
+	statsKeys := append([]string{}, activeKeys...)
+	if len(historicalKeys) > 0 {
+		statsKeys = append(statsKeys, historicalKeys[0]...)
+	}
+	if len(statsKeys) == 0 {
 		resp.SuccessRate = 100
 		resp.ErrorRate = 0
 		return resp
@@ -190,6 +194,12 @@ func (m *MetricsManager) ToResponseMultiURL(channelIndex int, baseURLs []string,
 				resp.RequestCount += metrics.RequestCount
 				resp.SuccessCount += metrics.SuccessCount
 				resp.FailureCount += metrics.FailureCount
+				if metrics.LastSuccessAt != nil && (latestSuccess == nil || metrics.LastSuccessAt.After(*latestSuccess)) {
+					latestSuccess = metrics.LastSuccessAt
+				}
+				if metrics.LastFailureAt != nil && (latestFailure == nil || metrics.LastFailureAt.After(*latestFailure)) {
+					latestFailure = metrics.LastFailureAt
+				}
 			}
 		}
 	}
@@ -265,7 +275,7 @@ func (m *MetricsManager) ToResponseMultiURL(channelIndex int, baseURLs []string,
 	}
 
 	resp.KeyMetrics = keyResponses
-	resp.TimeWindows = m.calculateAggregatedTimeWindowsMultiURL(baseURLs, activeKeys, serviceType)
+	resp.TimeWindows = m.calculateAggregatedTimeWindowsMultiURL(baseURLs, statsKeys, serviceType)
 
 	return resp
 }

@@ -14,6 +14,11 @@
 - 重构 `ConvertOpenAIChatToResponses`，将内联的 reasoning 和 content 处理逻辑封装为 `handleReasoningPart` 和 `handleContentPart`，使流式事件发射与状态机解耦。
 - 移除 PR #83 引入的 `stripThinkTags` 直接丢弃逻辑，升级为协议级提取与原生推理字段转换。
 
+### Fixed
+
+- 修复被拉黑 Key 的历史统计数据在渠道图表（渠道历史、Key 趋势、活跃度）中消失的问题。统计查询现使用 `APIKeys ∪ HistoricalAPIKeys ∪ DisabledAPIKeys` 合并集合，确保拉黑 Key 的数据保留。
+- 同步修正渠道日志的 metricsKey 枚举口径，保持日志与统计图表对拉黑 Key 的归属一致性。
+
 ## [v2.7.5] - 2026-05-18
 
 ### Added
@@ -21,7 +26,6 @@
 - 新增内置 OTA 更新能力：后端提供 `/api/system/update/check` 与 `/api/system/update/apply` 管理接口，支持 GitHub Release 版本检查、SHA256 校验、二进制替换备份与 Docker 环境禁用升级提示。
 - 新增前端系统更新对话框，版本徽标优先通过后端检查更新，失败时保留 GitHub 直连降级路径，并支持升级后健康检查轮询。
 - 发布工作流为 Linux、macOS、Windows 各平台资产生成并上传独立 `.sha256` 校验文件。
-
 ### Fixed
 
 - 修复启用严格 Claude 兼容开关的 Messages 渠道会透传历史 `thinking` / `redacted_thinking` 块的问题，避免跨上游复用签名导致 `signature: Field required` 或 `Invalid signature in thinking block`。

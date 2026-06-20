@@ -600,3 +600,55 @@ func TestResumeChannel_RestoresBlacklistedKeys(t *testing.T) {
 		})
 	}
 }
+
+func TestChannelStatsAPIKeysIncludesDisabledKeys(t *testing.T) {
+	upstream := config.UpstreamConfig{
+		APIKeys:           []string{"sk-active"},
+		HistoricalAPIKeys: []string{"sk-historical"},
+		DisabledAPIKeys:   []config.DisabledKeyInfo{{Key: "sk-disabled"}},
+	}
+
+	keys := channelStatsAPIKeys(upstream)
+	if len(keys) != 3 {
+		t.Fatalf("expected 3 keys, got %d: %v", len(keys), keys)
+	}
+}
+
+func TestFilterBucketsByURLsIncludesDisabledKeyStats(t *testing.T) {
+	baseURL := "https://shared.example.com"
+	activeKey := "sk-active"
+	disabledKey := "sk-disabled"
+	serviceType := "claude"
+
+	const intervalSec = int64(3600)
+	since := time.Now().Add(-2 * time.Hour)
+	dataTs := time.Unix((since.Unix()/intervalSec)*intervalSec+intervalSec, 0)
+
+	store := &fakePersistenceStore{
+		bucketsByMetricsKey: map[string][]metrics.AggregatedBucket{
+			metrics.GenerateMetricsIdentityKey(baseURL, activeKey, serviceType): {
+				{Timestamp: dataTs, TotalRequests: 1, SuccessCount: 1},
+			},
+			metrics.GenerateMetricsIdentityKey(baseURL, disabledKey, serviceType): {
+				{Timestamp: dataTs, TotalRequests: 4, SuccessCount: 2},
+			},
+		},
+	}
+
+	upstream := config.UpstreamConfig{
+		BaseURL:         baseURL,
+		APIKeys:         []string{activeKey},
+		DisabledAPIKeys: []config.DisabledKeyInfo{{Key: disabledKey}},
+	}
+	buckets := filterBucketsByURLs(store, "messages", since, intervalSec, upstream.GetAllBaseURLs(), channelStatsAPIKeys(upstream), serviceType)
+	hit := findBucketWithRequests(buckets)
+	if hit == nil {
+		t.Fatalf("no bucket with requests found in %+v", buckets)
+	}
+	if hit.TotalRequests != 5 {
+		t.Fatalf("total requests = %d, want 5 (active+disabled)", hit.TotalRequests)
+	}
+	if hit.SuccessCount != 3 {
+		t.Fatalf("success count = %d, want 3", hit.SuccessCount)
+	}
+}

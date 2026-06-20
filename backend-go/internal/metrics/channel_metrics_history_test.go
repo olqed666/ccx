@@ -55,6 +55,38 @@ func TestGetHistoricalStatsMultiURL_DeduplicatesEquivalentURLs(t *testing.T) {
 	}
 }
 
+func TestToResponseMultiURLIncludesHistoricalOnlyChannelWindows(t *testing.T) {
+	m := NewMetricsManager()
+	defer m.Stop()
+
+	baseURL := "https://example.com"
+	apiKey := "sk-disabled"
+	now := time.Now()
+
+	m.mu.Lock()
+	metrics := m.getOrCreateKey(baseURL, apiKey, "claude")
+	metrics.RequestCount = 2
+	metrics.SuccessCount = 1
+	metrics.FailureCount = 1
+	metrics.LastSuccessAt = &now
+	metrics.requestHistory = append(metrics.requestHistory,
+		RequestRecord{Timestamp: now.Add(-time.Minute), Success: true, InputTokens: 10},
+		RequestRecord{Timestamp: now.Add(-2 * time.Minute), Success: false, OutputTokens: 5},
+	)
+	m.mu.Unlock()
+
+	resp := m.ToResponseMultiURL(0, []string{baseURL}, nil, "claude", 0, []string{apiKey})
+	if resp.RequestCount != 2 {
+		t.Fatalf("request count = %d, want 2", resp.RequestCount)
+	}
+	if resp.LastSuccessAt == nil {
+		t.Fatal("lastSuccessAt should be populated for historical-only channel")
+	}
+	if got := resp.TimeWindows["15m"].RequestCount; got != 2 {
+		t.Fatalf("15m request count = %d, want 2", got)
+	}
+}
+
 func TestGetOrCreateKey_PromotesLegacyMetricsToIdentity(t *testing.T) {
 	m := NewMetricsManagerWithConfig(10, 0.5)
 

@@ -107,8 +107,7 @@ func channelMetricsKeys(upstream *config.UpstreamConfig, normalizedServiceType s
 		keys = append(keys, metricsKey)
 	}
 
-	allAPIKeys := append([]string{}, upstream.APIKeys...)
-	allAPIKeys = append(allAPIKeys, upstream.HistoricalAPIKeys...)
+	allAPIKeys := channelStatsAPIKeys(*upstream)
 
 	for _, baseURL := range upstream.GetAllBaseURLs() {
 		for _, apiKey := range allAPIKeys {

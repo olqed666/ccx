@@ -17,6 +17,55 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func channelHistoricalAPIKeys(upstream config.UpstreamConfig) []string {
+	seen := make(map[string]struct{})
+	var result []string
+	add := func(key string) {
+		if key == "" {
+			return
+		}
+		if _, exists := seen[key]; exists {
+			return
+		}
+		seen[key] = struct{}{}
+		result = append(result, key)
+	}
+
+	for _, key := range upstream.HistoricalAPIKeys {
+		add(key)
+	}
+	for _, dk := range upstream.DisabledAPIKeys {
+		add(dk.Key)
+	}
+	return result
+}
+
+func channelStatsAPIKeys(upstream config.UpstreamConfig) []string {
+	seen := make(map[string]struct{})
+	var result []string
+	add := func(key string) {
+		if key == "" {
+			return
+		}
+		if _, exists := seen[key]; exists {
+			return
+		}
+		seen[key] = struct{}{}
+		result = append(result, key)
+	}
+
+	for _, key := range upstream.APIKeys {
+		add(key)
+	}
+	for _, key := range upstream.HistoricalAPIKeys {
+		add(key)
+	}
+	for _, dk := range upstream.DisabledAPIKeys {
+		add(dk.Key)
+	}
+	return result
+}
+
 func channelUpstreamsByKind(cfg config.Config, kind scheduler.ChannelKind) []config.UpstreamConfig {
 	switch kind {
 	case scheduler.ChannelKindResponses:
@@ -35,7 +84,7 @@ func channelUpstreamsByKind(cfg config.Config, kind scheduler.ChannelKind) []con
 func buildChannelMetricsResult(metricsManager *metrics.MetricsManager, upstreams []config.UpstreamConfig, kind scheduler.ChannelKind, includeRuntimeState bool) []gin.H {
 	result := make([]gin.H, 0, len(upstreams))
 	for i, upstream := range upstreams {
-		resp := metricsManager.ToResponseMultiURL(i, upstream.GetAllBaseURLs(), upstream.APIKeys, scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType), 0, upstream.HistoricalAPIKeys)
+		resp := metricsManager.ToResponseMultiURL(i, upstream.GetAllBaseURLs(), upstream.APIKeys, scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType), 0, channelHistoricalAPIKeys(upstream))
 
 		item := gin.H{
 			"channelIndex":        i,
@@ -416,7 +465,7 @@ func getChannelMetricsHistoryWithKind(metricsManager *metrics.MetricsManager, cf
 
 			result := make([]MetricsHistoryResponse, 0, len(upstreams))
 			for i, upstream := range upstreams {
-				channelBuckets := filterBucketsByURLs(store, apiType, since, intervalSec, upstream.GetAllBaseURLs(), upstream.APIKeys, scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType))
+				channelBuckets := filterBucketsByURLs(store, apiType, since, intervalSec, upstream.GetAllBaseURLs(), channelStatsAPIKeys(upstream), scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType))
 				points := convertBucketsToDataPoints(channelBuckets)
 				result = append(result, MetricsHistoryResponse{
 					ChannelIndex: i,
@@ -431,7 +480,7 @@ func getChannelMetricsHistoryWithKind(metricsManager *metrics.MetricsManager, cf
 
 		result := make([]MetricsHistoryResponse, 0, len(upstreams))
 		for i, upstream := range upstreams {
-			dataPoints := metricsManager.GetHistoricalStatsMultiURL(upstream.GetAllBaseURLs(), upstream.APIKeys, scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType), duration, interval)
+			dataPoints := metricsManager.GetHistoricalStatsMultiURL(upstream.GetAllBaseURLs(), channelStatsAPIKeys(upstream), scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType), duration, interval)
 			result = append(result, MetricsHistoryResponse{
 				ChannelIndex: i,
 				ChannelName:  upstream.Name,
@@ -525,7 +574,7 @@ func getChannelKeyMetricsHistoryWithKind(metricsManager *metrics.MetricsManager,
 		}
 
 		upstream := upstreams[channelID]
-		allKeyInfos := metricsManager.GetChannelKeyUsageInfoMultiURL(upstream.GetAllBaseURLs(), upstream.APIKeys, scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType))
+		allKeyInfos := metricsManager.GetChannelKeyUsageInfoMultiURL(upstream.GetAllBaseURLs(), channelStatsAPIKeys(upstream), scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType))
 		displayKeys := metrics.SelectTopKeys(allKeyInfos, 10)
 
 		result := ChannelKeyMetricsHistoryResponse{
@@ -548,7 +597,7 @@ func getChannelKeyMetricsHistoryWithKind(metricsManager *metrics.MetricsManager,
 			intervalSec := int64(interval.Seconds())
 
 			// 整个渠道的汇总
-			channelBuckets := filterBucketsByURLs(store, apiType, since, intervalSec, upstream.GetAllBaseURLs(), upstream.APIKeys, serviceType)
+			channelBuckets := filterBucketsByURLs(store, apiType, since, intervalSec, upstream.GetAllBaseURLs(), channelStatsAPIKeys(upstream), serviceType)
 			result.Summary = summarizeAggregatedBuckets(durationLabel, channelBuckets)
 
 			// 逐 key 生成曲线
@@ -637,7 +686,7 @@ func getChannelKeyMetricsHistoryWithKind(metricsManager *metrics.MetricsManager,
 		}
 
 		// 内存路径的 summary：从整个渠道所有 key 聚合（而非仅 top 10 展示 keys）
-		channelDataPoints := metricsManager.GetHistoricalStatsMultiURL(upstream.GetAllBaseURLs(), upstream.APIKeys, serviceType, duration, interval)
+		channelDataPoints := metricsManager.GetHistoricalStatsMultiURL(upstream.GetAllBaseURLs(), channelStatsAPIKeys(upstream), serviceType, duration, interval)
 		result.Summary = summarizeHistoryDataPoints(durationLabel, channelDataPoints)
 
 		c.JSON(200, result)
@@ -760,7 +809,7 @@ func GetChannelDashboard(cfgManager *config.ConfigManager, sch *scheduler.Channe
 		// 4. 构建 recentActivity 数据（最近 15 分钟分段活跃度）
 		recentActivity := make([]*metrics.ChannelRecentActivity, len(upstreams))
 		for i, upstream := range upstreams {
-			recentActivity[i] = metricsManager.GetRecentActivityMultiURL(i, upstream.GetAllBaseURLs(), upstream.APIKeys, scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType))
+			recentActivity[i] = metricsManager.GetRecentActivityMultiURL(i, upstream.GetAllBaseURLs(), channelStatsAPIKeys(upstream), scheduler.NormalizedMetricsServiceType(kind, upstream.ServiceType))
 		}
 
 		// 5. 当前渠道索引（最近一次运行态调度选择；无请求记录时回退首个活跃渠道）
