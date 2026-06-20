@@ -63,3 +63,48 @@ func TestWatcher_DebouncesRapidWrites(t *testing.T) {
 		t.Fatal("callback 未触发")
 	}
 }
+
+// TestWatcherHandlesAtomicSave 验证 watcher 能处理编辑器常见的原子保存流程：
+// 先写临时文件，再 rename 覆盖目标配置文件。
+func TestWatcherHandlesAtomicSave(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.json")
+	initial := `{"upstream":[{"name":"a","baseUrl":"https://x.example","apiKeys":["k1"],"serviceType":"claude"}]}`
+	if err := os.WriteFile(configPath, []byte(initial), 0644); err != nil {
+		t.Fatalf("初始配置写入失败: %v", err)
+	}
+
+	cm, err := NewConfigManager(configPath, "")
+	if err != nil {
+		t.Fatalf("NewConfigManager() error = %v", err)
+	}
+	defer cm.CloseWatcher()
+
+	done := make(chan struct{}, 1)
+	cm.RegisterOnConfigChange(func(_ Config) {
+		select {
+		case done <- struct{}{}:
+		default:
+		}
+	})
+
+	updated := `{"upstream":[{"name":"atomic-save","baseUrl":"https://x.example","apiKeys":["k1"],"serviceType":"claude"}]}`
+	tmpPath := filepath.Join(tempDir, "config.json.tmp")
+	if err := os.WriteFile(tmpPath, []byte(updated), 0644); err != nil {
+		t.Fatalf("临时配置写入失败: %v", err)
+	}
+	if err := os.Rename(tmpPath, configPath); err != nil {
+		t.Fatalf("rename 覆盖失败: %v", err)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("atomic save 未触发配置重载")
+	}
+
+	cfg := cm.GetConfig()
+	if len(cfg.Upstream) != 1 || cfg.Upstream[0].Name != "atomic-save" {
+		t.Fatalf("重载后的配置未更新，got %+v", cfg.Upstream)
+	}
+}

@@ -640,6 +640,8 @@ func TestBlacklistKeyConfigSnapshotDeepCopy(t *testing.T) {
 			"apiKeyConfigs": [{
 				"key": "sk-1",
 				"name": "test-key",
+				"enabled": true,
+				"rateLimitAutoFromHeaders": true,
 				"weight": 5,
 				"models": ["claude-sonnet"]
 			}],
@@ -655,10 +657,18 @@ func TestBlacklistKeyConfigSnapshotDeepCopy(t *testing.T) {
 	}
 	defer cm.Close()
 
-	enabled := true
 	if err := cm.BlacklistKey("Messages", 0, "sk-1", "authentication_error", "test"); err != nil {
 		t.Fatalf("BlacklistKey() error = %v", err)
 	}
+
+	cm.mu.Lock()
+	falseVal := false
+	cm.config.Upstream[0].APIKeyConfigs[0].Name = "mutated"
+	cm.config.Upstream[0].APIKeyConfigs[0].Weight = 9
+	cm.config.Upstream[0].APIKeyConfigs[0].Models[0] = "mutated-model"
+	cm.config.Upstream[0].APIKeyConfigs[0].Enabled = &falseVal
+	cm.config.Upstream[0].APIKeyConfigs[0].RateLimitAutoFromHeaders = &falseVal
+	cm.mu.Unlock()
 
 	cfg := cm.GetConfig()
 	if len(cfg.Upstream[0].DisabledAPIKeys) != 1 {
@@ -668,16 +678,18 @@ func TestBlacklistKeyConfigSnapshotDeepCopy(t *testing.T) {
 	if dk.Config == nil {
 		t.Fatal("dk.Config is nil, want non-nil snapshot")
 	}
+	if dk.Config.Name != "test-key" {
+		t.Fatalf("snapshot Name = %q, want test-key", dk.Config.Name)
+	}
+	if dk.Config.Enabled == nil || !*dk.Config.Enabled {
+		t.Fatalf("snapshot Enabled = %v, want true", dk.Config.Enabled)
+	}
+	if dk.Config.RateLimitAutoFromHeaders == nil || !*dk.Config.RateLimitAutoFromHeaders {
+		t.Fatalf("snapshot RateLimitAutoFromHeaders = %v, want true", dk.Config.RateLimitAutoFromHeaders)
+	}
 	if dk.Config.Weight != 5 {
 		t.Errorf("snapshot Weight = %d, want 5", dk.Config.Weight)
 	}
-	// 修改源 config 的 Models 切片，验证快照不受影响（深拷贝）
-	cfg.Upstream[0].APIKeyConfigs = append(cfg.Upstream[0].APIKeyConfigs, APIKeyConfig{
-		Key:     "sk-2",
-		Enabled: &enabled,
-	})
-	_ = enabled
-
 	snapshotModels := dk.Config.Models
 	if len(snapshotModels) != 1 || snapshotModels[0] != "claude-sonnet" {
 		t.Errorf("snapshot Models mutated to %v, want [claude-sonnet]", snapshotModels)

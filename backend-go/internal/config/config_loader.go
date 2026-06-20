@@ -582,10 +582,18 @@ func (cm *ConfigManager) cleanupOldBackups(backupDir string) {
 	}
 }
 
-// startWatcher 启动文件监听
+// startWatcher 启动配置目录监听。
 func (cm *ConfigManager) startWatcher() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
+		return err
+	}
+
+	configDir := filepath.Dir(cm.configFile)
+	configPath := filepath.Clean(cm.configFile)
+
+	if err := watcher.Add(configDir); err != nil {
+		_ = watcher.Close()
 		return err
 	}
 
@@ -602,12 +610,11 @@ func (cm *ConfigManager) startWatcher() error {
 				if !ok {
 					return
 				}
+				if filepath.Clean(event.Name) != configPath {
+					continue
+				}
 				// 覆盖三种文件变更事件：直接写、原子保存（vim/VSCode 走 RENAME+CREATE）。
 				if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename) != 0 {
-					// 原子保存的 RENAME 会让 inode 失效，需要重新 Add 才能继续收到事件。
-					if event.Op&fsnotify.Rename == fsnotify.Rename {
-						_ = watcher.Add(cm.configFile)
-					}
 					// 仅发送信号，由独立 goroutine 负责防抖与重载，避免 watcher 回调内做 IO。
 					select {
 					case cm.reloadCh <- struct{}{}:
@@ -663,7 +670,7 @@ func (cm *ConfigManager) startWatcher() error {
 		}
 	}()
 
-	return watcher.Add(cm.configFile)
+	return nil
 }
 
 // CloseWatcher 关闭配置文件监听并等待后台 goroutine 退出。

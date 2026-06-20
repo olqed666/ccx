@@ -915,7 +915,7 @@ func (cm *ConfigManager) BlacklistKey(apiType string, channelIndex int, apiKey s
 	var disabledCfg *APIKeyConfig
 	for _, cfg := range upstream.APIKeyConfigs {
 		if cfg.Key == apiKey {
-			copyCfg := cfg
+			copyCfg := cloneAPIKeyConfig(cfg)
 			disabledCfg = &copyCfg
 			break
 		}
