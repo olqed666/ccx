@@ -3,10 +3,12 @@ package messages
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 
 	"github.com/BenedictKing/ccx/internal/config"
@@ -348,6 +350,202 @@ func TestModelsHandler_MergesChatModels(t *testing.T) {
 		if ids[i] != want[i] {
 			t.Fatalf("ids[%d] = %q, want %q, ids=%v", i, ids[i], want[i], ids)
 		}
+	}
+}
+
+func TestModelsHandler_IncludesImagesModels(t *testing.T) {
+	messagesUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"object":"list","data":[{"id":"model-shared","object":"model"}]}`))
+	}))
+	defer messagesUpstream.Close()
+
+	imagesUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/models" {
+			t.Fatalf("path = %q, want /v1/models", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"object":"list","data":[{"id":"image-model","object":"model"},{"id":"model-shared","object":"model","input_modalities":["text","image"]}]}`))
+	}))
+	defer imagesUpstream.Close()
+
+	cfgManager := setupModelsConfigManager(t, config.Config{
+		Upstream: []config.UpstreamConfig{{
+			Name:        "messages-active",
+			BaseURL:     messagesUpstream.URL,
+			APIKeys:     []string{"sk-messages"},
+			ServiceType: "claude",
+		}},
+		ImagesUpstream: []config.UpstreamConfig{{
+			Name:        "images-active",
+			BaseURL:     imagesUpstream.URL,
+			APIKeys:     []string{"sk-images"},
+			ServiceType: "openai",
+		}},
+	})
+	sch := newModelsTestScheduler(cfgManager)
+	router := newModelsRouterForAggregate(&config.EnvConfig{ProxyAccessKey: "test-key"}, cfgManager, sch)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
+	}
+
+	var resp ModelsResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("解析响应失败: %v", err)
+	}
+	if findModelEntry(resp.Data, "image-model") == nil {
+		t.Fatalf("缺少 images 模型: %#v", resp.Data)
+	}
+	shared := findModelEntry(resp.Data, "model-shared")
+	if shared == nil || !sameStrings(shared.InputModalities, []string{"text", "image"}) {
+		t.Fatalf("model-shared input_modalities = %#v, want [text image]", shared)
+	}
+}
+
+func TestModelsHandler_CollectsFiveSuccessfulChannelsPerProtocol(t *testing.T) {
+	var calls atomic.Int32
+	upstreams := make([]config.UpstreamConfig, 0, 6)
+	servers := make([]*httptest.Server, 0, 6)
+	for i := 0; i < 6; i++ {
+		idx := i
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			calls.Add(1)
+			if idx == 0 {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write([]byte(fmt.Sprintf(`{"object":"list","data":[{"id":"model-%d","object":"model"}]}`, idx)))
+		}))
+		servers = append(servers, server)
+		defer server.Close()
+		upstreams = append(upstreams, config.UpstreamConfig{
+			Name:        fmt.Sprintf("chat-%d", idx),
+			BaseURL:     server.URL,
+			APIKeys:     []string{fmt.Sprintf("sk-%d", idx)},
+			ServiceType: "openai",
+			Priority:    idx,
+		})
+	}
+
+	cfgManager := setupModelsConfigManager(t, config.Config{ChatUpstream: upstreams})
+	sch := newModelsTestScheduler(cfgManager)
+	router := newModelsRouterForAggregate(&config.EnvConfig{ProxyAccessKey: "test-key"}, cfgManager, sch)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
+	}
+
+	var resp ModelsResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("解析响应失败: %v", err)
+	}
+	for i := 1; i <= 5; i++ {
+		if findModelEntry(resp.Data, fmt.Sprintf("model-%d", i)) == nil {
+			t.Fatalf("缺少成功渠道模型 model-%d: %#v", i, resp.Data)
+		}
+	}
+	if findModelEntry(resp.Data, "model-0") != nil {
+		t.Fatalf("失败渠道模型不应出现: %#v", resp.Data)
+	}
+}
+
+func TestModelsHandler_XChannelOnlyQueriesPinnedChannel(t *testing.T) {
+	var pinnedCalls atomic.Int32
+	var otherCalls atomic.Int32
+	pinnedUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		pinnedCalls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"object":"list","data":[{"id":"model-pinned","object":"model"}]}`))
+	}))
+	defer pinnedUpstream.Close()
+
+	otherUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		otherCalls.Add(1)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"object":"list","data":[{"id":"model-other","object":"model"}]}`))
+	}))
+	defer otherUpstream.Close()
+
+	cfgManager := setupModelsConfigManager(t, config.Config{
+		ChatUpstream: []config.UpstreamConfig{
+			{Name: "chat-pinned", BaseURL: pinnedUpstream.URL, APIKeys: []string{"sk-pinned"}, ServiceType: "openai", Priority: 0},
+			{Name: "chat-other", BaseURL: otherUpstream.URL, APIKeys: []string{"sk-other"}, ServiceType: "openai", Priority: 1},
+		},
+	})
+	sch := newModelsTestScheduler(cfgManager)
+	router := newModelsRouterForAggregate(&config.EnvConfig{ProxyAccessKey: "test-key"}, cfgManager, sch)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/models", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	req.Header.Set("X-Channel", "chat-pinned")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
+	}
+	if pinnedCalls.Load() != 1 {
+		t.Fatalf("pinned calls = %d, want 1", pinnedCalls.Load())
+	}
+	if otherCalls.Load() != 0 {
+		t.Fatalf("other channel should not be queried, calls=%d", otherCalls.Load())
+	}
+}
+
+func TestModelsDetailHandler_FallsBackToImages(t *testing.T) {
+	messagesUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	}))
+	defer messagesUpstream.Close()
+
+	imagesUpstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/models/image-model" {
+			t.Fatalf("path = %q, want /v1/models/image-model", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"id":"image-model","object":"model","owned_by":"images"}`))
+	}))
+	defer imagesUpstream.Close()
+
+	cfgManager := setupModelsConfigManager(t, config.Config{
+		Upstream: []config.UpstreamConfig{{
+			Name:        "messages-active",
+			BaseURL:     messagesUpstream.URL,
+			APIKeys:     []string{"sk-messages"},
+			ServiceType: "claude",
+		}},
+		ImagesUpstream: []config.UpstreamConfig{{
+			Name:        "images-active",
+			BaseURL:     imagesUpstream.URL,
+			APIKeys:     []string{"sk-images"},
+			ServiceType: "openai",
+		}},
+	})
+	sch := newModelsTestScheduler(cfgManager)
+	router := newModelsRouterForAggregate(&config.EnvConfig{ProxyAccessKey: "test-key"}, cfgManager, sch)
+
+	req := httptest.NewRequest(http.MethodGet, "/v1/models/image-model", nil)
+	req.Header.Set("Authorization", "Bearer test-key")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
+	}
+	if got := w.Body.String(); got != `{"id":"image-model","object":"model","owned_by":"images"}` {
+		t.Fatalf("body = %s", got)
 	}
 }
 

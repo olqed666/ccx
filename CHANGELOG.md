@@ -1,3 +1,9 @@
+## [Unreleased]
+
+### 新增
+
+- **/v1/models 纳入 images 渠道多渠道并行聚合** - ModelsHandler 从 4 类协议串行改为 5 类协议（messages/responses/chat/gemini/images）并发采集，每协议最多收集 5 个成功渠道的模型列表；ModelsDetailHandler fallback 顺序追加 images；保留 X-Channel pinned、disabled-key fallback 语义
+
 ## [v2.9.12] - 2026-06-19
 
 ### 修复

@@ -2,6 +2,7 @@
 package messages
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/BenedictKing/ccx/internal/config"
@@ -21,7 +23,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const modelsRequestTimeout = 30 * time.Second
+const (
+	modelsRequestTimeout = 30 * time.Second
+	modelsCollectTimeout = 1 * time.Second
+	modelsBatchSize      = 3
+	modelsMaxChannels    = 5
+	modelsMaxAttempts    = 10
+)
 
 var errNoChannelWithDisabledKeys = errors.New("no channel with disabled keys")
 
@@ -40,7 +48,7 @@ type ModelEntry struct {
 	InputModalities []string `json:"input_modalities,omitempty"`
 }
 
-// ModelsHandler 处理 /v1/models 请求，从 Messages、Responses 和 Chat 渠道获取并合并模型列表
+// ModelsHandler 处理 /v1/models 请求，从 Messages、Responses、Chat、Gemini 和 Images 渠道获取并合并模型列表
 func ModelsHandler(envCfg *config.EnvConfig, cfgManager *config.ConfigManager, channelScheduler *scheduler.ChannelScheduler) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		middleware.ProxyAuthMiddleware(envCfg)(c)
@@ -48,12 +56,22 @@ func ModelsHandler(envCfg *config.EnvConfig, cfgManager *config.ConfigManager, c
 			return
 		}
 
-		messagesModels := fetchModelsFromChannels(c, cfgManager, channelScheduler, scheduler.ChannelKindMessages)
-		responsesModels := fetchModelsFromChannels(c, cfgManager, channelScheduler, scheduler.ChannelKindResponses)
-		chatModels := fetchModelsFromChannels(c, cfgManager, channelScheduler, scheduler.ChannelKindChat)
-		geminiModels := fetchModelsFromChannels(c, cfgManager, channelScheduler, scheduler.ChannelKindGemini)
+		req := modelsCollectionRequest{
+			ctx:              c.Request.Context(),
+			cfgManager:       cfgManager,
+			channelScheduler: channelScheduler,
+			routePrefix:      c.Param("routePrefix"),
+			channelName:      c.GetHeader("X-Channel"),
+		}
 
-		mergedModels := mergeModels(messagesModels, responsesModels, chatModels, geminiModels)
+		results := collectModelsFromAllKinds(req)
+		messagesModels := results[scheduler.ChannelKindMessages]
+		responsesModels := results[scheduler.ChannelKindResponses]
+		chatModels := results[scheduler.ChannelKindChat]
+		geminiModels := results[scheduler.ChannelKindGemini]
+		imagesModels := results[scheduler.ChannelKindImages]
+
+		mergedModels := mergeModels(messagesModels, responsesModels, chatModels, geminiModels, imagesModels)
 
 		if len(mergedModels) == 0 {
 			c.JSON(http.StatusNotFound, gin.H{
@@ -70,8 +88,8 @@ func ModelsHandler(envCfg *config.EnvConfig, cfgManager *config.ConfigManager, c
 			Data:   mergedModels,
 		}
 
-		log.Printf("[Models] 合并完成: messages=%d, responses=%d, chat=%d, gemini=%d, merged=%d",
-			len(messagesModels), len(responsesModels), len(chatModels), len(geminiModels), len(mergedModels))
+		log.Printf("[Models] 合并完成: messages=%d, responses=%d, chat=%d, gemini=%d, images=%d, merged=%d",
+			len(messagesModels), len(responsesModels), len(chatModels), len(geminiModels), len(imagesModels), len(mergedModels))
 
 		c.JSON(http.StatusOK, response)
 	}
@@ -101,6 +119,7 @@ func ModelsDetailHandler(envCfg *config.EnvConfig, cfgManager *config.ConfigMana
 			scheduler.ChannelKindResponses,
 			scheduler.ChannelKindChat,
 			scheduler.ChannelKindGemini,
+			scheduler.ChannelKindImages,
 		} {
 			if body, _, ok := tryModelsRequest(c, cfgManager, channelScheduler, "GET", "/"+modelID, kind); ok {
 				c.Data(http.StatusOK, "application/json", body)
@@ -117,13 +136,188 @@ func ModelsDetailHandler(envCfg *config.EnvConfig, cfgManager *config.ConfigMana
 	}
 }
 
+type modelsCollectionRequest struct {
+	ctx              context.Context
+	cfgManager       *config.ConfigManager
+	channelScheduler *scheduler.ChannelScheduler
+	routePrefix      string
+	channelName      string
+}
+
+type modelsChannelCandidate struct {
+	selection *scheduler.SelectionResult
+}
+
+type modelsChannelResult struct {
+	index  int
+	models []ModelEntry
+}
+
+func collectModelsFromAllKinds(req modelsCollectionRequest) map[scheduler.ChannelKind][]ModelEntry {
+	kinds := []scheduler.ChannelKind{
+		scheduler.ChannelKindMessages,
+		scheduler.ChannelKindResponses,
+		scheduler.ChannelKindChat,
+		scheduler.ChannelKindGemini,
+		scheduler.ChannelKindImages,
+	}
+
+	results := make(map[scheduler.ChannelKind][]ModelEntry, len(kinds))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+
+	for _, kind := range kinds {
+		kind := kind
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			models := collectModelsFromChannels(req, kind, modelsMaxChannels)
+			mu.Lock()
+			results[kind] = models
+			mu.Unlock()
+		}()
+	}
+
+	wg.Wait()
+	return results
+}
+
+func collectModelsFromChannels(req modelsCollectionRequest, kind scheduler.ChannelKind, maxSuccess int) []ModelEntry {
+	if maxSuccess <= 0 {
+		return nil
+	}
+
+	candidates, failedChannels := selectModelsChannelCandidates(req, kind)
+	if len(candidates) == 0 {
+		if req.channelName == "" {
+			return fetchModelsFromDisabledKeyFallback(req, kind, failedChannels)
+		}
+		return nil
+	}
+
+	ctx, cancel := context.WithTimeout(req.ctx, modelsCollectTimeout)
+	defer cancel()
+
+	resultsByIndex := make(map[int][]ModelEntry, len(candidates))
+	successCount := 0
+
+	// 分批启动候选：每批 modelsBatchSize 个，等全批返回后决定是否继续
+	for batchStart := 0; batchStart < len(candidates) && successCount < maxSuccess; batchStart += modelsBatchSize {
+		batchEnd := batchStart + modelsBatchSize
+		if batchEnd > len(candidates) {
+			batchEnd = len(candidates)
+		}
+		batch := candidates[batchStart:batchEnd]
+
+		type batchResult struct {
+			index  int
+			models []ModelEntry
+		}
+		resultCh := make(chan batchResult, len(batch))
+		var wg sync.WaitGroup
+		for i, candidate := range batch {
+			i := i
+			candidate := candidate
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				models := fetchModelsFromCandidate(ctx, req.cfgManager, candidate, kind)
+				if len(models) > 0 {
+					resultCh <- batchResult{index: batchStart + i, models: models}
+				}
+			}()
+		}
+
+		wg.Wait()
+		close(resultCh)
+
+		for result := range resultCh {
+			resultsByIndex[result.index] = result.models
+			successCount++
+		}
+
+		if ctx.Err() != nil {
+			break
+		}
+	}
+
+	if len(resultsByIndex) == 0 {
+		if req.channelName == "" {
+			if fallback := fetchModelsFromDisabledKeyFallback(req, kind, failedChannels); len(fallback) > 0 {
+				return mergeModels(fallback)
+			}
+		}
+		return nil
+	}
+
+	modelLists := make([][]ModelEntry, 0, minInt(maxSuccess, len(resultsByIndex)))
+	for idx := 0; idx < len(candidates) && len(modelLists) < maxSuccess; idx++ {
+		if models := resultsByIndex[idx]; len(models) > 0 {
+			modelLists = append(modelLists, models)
+		}
+	}
+
+	merged := mergeModels(modelLists...)
+	log.Printf("[%s-Models] 协议采集完成: successChannels=%d, merged=%d", channelKindLabel(kind), len(modelLists), len(merged))
+	return merged
+}
+
+func selectModelsChannelCandidates(req modelsCollectionRequest, kind scheduler.ChannelKind) ([]modelsChannelCandidate, map[int]bool) {
+	maxAttempts := modelsMaxAttempts
+	if req.channelName != "" {
+		maxAttempts = 1
+	}
+
+	failedChannels := make(map[int]bool)
+	candidates := make([]modelsChannelCandidate, 0, maxAttempts)
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		selection, err := req.channelScheduler.SelectChannel(req.ctx, "", failedChannels, kind, "", req.routePrefix, req.channelName)
+		if err != nil {
+			if len(candidates) == 0 {
+				log.Printf("[%s-Models] 渠道无可用: %v", channelKindLabel(kind), err)
+			}
+			break
+		}
+		candidates = append(candidates, modelsChannelCandidate{selection: selection})
+		failedChannels[selection.ChannelIndex] = true
+	}
+	return candidates, failedChannels
+}
+
+func fetchModelsFromCandidate(ctx context.Context, cfgManager *config.ConfigManager, candidate modelsChannelCandidate, kind scheduler.ChannelKind) []ModelEntry {
+	body, upstream, ok := requestModelsFromSelection(ctx, cfgManager, candidate.selection, "GET", "", kind)
+	if !ok {
+		return nil
+	}
+	return parseModelsResponseForKind(body, upstream, kind)
+}
+
+func fetchModelsFromDisabledKeyFallback(req modelsCollectionRequest, kind scheduler.ChannelKind, failedChannels map[int]bool) []ModelEntry {
+	for attempt := 0; attempt < modelsMaxAttempts; attempt++ {
+		selection, err := selectChannelWithDisabledKeys(req.cfgManager, failedChannels, kind, req.routePrefix)
+		if err != nil {
+			break
+		}
+		log.Printf("[%s-Models] 活跃渠道不可用，回退到挂起渠道查询模型: channel=%s, reason=%s", channelKindLabel(kind), selection.Upstream.Name, selection.Reason)
+		body, upstream, ok := requestModelsFromSelection(req.ctx, req.cfgManager, selection, "GET", "", kind)
+		if ok {
+			return parseModelsResponseForKind(body, upstream, kind)
+		}
+		failedChannels[selection.ChannelIndex] = true
+	}
+	return nil
+}
+
 // fetchModelsFromChannels 从指定类型的渠道获取模型列表
 func fetchModelsFromChannels(c *gin.Context, cfgManager *config.ConfigManager, channelScheduler *scheduler.ChannelScheduler, kind scheduler.ChannelKind) []ModelEntry {
 	body, upstream, ok := tryModelsRequest(c, cfgManager, channelScheduler, "GET", "", kind)
 	if !ok {
 		return nil
 	}
+	return parseModelsResponseForKind(body, upstream, kind)
+}
 
+func parseModelsResponseForKind(body []byte, upstream *config.UpstreamConfig, kind scheduler.ChannelKind) []ModelEntry {
 	// Gemini 渠道或 serviceType=gemini 的渠道返回 {"models": [...]} 格式
 	if kind == scheduler.ChannelKindGemini {
 		return enrichModelModalitiesForUpstream(parseGeminiModelsResponse(body), upstream)
@@ -401,10 +595,9 @@ func mergeModels(modelLists ...[]ModelEntry) []ModelEntry {
 // tryModelsRequest 使用调度器选择渠道，按故障转移顺序尝试请求 models 端点
 func tryModelsRequest(c *gin.Context, cfgManager *config.ConfigManager, channelScheduler *scheduler.ChannelScheduler, method, suffix string, kind scheduler.ChannelKind) ([]byte, *config.UpstreamConfig, bool) {
 	failedChannels := make(map[int]bool)
-	maxChannelRetries := 10 // 最多尝试 10 个渠道
 	channelType := channelKindLabel(kind)
 
-	for attempt := 0; attempt < maxChannelRetries; attempt++ {
+	for attempt := 0; attempt < modelsMaxAttempts; attempt++ {
 		selection, err := channelScheduler.SelectChannel(c.Request.Context(), "", failedChannels, kind, "", c.Param("routePrefix"), c.GetHeader("X-Channel"))
 		if err != nil {
 			fallbackSelection, fallbackErr := selectChannelWithDisabledKeys(cfgManager, failedChannels, kind, c.Param("routePrefix"))
@@ -416,90 +609,98 @@ func tryModelsRequest(c *gin.Context, cfgManager *config.ConfigManager, channelS
 			log.Printf("[%s-Models] 活跃渠道不可用，回退到挂起渠道查询模型: channel=%s, reason=%s", channelType, selection.Upstream.Name, selection.Reason)
 		}
 
-		upstream := selection.Upstream
-
-		// 构建候选 URL 列表
-		var candidateURLs []string
-		if upstream.ServiceType == "gemini" || kind == scheduler.ChannelKindGemini {
-			candidateURLs = []string{buildGeminiModelsURL(upstream.BaseURL) + suffix}
-		} else if kind == scheduler.ChannelKindMessages {
-			// messages/claude 渠道使用三段候选
-			bases := buildClaudeCompatibleModelsURLs(upstream.BaseURL)
-			candidateURLs = make([]string, len(bases))
-			for i, b := range bases {
-				candidateURLs[i] = b + suffix
-			}
-		} else {
-			candidateURLs = []string{buildModelsURL(upstream.BaseURL) + suffix}
+		body, upstream, ok := requestModelsFromSelection(c.Request.Context(), cfgManager, selection, method, suffix, kind)
+		if ok {
+			return body, upstream, true
 		}
-
-		client := httpclient.GetManager().GetStandardClient(modelsRequestTimeout, upstream.InsecureSkipVerify, upstream.ProxyURL)
-
-		apiKey, usedDisabledFallback, err := cfgManager.GetAdminAPIKey(upstream, nil, channelType)
-		if err != nil {
-			log.Printf("[%s-Models] 获取 API Key 失败: channel=%s, error=%v", channelType, upstream.Name, err)
-			failedChannels[selection.ChannelIndex] = true
-			continue
-		}
-		if usedDisabledFallback {
-			log.Printf("[%s-Models] 使用已拉黑密钥查询模型列表: channel=%s, key=%s", channelType, upstream.Name, utils.MaskAPIKey(apiKey))
-		}
-
-		// 依次尝试候选 URL
-		channelSuccess := false
-		for _, candidateURL := range candidateURLs {
-			req, err := http.NewRequestWithContext(c.Request.Context(), method, candidateURL, nil)
-			if err != nil {
-				log.Printf("[%s-Models] 创建请求失败: channel=%s, url=%s, error=%v", channelType, upstream.Name, candidateURL, err)
-				continue
-			}
-			if (upstream.ServiceType == "gemini" || kind == scheduler.ChannelKindGemini) && !utils.HasAuthenticationHeaderOverride(upstream.AuthHeader) {
-				utils.SetGeminiAuthenticationHeader(req.Header, apiKey)
-			} else {
-				utils.SetAuthenticationHeaderWithOverride(req.Header, apiKey, upstream.AuthHeader)
-			}
-			req.Header.Set("Content-Type", "application/json")
-			utils.ApplyCustomHeaders(req.Header, upstream.CustomHeaders)
-
-			resp, err := client.Do(req)
-			if err != nil {
-				log.Printf("[%s-Models] 请求失败: channel=%s, key=%s, url=%s, error=%v",
-					channelType, upstream.Name, utils.MaskAPIKey(apiKey), candidateURL, err)
-				continue
-			}
-
-			if resp.StatusCode == http.StatusOK {
-				body, err := io.ReadAll(resp.Body)
-				resp.Body.Close()
-				if err != nil {
-					log.Printf("[%s-Models] 读取响应失败: channel=%s, error=%v", channelType, upstream.Name, err)
-					continue
-				}
-				log.Printf("[%s-Models] 请求成功: method=%s, channel=%s, key=%s, url=%s, reason=%s",
-					channelType, method, upstream.Name, utils.MaskAPIKey(apiKey), candidateURL, selection.Reason)
-				return body, upstream, true
-			}
-
-			// 401/403 认证失败不继续尝试其他候选 URL
-			if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
-				log.Printf("[%s-Models] 上游认证失败: channel=%s, key=%s, status=%d, url=%s",
-					channelType, upstream.Name, utils.MaskAPIKey(apiKey), resp.StatusCode, candidateURL)
-				resp.Body.Close()
-				break
-			}
-
-			log.Printf("[%s-Models] 上游返回非 200: channel=%s, key=%s, status=%d, url=%s",
-				channelType, upstream.Name, utils.MaskAPIKey(apiKey), resp.StatusCode, candidateURL)
-			resp.Body.Close()
-		}
-
-		if !channelSuccess {
-			failedChannels[selection.ChannelIndex] = true
-		}
+		failedChannels[selection.ChannelIndex] = true
 	}
 
 	log.Printf("[%s-Models] 所有渠道均失败: method=%s, suffix=%s", channelType, method, suffix)
 	return nil, nil, false
+}
+
+func requestModelsFromSelection(ctx context.Context, cfgManager *config.ConfigManager, selection *scheduler.SelectionResult, method, suffix string, kind scheduler.ChannelKind) ([]byte, *config.UpstreamConfig, bool) {
+	channelType := channelKindLabel(kind)
+	upstream := selection.Upstream
+
+	var candidateURLs []string
+	if upstream.ServiceType == "gemini" || kind == scheduler.ChannelKindGemini {
+		candidateURLs = []string{buildGeminiModelsURL(upstream.BaseURL) + suffix}
+	} else if kind == scheduler.ChannelKindMessages {
+		bases := buildClaudeCompatibleModelsURLs(upstream.BaseURL)
+		candidateURLs = make([]string, len(bases))
+		for i, b := range bases {
+			candidateURLs[i] = b + suffix
+		}
+	} else {
+		candidateURLs = []string{buildModelsURL(upstream.BaseURL) + suffix}
+	}
+
+	client := httpclient.GetManager().GetStandardClient(modelsRequestTimeout, upstream.InsecureSkipVerify, upstream.ProxyURL)
+
+	apiKey, usedDisabledFallback, err := cfgManager.GetAdminAPIKey(upstream, nil, channelType)
+	if err != nil {
+		log.Printf("[%s-Models] 获取 API Key 失败: channel=%s, error=%v", channelType, upstream.Name, err)
+		return nil, upstream, false
+	}
+	if usedDisabledFallback {
+		log.Printf("[%s-Models] 使用已拉黑密钥查询模型列表: channel=%s, key=%s", channelType, upstream.Name, utils.MaskAPIKey(apiKey))
+	}
+
+	for _, candidateURL := range candidateURLs {
+		req, err := http.NewRequestWithContext(ctx, method, candidateURL, nil)
+		if err != nil {
+			log.Printf("[%s-Models] 创建请求失败: channel=%s, url=%s, error=%v", channelType, upstream.Name, candidateURL, err)
+			continue
+		}
+		if (upstream.ServiceType == "gemini" || kind == scheduler.ChannelKindGemini) && !utils.HasAuthenticationHeaderOverride(upstream.AuthHeader) {
+			utils.SetGeminiAuthenticationHeader(req.Header, apiKey)
+		} else {
+			utils.SetAuthenticationHeaderWithOverride(req.Header, apiKey, upstream.AuthHeader)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		utils.ApplyCustomHeaders(req.Header, upstream.CustomHeaders)
+
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Printf("[%s-Models] 请求失败: channel=%s, key=%s, url=%s, error=%v",
+				channelType, upstream.Name, utils.MaskAPIKey(apiKey), candidateURL, err)
+			continue
+		}
+
+		if resp.StatusCode == http.StatusOK {
+			body, err := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			if err != nil {
+				log.Printf("[%s-Models] 读取响应失败: channel=%s, error=%v", channelType, upstream.Name, err)
+				continue
+			}
+			log.Printf("[%s-Models] 请求成功: method=%s, channel=%s, key=%s, url=%s, reason=%s",
+				channelType, method, upstream.Name, utils.MaskAPIKey(apiKey), candidateURL, selection.Reason)
+			return body, upstream, true
+		}
+
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			log.Printf("[%s-Models] 上游认证失败: channel=%s, key=%s, status=%d, url=%s",
+				channelType, upstream.Name, utils.MaskAPIKey(apiKey), resp.StatusCode, candidateURL)
+			resp.Body.Close()
+			break
+		}
+
+		log.Printf("[%s-Models] 上游返回非 200: channel=%s, key=%s, status=%d, url=%s",
+			channelType, upstream.Name, utils.MaskAPIKey(apiKey), resp.StatusCode, candidateURL)
+		resp.Body.Close()
+	}
+
+	return nil, upstream, false
+}
+
+func minInt(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 func channelKindLabel(kind scheduler.ChannelKind) string {
@@ -510,6 +711,8 @@ func channelKindLabel(kind scheduler.ChannelKind) string {
 		return "Chat"
 	case scheduler.ChannelKindGemini:
 		return "Gemini"
+	case scheduler.ChannelKindImages:
+		return "Images"
 	default:
 		return "Messages"
 	}
