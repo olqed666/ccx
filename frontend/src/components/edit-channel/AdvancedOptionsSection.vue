@@ -46,6 +46,7 @@
               :model-value="form.authHeader || 'auto'"
               :items="authHeaderOptions"
               variant="outlined"
+              style="max-width: 160px;"
               density="compact"
               hide-details
               eager

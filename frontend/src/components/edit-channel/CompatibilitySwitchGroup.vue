@@ -125,27 +125,34 @@
         />
       </div>
 
-      <!-- Fast Mode / Text Verbosity -->
-      <div v-if="supportsOpenAIAdvancedOptions" class="d-flex flex-column flex-sm-row align-sm-center ga-3">
-        <div class="d-flex align-center justify-space-between flex-grow-1">
-          <div class="d-flex align-center ga-2">
-            <v-icon color="primary">mdi-fast-forward</v-icon>
-            <div>
-              <div class="section-title section-title--soft">{{ t('channelEditor.compat.fastMode.label') }}</div>
-              <div class="text-caption text-medium-emphasis">{{ t('channelEditor.compat.fastMode.hint') }}</div>
-            </div>
+      <!-- Fast Mode -->
+      <div v-if="supportsOpenAIAdvancedOptions" class="d-flex align-center justify-space-between">
+        <div class="d-flex align-center ga-2">
+          <v-icon color="primary">mdi-fast-forward</v-icon>
+          <div>
+            <div class="section-title section-title--soft">{{ t('channelEditor.compat.fastMode.label') }}</div>
+            <div class="text-caption text-medium-emphasis">{{ t('channelEditor.compat.fastMode.hint') }}</div>
           </div>
-          <v-switch :model-value="form.fastMode" inset color="primary" hide-details @update:model-value="updateField('fastMode', $event)" />
+        </div>
+        <v-switch :model-value="form.fastMode" inset color="primary" hide-details @update:model-value="updateField('fastMode', $event)" />
+      </div>
+
+      <!-- Text Verbosity -->
+      <div v-if="supportsOpenAIAdvancedOptions" class="d-flex align-center justify-space-between">
+        <div class="d-flex align-center ga-2">
+          <v-icon color="primary">mdi-text</v-icon>
+          <div>
+            <div class="section-title section-title--soft">{{ t('addChannel.textVerbosityLabel') }}</div>
+          </div>
         </div>
         <v-select
           :model-value="form.textVerbosity || ''"
-          :label="t('addChannel.textVerbosityLabel')"
           :items="textVerbosityOptions"
           variant="outlined"
           density="comfortable"
           hide-details
           clearable
-          class="text-verbosity-select"
+          class="channel-config-select"
           eager
           @update:model-value="updateField('textVerbosity', $event || '')"
           @update:menu="$emit('menu-update', $event)"
@@ -291,17 +298,5 @@ const updateField = (field: keyof FormData, value: unknown) => {
 
 .channel-config-select {
   max-width: 200px;
-}
-
-.text-verbosity-select {
-  flex: 0 0 240px;
-  max-width: 240px;
-}
-
-@media (max-width: 599px) {
-  .text-verbosity-select {
-    flex: 1 1 auto;
-    max-width: none;
-  }
 }
 </style>

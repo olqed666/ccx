@@ -96,7 +96,7 @@ function updateTextVerbosity(value: string) {
         </div>
         <Switch :model-value="form.lowQuality" @update:model-value="updateField('lowQuality', $event)" />
       </div>
-      <div class="grid gap-3 rounded-lg border border-border/60 bg-gradient-to-r from-background/60 to-background/40 p-4 shadow-sm backdrop-blur-sm md:grid-cols-[minmax(0,1fr)_220px]">
+      <div class="grid gap-3 rounded-lg border border-border/60 bg-gradient-to-r from-background/60 to-background/40 p-4 shadow-sm backdrop-blur-sm md:grid-cols-[minmax(0,1fr)_160px]">
         <div class="min-w-0 space-y-0.5">
           <Label class="flex items-center gap-1.5 text-xs font-medium">
             <KeyRound class="h-3 w-3 text-primary" />
@@ -214,7 +214,7 @@ function updateTextVerbosity(value: string) {
               :model-value="form.reasoningParamStyle || 'reasoning'"
               @update:model-value="(val) => updateField('reasoningParamStyle', String(val))"
             >
-              <SelectTrigger class="h-8 w-[180px] text-xs">
+              <SelectTrigger class="h-8 w-[200px] text-xs">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -224,33 +224,33 @@ function updateTextVerbosity(value: string) {
               </SelectContent>
             </Select>
           </div>
-          <div v-if="supportsOpenAIAdvancedOptions" class="grid gap-3 md:grid-cols-[minmax(0,1fr)_180px]">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0 space-y-0.5">
-                <Label class="text-xs font-medium">{{ t('channelEditor.compat.fastMode.label') }}</Label>
-                <p class="text-[10px] leading-4 text-muted-foreground">{{ t('channelEditor.compat.fastMode.hint') }}</p>
-              </div>
-              <Switch :model-value="form.fastMode" @update:model-value="updateField('fastMode', $event)" />
+          <div v-if="supportsOpenAIAdvancedOptions" class="flex items-center justify-between gap-3">
+            <div class="min-w-0 space-y-0.5">
+              <Label class="text-xs font-medium">{{ t('channelEditor.compat.fastMode.label') }}</Label>
+              <p class="text-[10px] leading-4 text-muted-foreground">{{ t('channelEditor.compat.fastMode.hint') }}</p>
             </div>
-            <div class="space-y-1">
+            <Switch :model-value="form.fastMode" @update:model-value="updateField('fastMode', $event)" />
+          </div>
+          <div v-if="supportsOpenAIAdvancedOptions" class="flex items-center justify-between gap-3">
+            <div class="min-w-0 space-y-0.5">
               <Label class="text-xs font-medium">{{ t('channelEditor.compat.textVerbosity.label') }}</Label>
-              <Select
-                :model-value="form.textVerbosity || TEXT_VERBOSITY_DEFAULT_VALUE"
-                @update:model-value="(val) => updateTextVerbosity(String(val))"
-              >
-                <SelectTrigger class="h-8 w-full text-xs">
-                  <SelectValue :placeholder="t('channelEditor.compat.textVerbosity.placeholder')" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="TEXT_VERBOSITY_DEFAULT_VALUE">
-                    {{ t('channelEditor.compat.textVerbosity.placeholder') }}
-                  </SelectItem>
-                  <SelectItem v-for="opt in textVerbosityOptions" :key="opt.value" :value="opt.value">
-                    {{ opt.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </div>
+            <Select
+              :model-value="form.textVerbosity || TEXT_VERBOSITY_DEFAULT_VALUE"
+              @update:model-value="(val) => updateTextVerbosity(String(val))"
+            >
+              <SelectTrigger class="h-8 w-[200px] text-xs">
+                <SelectValue :placeholder="t('channelEditor.compat.textVerbosity.placeholder')" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="TEXT_VERBOSITY_DEFAULT_VALUE">
+                  {{ t('channelEditor.compat.textVerbosity.placeholder') }}
+                </SelectItem>
+                <SelectItem v-for="opt in textVerbosityOptions" :key="opt.value" :value="opt.value">
+                  {{ opt.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <div v-if="(channelType === 'gemini' || channelType === 'messages') && form.serviceType === 'gemini'" class="flex items-center justify-between gap-3">
             <div class="min-w-0 space-y-0.5">
