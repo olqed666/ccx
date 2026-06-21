@@ -452,10 +452,6 @@ function handleCardClick(event: MouseEvent) {
               <Copy class="h-4 w-4" />
               {{ t('orchestration.copyConfig') }}
             </DropdownMenuItem>
-            <DropdownMenuItem v-if="websiteUrl" @click="openWebsite">
-              <ExternalLink class="h-4 w-4" />
-              {{ t('orchestration.openWebsite') }}
-            </DropdownMenuItem>
           </DropdownMenuGroup>
 
           <DropdownMenuSeparator />

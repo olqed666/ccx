@@ -393,19 +393,19 @@
                     </template>
                     <v-list-item-title>{{ t('orchestration.copyConfig') }}</v-list-item-title>
                   </v-list-item>
-                  <v-list-item @click="setPromotion(element)">
+                  <v-list-item v-if="!isInPromotion(element)" @click="setPromotion(element)">
                     <template #prepend>
                       <v-icon size="small" color="info">mdi-rocket-launch</v-icon>
                     </template>
                     <v-list-item-title>{{ t('orchestration.promotion') }}</v-list-item-title>
                   </v-list-item>
-                  <v-list-item v-if="index > 0" :disabled="isSavingOrder" @click="moveChannelToTop(element.index)">
+                  <v-list-item v-if="!isFirstActiveChannel(element)" :disabled="isSavingOrder" @click="moveChannelToTop(element.index)">
                     <template #prepend>
                       <v-icon size="small" color="primary">mdi-arrow-collapse-up</v-icon>
                     </template>
                     <v-list-item-title>{{ t('orchestration.moveTop') }}</v-list-item-title>
                   </v-list-item>
-                  <v-list-item v-if="index < activeChannels.length - 1" :disabled="isSavingOrder" @click="moveChannelToBottom(element.index)">
+                  <v-list-item v-if="!isLastActiveChannel(element)" :disabled="isSavingOrder" @click="moveChannelToBottom(element.index)">
                     <template #prepend>
                       <v-icon size="small" color="primary">mdi-arrow-collapse-down</v-icon>
                     </template>
@@ -423,6 +423,16 @@
                       <v-icon size="small" color="error">mdi-stop-circle</v-icon>
                     </template>
                     <v-list-item-title>{{ t('orchestration.moveToPool') }}</v-list-item-title>
+                  </v-list-item>
+                  <v-divider />
+                  <v-list-item disabled density="compact">
+                    <template #prepend>
+                      <v-icon size="small">mdi-key</v-icon>
+                    </template>
+                    <v-list-item-title class="text-caption text-medium-emphasis">
+                      {{ element.apiKeys?.length || 0 }} {{ t('channelCard.configuredKeys') }}
+                      <span v-if="element.disabledApiKeys?.length"> · {{ element.disabledApiKeys.length }} {{ t('channelCard.disabledKeys') }}</span>
+                    </v-list-item-title>
                   </v-list-item>
                   <v-list-item :disabled="!canDeleteChannel(element)" @click="handleDeleteChannel(element)">
                     <template #prepend>
@@ -1052,6 +1062,13 @@ const saveOrder = async () => {
     isSavingOrder.value = false
   }
 }
+
+// Whether the channel is the first/last in the full active sequence.
+// 基于完整活跃列表的 index 值判断，避免搜索过滤（v-show）后位置变量 index 失真。
+const isFirstActiveChannel = (channel: Channel): boolean =>
+  activeChannels.value[0]?.index === channel.index
+const isLastActiveChannel = (channel: Channel): boolean =>
+  activeChannels.value[activeChannels.value.length - 1]?.index === channel.index
 
 // Move channel to top
 const moveChannelToTop = async (channelIndex: number) => {
