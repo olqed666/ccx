@@ -108,6 +108,7 @@ const showGlobalStats = ref(false)
 
 // 渠道级 Key 趋势图
 const expandedChannelId = ref<number | null>(null)
+const keyMetricsDuration = ref('1h')
 const keyMetricsData = ref<KeyHistoryData[]>([])
 const keyMetricsSummary = ref<GlobalStatsSummary | null>(null)
 const keyMetricsLoading = ref(false)
@@ -148,7 +149,8 @@ async function loadKeyMetrics(channelId: number, duration?: string) {
       images: 'images'
     }
     const apiPath = typeMap[props.type]
-    const dur = duration || '1h'
+    const dur = duration || keyMetricsDuration.value
+    keyMetricsDuration.value = dur
     const data = await adminApi.get<{ keys: KeyHistoryData[]; summary?: GlobalStatsSummary }>(
       `/api/${apiPath}/channels/${channelId}/keys/metrics/history?duration=${dur}`
     )
@@ -169,8 +171,13 @@ function handleToggleChart(channelId: number) {
     keyMetricsSummary.value = null
   } else {
     expandedChannelId.value = channelId
-    loadKeyMetrics(channelId)
+    loadKeyMetrics(channelId, keyMetricsDuration.value)
   }
+}
+
+function handleKeyMetricsRefresh(duration: string) {
+  if (expandedChannelId.value === null) return
+  loadKeyMetrics(expandedChannelId.value, duration)
 }
 
 async function loadFuzzyMode() {
@@ -586,8 +593,9 @@ watch(() => props.type, () => {
                 :data="keyMetricsData"
                 :channel-name="channel.name"
                 :loading="keyMetricsLoading"
-                :duration="'1h'"
+                :duration="keyMetricsDuration"
                 :summary="keyMetricsSummary"
+                @refresh="handleKeyMetricsRefresh"
               />
             </div>
           </div>

@@ -251,17 +251,26 @@ function openWebsite() {
   if (!websiteUrl.value) return
   void openExternalLink(websiteUrl.value)
 }
+
+function handleCardClick(event: MouseEvent) {
+  if (props.inactive) return
+  const target = event.target as HTMLElement | null
+  if (!target) return
+  if (target.closest('button, a, input, textarea, select, [role="button"], [role="menuitem"], [data-no-card-toggle]')) return
+  emit('toggle')
+}
 </script>
 
 <template>
   <div
     :class="[
-      'group relative grid grid-cols-[24px_minmax(150px,1fr)_28px_84px_104px] items-center gap-1 border px-2 py-2 transition-all duration-200 lg:grid-cols-[36px_minmax(170px,1fr)_32px_92px_56px_104px] lg:gap-1.5 xl:grid-cols-[42px_minmax(220px,1fr)_32px_108px_64px_104px] xl:gap-3 xl:px-3 xl:py-2.5',
+      'group relative grid cursor-pointer grid-cols-[24px_minmax(150px,1fr)_28px_84px_104px] items-center gap-1 border px-2 py-2 transition-all duration-200 lg:grid-cols-[36px_minmax(170px,1fr)_32px_92px_56px_104px] lg:gap-1.5 xl:grid-cols-[42px_minmax(220px,1fr)_32px_108px_64px_104px] xl:gap-3 xl:px-3 xl:py-2.5',
       'bg-card/75 hover:bg-card dark:bg-card/55 dark:hover:bg-card/80',
       'overflow-hidden',
       inactive ? 'border-dashed border-border/80 opacity-80' : 'border-border',
       circuitDisplay ? 'ring-1 ring-rose-500/20' : '',
     ]"
+    @click="handleCardClick"
   >
     <!-- SVG activity chart background -->
     <ActivityChart :activity="activity" class="opacity-60 dark:opacity-70" />

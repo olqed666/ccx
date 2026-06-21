@@ -1,7 +1,21 @@
 <template>
   <div class="key-trend-chart">
-    <!-- Header: view switcher -->
-    <div class="flex items-center justify-end mb-3">
+    <!-- Header: duration and view switcher -->
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <div class="inline-flex rounded-md border border-border divide-x divide-border">
+        <button
+          v-for="opt in durationOptions"
+          :key="opt.value"
+          type="button"
+          class="px-2 py-1 text-[11px] font-semibold transition-colors hover:bg-accent/40 disabled:opacity-50"
+          :class="{ 'bg-accent text-accent-foreground': selectedDuration === opt.value }"
+          :disabled="loading"
+          @click="selectedDuration = opt.value"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
+
       <div class="inline-flex rounded-md border border-border divide-x divide-border">
         <button
           v-for="view in viewOptions"
@@ -78,7 +92,7 @@
     <div v-else>
       <VueApexCharts
         ref="chartRef"
-        :key="`key-trend-${selectedView}`"
+        :key="`key-trend-${selectedView}-${selectedDuration}`"
         type="area"
         height="280"
         :options="chartOptions"
@@ -89,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import VueApexCharts from 'vue3-apexcharts'
 import type { ApexOptions } from 'apexcharts'
 import { useTheme } from '@/composables/useTheme'
@@ -112,6 +126,10 @@ const props = withDefaults(
   },
 )
 
+const emit = defineEmits<{
+  refresh: [duration: string]
+}>()
+
 const { theme } = useTheme()
 const chartRef = ref<InstanceType<typeof VueApexCharts> | null>(null)
 
@@ -130,15 +148,37 @@ const KEY_COLORS = [
   '#eab308', '#06b6d4', '#f43f5e', '#84cc16', '#6366f1',
 ]
 
-// View mode
+// View and duration mode
 type ViewMode = 'traffic' | 'tokens' | 'cache'
+type Duration = '1h' | '6h' | '24h' | 'today' | '7d' | '30d'
+const isDuration = (value?: string): value is Duration => !!value && ['1h', '6h', '24h', 'today', '7d', '30d'].includes(value)
 const selectedView = ref<ViewMode>('traffic')
+const selectedDuration = ref<Duration>(isDuration(props.duration) ? props.duration : '1h')
+
+const durationOptions = computed(() => [
+  { label: t('chart.1h'), value: '1h' as Duration },
+  { label: t('chart.6h'), value: '6h' as Duration },
+  { label: t('chart.24h'), value: '24h' as Duration },
+  { label: t('chart.today'), value: 'today' as Duration },
+  { label: t('chart.7d'), value: '7d' as Duration },
+  { label: t('chart.30d'), value: '30d' as Duration },
+])
 
 const viewOptions = computed(() => [
   { label: 'chart.traffic', value: 'traffic' as ViewMode },
   { label: 'chart.tokens', value: 'tokens' as ViewMode },
   { label: 'chart.cacheRw', value: 'cache' as ViewMode },
 ])
+
+watch(selectedDuration, (duration) => {
+  emit('refresh', duration)
+})
+
+watch(() => props.duration, (duration) => {
+  if (isDuration(duration) && duration !== selectedDuration.value) {
+    selectedDuration.value = duration
+  }
+})
 
 const hasData = computed(() => {
   if (!props.data?.length) return false
@@ -154,7 +194,7 @@ const hasData = computed(() => {
 })
 
 const xLabelFormat = computed(() =>
-  props.duration === '7d' || props.duration === '30d' ? 'MM-dd HH:mm' : 'HH:mm',
+  selectedDuration.value === '7d' || selectedDuration.value === '30d' ? 'MM-dd HH:mm' : 'HH:mm',
 )
 
 // Failure rate background bands
@@ -181,7 +221,7 @@ const failureAnnotations = computed(() => {
   if (selectedView.value !== 'traffic') return []
   if (!props.data?.length) return []
 
-  const interval = AGGREGATION_INTERVALS[props.duration] || 60000
+  const interval = AGGREGATION_INTERVALS[selectedDuration.value] || 60000
 
   // Aggregate all keys by aligned timestamp
   const timeMap = new Map<number, { totalRequests: number; totalFailures: number }>()
@@ -412,7 +452,7 @@ const buildTrafficTooltip = ({ seriesIndex, dataPointIndex, w }: any): string =>
     minute: '2-digit',
   })
 
-  const interval = AGGREGATION_INTERVALS[props.duration] || 60000
+  const interval = AGGREGATION_INTERVALS[selectedDuration.value] || 60000
   const alignedTimestamp = Math.floor(timestamp / interval) * interval
 
   interface KeyStat {
