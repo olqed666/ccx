@@ -52,6 +52,7 @@ let masonryLayoutFrame = 0
 let noticeTimer: ReturnType<typeof setTimeout> | undefined
 let clockTimer: ReturnType<typeof setInterval> | undefined
 let hasLoadedSettings = false
+let isUnmounted = false
 const masonryItemElements = new Map<string, HTMLElement>()
 const masonryItemObservers = new Map<string, ResizeObserver>()
 
@@ -223,15 +224,20 @@ function updateMasonryColumnCount(width = masonryEl.value?.clientWidth || 0) {
 }
 
 function scheduleMasonryLayout() {
+  if (isUnmounted) return
   if (masonryLayoutFrame) return
   masonryLayoutFrame = window.requestAnimationFrame(() => {
     masonryLayoutFrame = 0
+    if (isUnmounted) return
     layoutMasonryItems()
   })
 }
 
 function layoutMasonryItems() {
-  const containerWidth = masonryEl.value?.clientWidth || 0
+  const container = masonryEl.value
+  if (isUnmounted || !container?.isConnected) return
+
+  const containerWidth = container.clientWidth || 0
   if (!containerWidth) return
 
   const columnCount = Math.max(1, masonryColumnCount.value)
@@ -283,6 +289,8 @@ function getMasonryItemStyle(id: string): StyleValue {
 }
 
 function setMasonryItemRef(id: string, el: Element | ComponentPublicInstance | null) {
+  if (isUnmounted) return
+
   const element = el instanceof HTMLElement ? el : null
   const existing = masonryItemElements.get(id)
   if (existing === element) return
@@ -305,6 +313,7 @@ function setMasonryItemRef(id: string, el: Element | ComponentPublicInstance | n
 }
 
 onBeforeUnmount(() => {
+  isUnmounted = true
   if (clockTimer) clearInterval(clockTimer)
   masonryResizeObserver?.disconnect()
   for (const observer of masonryItemObservers.values()) observer.disconnect()
@@ -313,9 +322,11 @@ onBeforeUnmount(() => {
 })
 
 watch(masonryEl, (el, _prev, onCleanup) => {
+  if (isUnmounted) return
   if (!el) return
   updateMasonryColumnCount(el.clientWidth)
   const observer = new ResizeObserver(entries => {
+    if (isUnmounted) return
     const entry = entries[0]
     if (!entry) return
     updateMasonryColumnCount(entry.contentRect.width)
@@ -330,8 +341,10 @@ watch(masonryEl, (el, _prev, onCleanup) => {
 }, { flush: 'post' })
 
 watch(visibleConversations, async () => {
+  if (isUnmounted) return
   pruneMasonryItemRefs()
   await nextTick()
+  if (isUnmounted) return
   scheduleMasonryLayout()
 })
 

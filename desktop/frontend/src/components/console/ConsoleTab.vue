@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Alert } from '@/components/ui/alert'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -12,7 +11,6 @@ import {
   channelSelectionPath,
   consoleSelectionChannelType,
   consoleSelectionSection,
-  isManagedChannelType,
   type ConsoleSelection,
 } from '@/composables/useConsoleSelection'
 import { OpenWebUIInBrowser } from '@bindings/github.com/BenedictKing/ccx/desktop/desktopservice'
@@ -55,18 +53,29 @@ const applySelection = (selection: ConsoleSelection) => {
   }
 }
 
-const updateConsoleTab = (value: string | number) => {
-  const next = String(value) === 'conversations' ? 'conversations' : 'channels'
+const updateConsoleTab = (next: 'channels' | 'conversations') => {
   consoleTab.value = next
   emit('update:selection', next === 'conversations' ? '/conversations' : channelSelectionPath(activeTab.value))
 }
 
-const updateProtocolTab = (value: string | number) => {
-  const next = String(value)
-  if (!isManagedChannelType(next)) return
+const updateProtocolTab = (next: ManagedChannelType) => {
   activeTab.value = next
   emit('update:selection', channelSelectionPath(next))
 }
+
+const consoleTabClass = (tab: 'channels' | 'conversations') => [
+  'inline-flex h-full items-center justify-center px-2.5 py-0.5 text-xs font-medium transition-colors',
+  consoleTab.value === tab
+    ? 'bg-primary text-primary-foreground'
+    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+]
+
+const protocolTabClass = (tab: ManagedChannelType) => [
+  'inline-flex h-full items-center justify-center px-2 py-0.5 text-xs font-medium transition-colors',
+  activeTab.value === tab
+    ? 'bg-primary text-primary-foreground'
+    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+]
 
 
 const openInBrowser = async () => {
@@ -108,42 +117,53 @@ watch(() => props.selection, (selection) => {
       <!-- 顶部紧凑工具栏：顶级 Tab + 协议子 Tab + 操作按钮，一行融合 -->
       <div class="shrink-0 border-b border-border bg-card/50 px-2 py-1.5 flex items-center gap-2">
         <!-- 顶级 Tab：Channels / Conversations -->
-        <Tabs
-          :model-value="consoleTab"
-          class="inline-flex"
-          @update:model-value="updateConsoleTab"
+        <div
+          role="tablist"
+          :aria-label="t('tab.dashboardTitle')"
+          class="inline-flex h-7 items-center gap-0.5 border border-border bg-secondary/40 p-0.5"
         >
-          <TabsList class="h-7 border border-border bg-secondary/40 p-0.5">
-            <TabsTrigger value="channels" class="px-2.5 py-0.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              {{ t('app.tabs.messages') }}
-            </TabsTrigger>
-            <TabsTrigger value="conversations" class="px-2.5 py-0.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              {{ t('app.tabs.conversations') }}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="consoleTab === 'channels'"
+            :class="consoleTabClass('channels')"
+            @click="updateConsoleTab('channels')"
+          >
+            {{ t('app.tabs.messages') }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="consoleTab === 'conversations'"
+            :class="consoleTabClass('conversations')"
+            @click="updateConsoleTab('conversations')"
+          >
+            {{ t('app.tabs.conversations') }}
+          </button>
+        </div>
 
         <!-- 分隔线 -->
         <div v-if="consoleTab === 'channels'" class="w-px h-4 bg-border" />
 
         <!-- 协议子 Tab（仅 channels 面板显示） -->
-        <Tabs
+        <div
           v-if="consoleTab === 'channels'"
-          :model-value="activeTab"
-          class="inline-flex"
-          @update:model-value="updateProtocolTab"
+          role="tablist"
+          :aria-label="t('nav.channels')"
+          class="inline-flex h-7 items-center gap-0.5 border border-border bg-secondary/40 p-0.5"
         >
-          <TabsList class="h-7 border border-border bg-secondary/40 p-0.5">
-            <TabsTrigger
-              v-for="tab in protocolTabs"
-              :key="tab.value"
-              :value="tab.value"
-              class="px-2 py-0.5 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-            >
-              {{ tab.label }}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+          <button
+            v-for="tab in protocolTabs"
+            :key="tab.value"
+            type="button"
+            role="tab"
+            :aria-selected="activeTab === tab.value"
+            :class="protocolTabClass(tab.value)"
+            @click="updateProtocolTab(tab.value)"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
 
         <!-- 弹性占位 -->
         <div class="flex-1" />
@@ -158,7 +178,7 @@ watch(() => props.selection, (selection) => {
       <!-- 内容区域 -->
       <div class="flex-1 min-h-0">
         <!-- 频道管理面板 -->
-        <div v-show="consoleTab === 'channels'" class="h-full">
+        <div v-if="consoleTab === 'channels'" key="channels" class="h-full">
           <ScrollArea class="h-full">
             <div class="p-3">
               <ChannelManager :type="activeTab" />
@@ -167,7 +187,7 @@ watch(() => props.selection, (selection) => {
         </div>
 
         <!-- 驾驶舱面板 -->
-        <div v-show="consoleTab === 'conversations'" class="h-full">
+        <div v-else key="conversations" class="h-full">
           <ScrollArea class="h-full">
             <div class="p-3">
               <ConversationDashboard />
