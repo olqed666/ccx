@@ -537,6 +537,41 @@ export const builtinUpstreamModelCapabilities: Record<string, UpstreamModelCapab
       "https://github.com/BerriAI/litellm/blob/main/model_prices_and_context_window.json"
     ]
   },
+  "(?:^|[-/])kimi-k2\\.7(?:-\\d{4}-\\d{2}-\\d{2}|-\\d{6,8})?(?=$|@)": {
+    "provider": "moonshot",
+    "displayName": "Kimi K2.7 Code",
+    "description": "Kimi coding model with text, image and video input plus thinking mode. kimi-for-coding token plan alias falls back to this model.",
+    "contextWindowTokens": 262144,
+    "maxOutputTokens": 262144,
+    "defaultOutputTokens": 32768,
+    "recommendedOutputTokens": 262144,
+    "thinkingMode": "thinking",
+    "reasoningEfforts": [
+      "high",
+      "max"
+    ],
+    "capabilities": {
+      "vision": true,
+      "videoInput": true,
+      "toolCalls": true,
+      "jsonMode": true,
+      "partialMode": true,
+      "contextCaching": true
+    },
+    "pricing": {
+      "unit": "per_1m_tokens_usd",
+      "currency": "USD",
+      "inputCacheHitPrice": 0.19,
+      "inputCacheMissPrice": 0.95,
+      "outputPrice": 4
+    },
+    "sources": [
+      "https://platform.kimi.com/docs/pricing/chat-k27-code",
+      "https://platform.kimi.com/docs/guide/kimi-k2-7-code-quickstart",
+      "https://platform.kimi.com/docs/api/models-overview",
+      "https://platform.kimi.com/docs/guide/benchmark-best-practice"
+    ]
+  },
   "(?:^|[-/])kimi-k2\\.7-code(?:-highspeed)?(?:-\\d{4}-\\d{2}-\\d{2}|-\\d{6,8})?(?=$|@)": {
     "provider": "moonshot",
     "displayName": "Kimi K2.7 Code",
