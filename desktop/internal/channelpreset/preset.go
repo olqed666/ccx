@@ -219,7 +219,7 @@ func Presets() []ProviderPreset {
 				{ID: "token-sgp-anthropic", Label: "Token Plan - 新加坡 (Anthropic)", BaseURL: "https://token-plan-sgp.xiaomimimo.com/anthropic", Description: "新加坡区 Token Plan Claude Messages 原生入口"},
 				{ID: "token-ams-anthropic", Label: "Token Plan - 欧洲 (Anthropic)", BaseURL: "https://token-plan-ams.xiaomimimo.com/anthropic", Description: "欧洲区 Token Plan Claude Messages 原生入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		newFullCapabilityPreset(
@@ -258,7 +258,7 @@ func Presets() []ProviderPreset {
 				{ID: "coding-anthropic", Label: "Coding Plan (Anthropic)", BaseURL: "https://api.kimi.com/coding", Description: "Coding Plan Claude Messages 原生入口"},
 				{ID: "coding-openai-chat", Label: "Coding Plan (OpenAI)", BaseURL: "https://api.kimi.com/coding/v1", Description: "Coding Plan Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -275,7 +275,7 @@ func Presets() []ProviderPreset {
 				{ID: "coding", Label: "Coding Plan (OpenAI)", BaseURL: "https://open.bigmodel.cn/api/coding/paas/v4#", Description: "Coding Plan Chat / Responses 通用入口"},
 				{ID: "openai-chat", Label: "通用 (OpenAI)", BaseURL: "https://open.bigmodel.cn/api/paas/v4#", Description: "通用 Chat / Responses 入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -291,7 +291,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://api.minimaxi.com/anthropic", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://api.minimax.chat/v1", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -311,7 +311,7 @@ func Presets() []ProviderPreset {
 				{ID: "token-plan-anthropic", Label: "Token Plan (Anthropic)", BaseURL: "https://token-plan.cn-beijing.maas.aliyuncs.com/apps/anthropic", Description: "Token Plan Claude Messages 原生入口"},
 				{ID: "token-plan-openai-chat", Label: "Token Plan (OpenAI)", BaseURL: "https://token-plan.cn-beijing.maas.aliyuncs.com/compatible-mode/v1", Description: "Token Plan Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -327,7 +327,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://opencode.ai/zen/v1/messages", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://opencode.ai/zen/v1", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -343,7 +343,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://opencode.ai/zen/go/v1/messages", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://opencode.ai/zen/go/v1", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -359,7 +359,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://api.lkeap.cloud.tencent.com/plan/anthropic", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://api.lkeap.cloud.tencent.com/plan/v3", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -375,7 +375,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://ark.cn-beijing.volces.com/api/coding#", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://ark.cn-beijing.volces.com/api/coding/v3", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -391,7 +391,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://qianfan.baidubce.com/anthropic/coding", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://qianfan.baidubce.com/v2/coding#", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -407,7 +407,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://maas-api.cn-huabei-1.xf-yun.com/anthropic", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://maas-api.cn-huabei-1.xf-yun.com/v2", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -423,7 +423,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://openrouter.ai/api", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://openrouter.ai/api/v1", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -439,7 +439,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://api-inference.modelscope.cn", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://api-inference.modelscope.cn/v1", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 		{
@@ -457,7 +457,7 @@ func Presets() []ProviderPreset {
 				{ID: "anthropic", Label: "Anthropic-compatible", BaseURL: "https://api.easytransnote.com/coding", Description: "Claude Messages 原生入口", Recommended: true},
 				{ID: "openai-chat", Label: "OpenAI-compatible", BaseURL: "https://api.easytransnote.com/coding/v1", Description: "Chat / Responses 通用入口"},
 			},
-			Targets: defaultTargets(),
+			Targets:       defaultTargets(),
 			DefaultTarget: TargetMessages,
 		},
 	}
@@ -823,152 +823,7 @@ var channelTargetConfigs = map[string]map[string]channelTargetConfig{
 			NormalizeNonstandardChatRoles: true,
 		},
 	},
-	TargetResponses: {
-		ProviderDeepSeek: {
-			ModelMapping: map[string]string{
-				"codex": "deepseek-v4-flash",
-				"gpt":   "deepseek-v4-pro",
-				"mini":  "deepseek-v4-flash",
-			},
-			ReasoningMapping:              map[string]string{"gpt": "max"},
-			ReasoningParamStyle:           "reasoning",
-			CodexToolCompat:               boolRef(false),
-			StripCodexClientTools:         boolRef(false),
-			CodexNativeToolPassthrough:    true,
-			NormalizeNonstandardChatRoles: true,
-			NoVision:                      true,
-		},
-		ProviderMiMo: {
-			ModelMapping:          map[string]string{"codex": "mimo-v2.5-pro", "gpt": "mimo-v2.5-pro", "mini": "mimo-v2.5-pro"},
-			ReasoningParamStyle:   "reasoning",
-			CodexToolCompat:       boolRef(true),
-			StripCodexClientTools: boolRef(true),
-			NoVisionModels:        []string{"mimo-v2.5-pro"},
-			VisionFallbackModel:   "mimo-v2.5",
-			RateLimitRPM:          80,
-		},
-		ProviderCompshare: {
-			ModelMapping: map[string]string{
-				"codex": "deepseek-v4-flash",
-				"gpt":   "glm-5.2",
-				"mini":  "deepseek-v4-flash",
-			},
-			ReasoningMapping: map[string]string{
-				"MiniMax-M2.7": "xhigh",
-				"gpt":          "max",
-				"mini":         "high",
-			},
-			ReasoningParamStyle:           "reasoning",
-			CodexToolCompat:               boolRef(false),
-			StripCodexClientTools:         boolRef(false),
-			CodexNativeToolPassthrough:    true,
-			NormalizeNonstandardChatRoles: true,
-			NoVisionModels:                []string{"glm-5.2", "deepseek-v4-flash"},
-			VisionFallbackModel:           "MiniMax-M2.7",
-		},
-		ProviderRunAPI: {
-			CodexToolCompat:            boolRef(false),
-			StripCodexClientTools:      boolRef(false),
-			StripImageGenerationTool:   true,
-		},
-		ProviderUnity2: {
-			CodexToolCompat:            boolRef(false),
-			StripCodexClientTools:      boolRef(false),
-			StripImageGenerationTool:   true,
-		},
-		ProviderMiniMax: {
-			ModelMapping:                  map[string]string{"codex": "MiniMax-M2.7", "gpt": "MiniMax-M3", "mini": "MiniMax-M2.7"},
-			CodexToolCompat:               boolRef(false),
-			StripCodexClientTools:         boolRef(false),
-			CodexNativeToolPassthrough:    true,
-			NormalizeNonstandardChatRoles: true,
-		},
-		ProviderDashScope: {
-			ModelMapping: map[string]string{
-				"codex": "deepseek-v4-flash",
-				"gpt":   "deepseek-v4-pro",
-				"mini":  "deepseek-v4-flash",
-			},
-			ReasoningMapping: map[string]string{
-				"gpt": "max",
-			},
-		},
-		ProviderOpenCodeZen: {
-			ModelMapping: map[string]string{
-				"codex": "deepseek-v4-flash",
-				"gpt":   "glm-5.2",
-				"mini":  "deepseek-v4-flash",
-			},
-			ReasoningMapping: map[string]string{
-				"codex": "high",
-				"gpt":   "max",
-				"mini":  "high",
-			},
-		},
-		ProviderOpenCodeGo: {
-			ModelMapping: map[string]string{
-				"codex": "deepseek-v4-flash",
-				"gpt":   "glm-5.2",
-				"mini":  "deepseek-v4-flash",
-			},
-			ReasoningMapping: map[string]string{
-				"codex": "high",
-				"gpt":   "max",
-				"mini":  "high",
-			},
-		},
-		ProviderKimi: {
-			ModelMapping: map[string]string{"codex": "kimi-k2.6", "gpt": "kimi-k2.6"},
-		},
-		ProviderGLM: {
-			ModelMapping: map[string]string{"codex": "glm-5.1", "gpt": "glm-5.1"},
-		},
-		ProviderOpenRouter: {
-			CodexToolCompat:       boolRef(false),
-			StripCodexClientTools: boolRef(false),
-		},
-		ProviderModelScope: {
-			ModelMapping: map[string]string{
-				"codex": "deepseek-ai/DeepSeek-V4-Flash",
-				"gpt":   "ZhipuAI/GLM-5.1",
-				"mini":  "deepseek-ai/DeepSeek-V4-Flash",
-			},
-			CodexToolCompat:               boolRef(false),
-			StripCodexClientTools:         boolRef(false),
-			NormalizeNonstandardChatRoles: true,
-		},
-		ProviderVolcArk: {
-			ModelMapping: map[string]string{
-				"codex": "deepseek-v4-flash",
-				"gpt":   "glm-5.2",
-				"mini":  "deepseek-v4-flash",
-			},
-			ReasoningMapping: map[string]string{
-				"codex":      "high",
-				"gpt":        "max",
-				"mini":       "high",
-				"minimax-m3": "xhigh",
-			},
-			ReasoningParamStyle:           "reasoning",
-			CodexToolCompat:               boolRef(false),
-			StripCodexClientTools:         boolRef(false),
-			CodexNativeToolPassthrough:    true,
-			NormalizeNonstandardChatRoles: true,
-			NoVisionModels:                []string{"glm-5.2", "deepseek-v4-flash"},
-			VisionFallbackModel:           "minimax-m3",
-		},
-		ProviderQianfan: {
-			ModelMapping: map[string]string{
-				"codex": "qianfan-code-latest",
-				"gpt":   "qianfan-code-latest",
-				"mini":  "qianfan-code-latest",
-			},
-			NormalizeNonstandardChatRoles: true,
-		},
-		ProviderXFyun: {
-			NormalizeNonstandardChatRoles: true,
-		},
-	},
+	TargetResponses: generatedCodexResponsesTargetConfigs(),
 }
 
 func boolRef(value bool) *bool {

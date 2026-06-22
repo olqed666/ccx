@@ -238,6 +238,7 @@ import {
 } from '../utils/add-channel-modal-state'
 import { streamTimeoutPresets } from '../utils/streamTimeoutPresets'
 import { sortModelNamesDesc } from '../utils/modelPriority'
+import { codexResponsesPresets } from '../generated/codexResponsesPresets'
 import { useI18n } from '../i18n'
 
 // 子组件导入
@@ -692,82 +693,13 @@ const showCodexResponsesChannelPresets = computed(() => {
   return props.channelType === 'responses' && supportsOpenAIAdvancedOptions.value
 })
 
-const codexResponsesChannelPresets: Record<
-  'mimo' | 'deepseek' | 'minimax',
-  {
-    modelMapping: Record<string, string>
-    reasoningMapping: Record<string, 'none' | 'low' | 'medium' | 'high' | 'xhigh' | 'max'>
-    reasoningParamStyle: 'reasoning' | 'reasoning_effort' | 'thinking'
-    codexNativeToolPassthrough: boolean
-    codexToolCompat: boolean
-    stripCodexClientTools: boolean
-    stripImageGenerationTool: boolean
-    normalizeNonstandardChatRoles: boolean
-    noVision: boolean
-    noVisionModels: string[]
-    visionFallbackModel: string
-  }
-> = {
-  mimo: {
-    modelMapping: {
-      codex: 'mimo-v2.5-pro',
-      gpt: 'mimo-v2.5-pro',
-      mini: 'mimo-v2.5-pro'
-    },
-    reasoningMapping: {},
-    reasoningParamStyle: 'reasoning',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: true,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: false,
-    noVision: false,
-    noVisionModels: ['mimo-v2.5-pro'],
-    visionFallbackModel: 'mimo-v2.5'
-  },
-  deepseek: {
-    modelMapping: {
-      codex: 'deepseek-v4-flash',
-      gpt: 'deepseek-v4-pro',
-      mini: 'deepseek-v4-flash'
-    },
-    reasoningMapping: {
-      gpt: 'max'
-    },
-    reasoningParamStyle: 'reasoning',
-    codexNativeToolPassthrough: true,
-    codexToolCompat: false,
-    stripCodexClientTools: false,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: true,
-    noVision: true,
-    noVisionModels: [],
-    visionFallbackModel: ''
-  },
-  minimax: {
-    modelMapping: {
-      codex: 'minimax-m2.7',
-      gpt: 'minimax-m3',
-      mini: 'minimax-m2.7'
-    },
-    reasoningMapping: {},
-    reasoningParamStyle: 'reasoning',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: false,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: true,
-    noVision: true,
-    noVisionModels: [],
-    visionFallbackModel: ''
-  }
-}
+const applyCodexResponsesChannelPreset = (preset: string) => {
+  const presetConfig = codexResponsesPresets[preset.toLowerCase()]
+  if (!presetConfig) return
 
-const applyCodexResponsesChannelPreset = (preset: keyof typeof codexResponsesChannelPresets) => {
-  const presetConfig = codexResponsesChannelPresets[preset]
   form.modelMapping = { ...presetConfig.modelMapping }
-  form.reasoningMapping = { ...presetConfig.reasoningMapping }
-  form.reasoningParamStyle = presetConfig.reasoningParamStyle
+  form.reasoningMapping = { ...presetConfig.reasoningMapping } as typeof form.reasoningMapping
+  form.reasoningParamStyle = presetConfig.reasoningParamStyle as typeof form.reasoningParamStyle
   form.codexNativeToolPassthrough = presetConfig.codexNativeToolPassthrough
   form.codexToolCompat = presetConfig.codexToolCompat
   form.stripCodexClientTools = presetConfig.stripCodexClientTools
@@ -1636,7 +1568,7 @@ const applyPreset = (presetName: string) => {
   } else if (form.serviceType === 'claude') {
     applyClaudeChannelPreset(presetName as 'mimo' | 'deepseek' | 'minimax')
   } else if (props.channelType === 'responses') {
-    applyCodexResponsesChannelPreset(presetName as 'mimo' | 'deepseek' | 'minimax')
+    applyCodexResponsesChannelPreset(presetName)
   } else {
     applyClaudeChannelPreset(presetName as 'mimo' | 'deepseek' | 'minimax')
   }

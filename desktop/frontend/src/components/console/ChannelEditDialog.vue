@@ -27,6 +27,7 @@ import { getChannelTypeApi, type ManagedChannelType } from '@/utils/channel-type
 import { buildExpectedRequestUrls } from '@/utils/expected-request-urls'
 import { sortModelNamesDesc } from '@/utils/model-priority'
 import { parseQuickInput } from '@/utils/quick-input-parser'
+import { codexResponsesPresets } from '@/generated/codex-responses-presets'
 import type { Channel, DisabledKeyInfo } from '@/services/admin-api'
 import ChannelEditorHeader from './channel-edit/ChannelEditorHeader.vue'
 import QuickCreatePanel from './channel-edit/QuickCreatePanel.vue'
@@ -1063,160 +1064,6 @@ const claudeChannelPresets: Record<string, {
   },
 }
 
-const codexResponsesPresets: Record<string, {
-  mapping: { source: string; target: string; reasoning?: ModelMappingRow['reasoning'] }[]
-  reasoningParamStyle: string
-  codexNativeToolPassthrough: boolean
-  codexToolCompat: boolean
-  stripCodexClientTools: boolean
-  stripImageGenerationTool: boolean
-  normalizeNonstandardChatRoles: boolean
-  noVision: boolean
-  noVisionModels: string[]
-  visionFallbackModel: string
-}> = {
-  mimo: {
-    mapping: [
-      { source: 'codex', target: 'mimo-v2.5-pro' },
-      { source: 'gpt', target: 'mimo-v2.5-pro' },
-      { source: 'mini', target: 'mimo-v2.5-pro' },
-    ],
-    reasoningParamStyle: 'reasoning',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: true,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: false,
-    noVision: false,
-    noVisionModels: ['mimo-v2.5-pro'],
-    visionFallbackModel: 'mimo-v2.5',
-  },
-  deepseek: {
-    mapping: [
-      { source: 'codex', target: 'deepseek-v4-flash' },
-      { source: 'gpt', target: 'deepseek-v4-pro', reasoning: 'max' },
-      { source: 'mini', target: 'deepseek-v4-flash' },
-    ],
-    reasoningParamStyle: 'reasoning',
-    codexNativeToolPassthrough: true,
-    codexToolCompat: false,
-    stripCodexClientTools: false,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: true,
-    noVision: true,
-    noVisionModels: [],
-    visionFallbackModel: '',
-  },
-  compshare: {
-    mapping: [
-      { source: 'codex', target: 'deepseek-v4-flash' },
-      { source: 'gpt', target: 'glm-5.2', reasoning: 'max' },
-      { source: 'mini', target: 'deepseek-v4-flash', reasoning: 'high' },
-    ],
-    reasoningParamStyle: 'reasoning',
-    codexNativeToolPassthrough: true,
-    codexToolCompat: false,
-    stripCodexClientTools: false,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: true,
-    noVision: false,
-    noVisionModels: ['glm-5.2', 'deepseek-v4-flash'],
-    visionFallbackModel: 'minimax-m2.7',
-  },
-  minimax: {
-    mapping: [
-      { source: 'codex', target: 'minimax-m2.7' },
-      { source: 'gpt', target: 'minimax-m3' },
-      { source: 'mini', target: 'minimax-m2.7' },
-    ],
-    reasoningParamStyle: '',
-    codexNativeToolPassthrough: true,
-    codexToolCompat: false,
-    stripCodexClientTools: false,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: true,
-    noVision: false,
-    noVisionModels: [],
-    visionFallbackModel: '',
-  },
-  dashscope: {
-    mapping: [
-      { source: 'codex', target: 'deepseek-v4-flash' },
-      { source: 'gpt', target: 'deepseek-v4-pro', reasoning: 'max' },
-      { source: 'mini', target: 'deepseek-v4-flash' },
-    ],
-    reasoningParamStyle: 'reasoning',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: true,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: false,
-    noVision: false,
-    noVisionModels: [],
-    visionFallbackModel: '',
-  },
-  kimi: {
-    mapping: [
-      { source: 'codex', target: 'kimi-k2.7-code' },
-      { source: 'gpt', target: 'kimi-k2.7-code' },
-    ],
-    reasoningParamStyle: '',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: true,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: false,
-    noVision: false,
-    noVisionModels: [],
-    visionFallbackModel: '',
-  },
-  glm: {
-    mapping: [
-      { source: 'codex', target: 'glm-5.1' },
-      { source: 'gpt', target: 'glm-5.1' },
-    ],
-    reasoningParamStyle: '',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: true,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: false,
-    noVision: false,
-    noVisionModels: [],
-    visionFallbackModel: '',
-  },
-  'opencode-zen': {
-    mapping: [
-      { source: 'codex', target: 'glm-5.1' },
-      { source: 'gpt', target: 'glm-5.1' },
-    ],
-    reasoningParamStyle: '',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: true,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: false,
-    noVision: false,
-    noVisionModels: [],
-    visionFallbackModel: '',
-  },
-  'opencode-go': {
-    mapping: [
-      { source: 'codex', target: 'glm-5.1' },
-      { source: 'gpt', target: 'glm-5.1' },
-    ],
-    reasoningParamStyle: '',
-    codexNativeToolPassthrough: false,
-    codexToolCompat: true,
-    stripCodexClientTools: true,
-    stripImageGenerationTool: false,
-    normalizeNonstandardChatRoles: false,
-    noVision: false,
-    noVisionModels: [],
-    visionFallbackModel: '',
-  },
-}
-
 const serviceTypeOptions = computed(() => {
   const all = [
     { label: 'OpenAI Chat', value: 'openai' },
@@ -1319,7 +1166,13 @@ function applyCodexResponsesPreset(name: string) {
   const preset = codexResponsesPresets[name.toLowerCase()]
   if (!preset) return
   const noVisionSet = new Set(preset.noVisionModels)
-  modelMappingRows.value = preset.mapping.map(m => ({ id: ++rowId, source: m.source, target: m.target, reasoning: m.reasoning || '', noVision: noVisionSet.has(m.target) }))
+  modelMappingRows.value = Object.entries(preset.modelMapping).map(([source, target]) => ({
+    id: ++rowId,
+    source,
+    target,
+    reasoning: preset.reasoningMapping[source] || '',
+    noVision: noVisionSet.has(target),
+  }))
   form.reasoningParamStyle = preset.reasoningParamStyle as typeof form.reasoningParamStyle
   form.codexNativeToolPassthrough = preset.codexNativeToolPassthrough
   form.codexToolCompat = preset.codexToolCompat

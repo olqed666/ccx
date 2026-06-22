@@ -1,0 +1,165 @@
+{
+  "schemaVersion": 1,
+  "providers": {
+    "deepseek": {
+      "modelMapping": {
+        "codex": "deepseek-v4-flash",
+        "gpt": "deepseek-v4-pro",
+        "mini": "deepseek-v4-flash"
+      },
+      "reasoningMapping": {
+        "gpt": "max"
+      },
+      "reasoningParamStyle": "reasoning",
+      "codexToolCompat": false,
+      "stripCodexClientTools": false,
+      "codexNativeToolPassthrough": true,
+      "normalizeNonstandardChatRoles": true,
+      "noVision": true
+    },
+    "mimo": {
+      "modelMapping": {
+        "codex": "mimo-v2.5-pro",
+        "gpt": "mimo-v2.5-pro",
+        "mini": "mimo-v2.5-pro"
+      },
+      "reasoningParamStyle": "reasoning",
+      "codexToolCompat": true,
+      "stripCodexClientTools": true,
+      "noVisionModels": ["mimo-v2.5-pro"],
+      "visionFallbackModel": "mimo-v2.5",
+      "rateLimitRpm": 80
+    },
+    "compshare": {
+      "modelMapping": {
+        "codex": "deepseek-v4-flash",
+        "gpt": "glm-5.2",
+        "mini": "deepseek-v4-flash"
+      },
+      "reasoningMapping": {
+        "MiniMax-M2.7": "xhigh",
+        "gpt": "max",
+        "mini": "high"
+      },
+      "reasoningParamStyle": "reasoning",
+      "codexToolCompat": false,
+      "stripCodexClientTools": false,
+      "codexNativeToolPassthrough": true,
+      "normalizeNonstandardChatRoles": true,
+      "noVisionModels": ["glm-5.2", "deepseek-v4-flash"],
+      "visionFallbackModel": "MiniMax-M2.7"
+    },
+    "runapi": {
+      "codexToolCompat": false,
+      "stripCodexClientTools": false,
+      "stripImageGenerationTool": true
+    },
+    "unity2": {
+      "codexToolCompat": false,
+      "stripCodexClientTools": false,
+      "stripImageGenerationTool": true
+    },
+    "minimax": {
+      "modelMapping": {
+        "codex": "MiniMax-M2.7",
+        "gpt": "MiniMax-M3",
+        "mini": "MiniMax-M2.7"
+      },
+      "codexToolCompat": false,
+      "stripCodexClientTools": false,
+      "codexNativeToolPassthrough": true,
+      "normalizeNonstandardChatRoles": true
+    },
+    "dashscope": {
+      "modelMapping": {
+        "codex": "deepseek-v4-flash",
+        "gpt": "deepseek-v4-pro",
+        "mini": "deepseek-v4-flash"
+      },
+      "reasoningMapping": {
+        "gpt": "max"
+      }
+    },
+    "opencode-zen": {
+      "modelMapping": {
+        "codex": "deepseek-v4-flash",
+        "gpt": "glm-5.2",
+        "mini": "deepseek-v4-flash"
+      },
+      "reasoningMapping": {
+        "codex": "high",
+        "gpt": "max",
+        "mini": "high"
+      }
+    },
+    "opencode-go": {
+      "modelMapping": {
+        "codex": "deepseek-v4-flash",
+        "gpt": "glm-5.2",
+        "mini": "deepseek-v4-flash"
+      },
+      "reasoningMapping": {
+        "codex": "high",
+        "gpt": "max",
+        "mini": "high"
+      }
+    },
+    "kimi": {
+      "modelMapping": {
+        "codex": "kimi-k2.6",
+        "gpt": "kimi-k2.6"
+      }
+    },
+    "glm": {
+      "modelMapping": {
+        "codex": "glm-5.1",
+        "gpt": "glm-5.1"
+      }
+    },
+    "openrouter": {
+      "codexToolCompat": false,
+      "stripCodexClientTools": false
+    },
+    "modelscope": {
+      "modelMapping": {
+        "codex": "deepseek-ai/DeepSeek-V4-Flash",
+        "gpt": "ZhipuAI/GLM-5.1",
+        "mini": "deepseek-ai/DeepSeek-V4-Flash"
+      },
+      "codexToolCompat": false,
+      "stripCodexClientTools": false,
+      "normalizeNonstandardChatRoles": true
+    },
+    "volc-ark": {
+      "modelMapping": {
+        "codex": "deepseek-v4-flash",
+        "gpt": "glm-5.2",
+        "mini": "deepseek-v4-flash"
+      },
+      "reasoningMapping": {
+        "codex": "high",
+        "gpt": "max",
+        "mini": "high",
+        "minimax-m3": "xhigh"
+      },
+      "reasoningParamStyle": "reasoning",
+      "codexToolCompat": false,
+      "stripCodexClientTools": false,
+      "codexNativeToolPassthrough": true,
+      "normalizeNonstandardChatRoles": true,
+      "noVisionModels": ["glm-5.2", "deepseek-v4-flash"],
+      "visionFallbackModel": "minimax-m3"
+    },
+    "qianfan": {
+      "modelMapping": {
+        "codex": "qianfan-code-latest",
+        "gpt": "qianfan-code-latest",
+        "mini": "qianfan-code-latest"
+      },
+      "normalizeNonstandardChatRoles": true
+    },
+    "xfyun": {
+      "normalizeNonstandardChatRoles": true
+    }
+  }
+}
