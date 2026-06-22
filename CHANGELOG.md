@@ -1,4 +1,4 @@
-## [Unreleased]
+## [v2.9.14] - 2026-06-22
 
 ### 新增
 
@@ -10,6 +10,41 @@
   - Web 端和桌面端所有图表组件同步更新
   - 统一两端时间选项文案：桌面端 `7d`/`30d` → `1周`/`1月`
   - 新增中文、英文、印尼文三语言国际化文案
+- **Unity2.ai 赞助商集成** - 新增 Unity2.ai 赞助商渠道预设与国际化文案支持
+- **Unity2.ai 国际化文案** - 添加 Unity2.ai 渠道预设翻译
+- **自动赞助商集成技能** - 新增 add-sponsor skill，支持自动化赞助商集成流程
+- **对齐 Web 与桌面端渠道菜单行为** - 统一两端渠道操作菜单交互逻辑
+
+### 修复
+
+- **Unity2.ai 和 RunAPI 响应剥离图片生成工具** - 为 Unity2.ai 和 RunAPI 响应剥离 image generation tool
+- **Unity2.ai 使用原生 responses 协议** - Unity2.ai 改用原生 responses 协议
+- **Unity2.ai 添加 anthropic plan 支持 Messages 目标** - 为 Unity2.ai 添加 anthropic plan 以支持 Messages target
+- **Unity2.ai targets 顺序修正** - 修正 Unity2.ai targets 顺序为标准 Messages → Responses → Chat
+- **恢复原生 tool_search 调用** - 恢复 Codex 原生 tool_search calls
+- **为 tool_search stream 发送 custom_tool_call_input.done** - 确保 tool_search 流式响应完整性
+- **保留 tool_search 历史参数** - 保持 Codex tool_search history arguments
+- **恢复 tool_search 自定义调用语义** - 恢复 tool_search custom call semantics
+- **统一两端高级选项选择框宽度与布局** - 统一 Web 和桌面端渠道编辑器高级选项布局
+- **tool_search 保留原始参数 schema 映射为 function** - converters 中 tool_search 保留原始参数 schema 映射
+- **统一渠道菜单文案与 Web 端** - 桌面端渠道菜单文案对齐 Web 端
+- **保留搜索结果渠道置顶置底操作** - 桌面端搜索结果中保留渠道排序操作
+
+### 重构
+
+- **预设配置辅助函数抽取** - 使用 helper functions 减少 preset 配置重复代码
+
+### 测试
+
+- **Codex chat 子代理工具调用测试覆盖** - 为 chat sub-agent tool calls 添加测试覆盖
+
+### 文档
+
+- **更新 add-sponsor skill 文档** - 更新 add-sponsor skill 最新使用模式
+
+### 其他
+
+- **移除 add-sponsor.sh 脚本** - 删除旧的 add-sponsor shell 脚本
 
 ## [v2.9.13] - 2026-06-21
 
