@@ -25,6 +25,7 @@ import {
 } from '@/utils/channel-dialog-state'
 import { getChannelTypeApi, type ManagedChannelType } from '@/utils/channel-type-api'
 import { buildExpectedRequestUrls } from '@/utils/expected-request-urls'
+import { sortModelNamesDesc } from '@/utils/model-priority'
 import { parseQuickInput } from '@/utils/quick-input-parser'
 import type { Channel, DisabledKeyInfo } from '@/services/admin-api'
 import ChannelEditorHeader from './channel-edit/ChannelEditorHeader.vue'
@@ -1369,7 +1370,7 @@ const targetModelDatalist = computed(() => {
       byLowercaseModel.set(key, trimmed)
     }
   }
-  return Array.from(byLowercaseModel.values()).sort((a, b) => a.localeCompare(b))
+  return sortModelNamesDesc(Array.from(byLowercaseModel.values()))
 })
 
 const commonSupportedModelFilters = ['claude-*', 'gpt-5*', 'gpt-image-2', 'grok-4*', 'gemini-3*', '!*image*']
@@ -1527,7 +1528,7 @@ async function fetchTargetModels() {
           byLowercaseModel.set(key, trimmed)
         }
       })
-    targetModelOptions.value = Array.from(byLowercaseModel.values()).sort((a, b) => a.localeCompare(b))
+    targetModelOptions.value = sortModelNamesDesc(Array.from(byLowercaseModel.values()))
     showTargetSuggestions.value = !!activeTargetInputId.value && targetModelDatalist.value.length > 0
 
     const allFailed = keys.every(key => {
