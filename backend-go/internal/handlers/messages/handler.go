@@ -312,14 +312,15 @@ func handleSingleChannel(
 			userMessageCount := countUserMessages(claudeReq.Messages)
 			agentRole := ""
 			affinityUserID := userID
-			if ac := common.AgentContextFromGin(c); ac != nil {
-				agentRole = ac.AgentRole
+			agentCtx := common.AgentContextFromGin(c)
+			if agentCtx != nil {
+				agentRole = agentCtx.AgentRole
 				if agentRole == "subagent" {
 					affinityUserID = userID + ":subagent"
 				}
 			}
 			channelScheduler.SetTraceAffinityForRequirement(affinityUserID, channelIndex, scheduler.ChannelKindMessages, contextRequirement)
-			channelScheduler.TrackConversation(scheduler.ChannelKindMessages, userID, claudeReq.Model, channelIndex, upstream.Name, "", lastUserMessage, userMessageCount, agentRole)
+			channelScheduler.TrackConversation(scheduler.ChannelKindMessages, userID, claudeReq.Model, channelIndex, upstream.Name, "", lastUserMessage, userMessageCount, agentRole, agentCtx)
 			if envCfg.ShouldLog("debug") {
 				common.RequestLogf(c, "[Messages-Conversation-Debug] 已追踪单渠道对话: user=%s, model=%s, channel=%d, userMessages=%d, hasFallbackTitle=%t",
 					scheduler.MaskUserIDForLog(userID), claudeReq.Model, channelIndex, userMessageCount, lastUserMessage != "")

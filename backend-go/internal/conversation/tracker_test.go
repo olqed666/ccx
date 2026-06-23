@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/BenedictKing/ccx/internal/types"
 )
 
 func TestConversationTracker_Track(t *testing.T) {
@@ -328,6 +330,104 @@ func TestConversationTracker_SessionID(t *testing.T) {
 	}
 }
 
+func TestConversationTracker_LinksSubagentToParentConversation(t *testing.T) {
+	ct := NewConversationTracker(1*time.Hour, 2*time.Hour)
+	defer ct.Stop()
+
+	ct.Track("responses", "main-thread", "model-a", 0, "main", "", "主对话", 1, "main")
+	ct.Track("responses", "child-thread", "model-a", 1, "sub", "", "子任务", 1, "subagent", &types.AgentContext{
+		AgentRole:      "subagent",
+		ParentThreadID: "main-thread",
+	})
+
+	mainConv := requireConversationByRawUserID(t, ct, "main-thread")
+	childConv := requireConversationByRawUserID(t, ct, "child-thread")
+
+	if childConv.ParentConversationID != mainConv.ID {
+		t.Fatalf("expected child parentConversationId=%s, got %s", mainConv.ID, childConv.ParentConversationID)
+	}
+	if !containsString(mainConv.ChildConversationIDs, childConv.ID) {
+		t.Fatalf("expected parent childConversationIds to contain %s, got %#v", childConv.ID, mainConv.ChildConversationIDs)
+	}
+}
+
+func TestConversationTracker_LinksParentCreatedAfterSubagent(t *testing.T) {
+	ct := NewConversationTracker(1*time.Hour, 2*time.Hour)
+	defer ct.Stop()
+
+	ct.Track("responses", "child-thread", "model-a", 1, "sub", "", "子任务", 1, "subagent", &types.AgentContext{
+		AgentRole:      "subagent",
+		ParentThreadID: "main-thread",
+	})
+	ct.Track("responses", "main-thread", "model-a", 0, "main", "", "主对话", 1, "main")
+
+	mainConv := requireConversationByRawUserID(t, ct, "main-thread")
+	childConv := requireConversationByRawUserID(t, ct, "child-thread")
+
+	if childConv.ParentConversationID != mainConv.ID {
+		t.Fatalf("expected delayed parentConversationId=%s, got %s", mainConv.ID, childConv.ParentConversationID)
+	}
+	if !containsString(mainConv.ChildConversationIDs, childConv.ID) {
+		t.Fatalf("expected delayed childConversationIds to contain %s, got %#v", childConv.ID, mainConv.ChildConversationIDs)
+	}
+}
+
+func TestConversationTracker_ReparentsSubagentWithoutStaleChildReference(t *testing.T) {
+	ct := NewConversationTracker(1*time.Hour, 2*time.Hour)
+	defer ct.Stop()
+
+	ct.Track("responses", "main-a", "model-a", 0, "main-a", "", "主对话 A", 1, "main")
+	ct.Track("responses", "main-b", "model-a", 0, "main-b", "", "主对话 B", 1, "main")
+	ct.Track("responses", "child-thread", "model-a", 1, "sub", "", "子任务", 1, "subagent", &types.AgentContext{
+		AgentRole:      "subagent",
+		ParentThreadID: "main-a",
+	})
+	ct.Track("responses", "child-thread", "model-a", 1, "sub", "", "子任务", 2, "subagent", &types.AgentContext{
+		AgentRole:      "subagent",
+		ParentThreadID: "main-b",
+	})
+
+	firstParent := requireConversationByRawUserID(t, ct, "main-a")
+	secondParent := requireConversationByRawUserID(t, ct, "main-b")
+	childConv := requireConversationByRawUserID(t, ct, "child-thread")
+
+	if childConv.ParentConversationID != secondParent.ID {
+		t.Fatalf("expected child parentConversationId=%s, got %s", secondParent.ID, childConv.ParentConversationID)
+	}
+	if containsString(firstParent.ChildConversationIDs, childConv.ID) {
+		t.Fatalf("expected first parent childConversationIds to not contain %s, got %#v", childConv.ID, firstParent.ChildConversationIDs)
+	}
+	if !containsString(secondParent.ChildConversationIDs, childConv.ID) {
+		t.Fatalf("expected second parent childConversationIds to contain %s, got %#v", childConv.ID, secondParent.ChildConversationIDs)
+	}
+}
+
+func TestConversationTracker_PersistAndRestoreRelationships(t *testing.T) {
+	dir := t.TempDir()
+	path := dir + "/state.json"
+
+	ct := NewConversationTracker(1*time.Hour, 2*time.Hour, path)
+	ct.Track("responses", "main-thread", "model-a", 0, "main", "", "主对话", 1, "main")
+	ct.Track("responses", "child-thread", "model-a", 1, "sub", "", "子任务", 1, "subagent", &types.AgentContext{
+		AgentRole:      "subagent",
+		ParentThreadID: "main-thread",
+	})
+	ct.Stop()
+
+	ct2 := NewConversationTracker(1*time.Hour, 2*time.Hour, path)
+	defer ct2.Stop()
+
+	mainConv := requireConversationByRawUserID(t, ct2, "main-thread")
+	childConv := requireConversationByRawUserID(t, ct2, "child-thread")
+
+	if childConv.ParentConversationID != mainConv.ID {
+		t.Fatalf("expected restored parentConversationId=%s, got %s", mainConv.ID, childConv.ParentConversationID)
+	}
+	if !containsString(mainConv.ChildConversationIDs, childConv.ID) {
+		t.Fatalf("expected restored childConversationIds to contain %s, got %#v", childConv.ID, mainConv.ChildConversationIDs)
+	}
+}
+
 func TestConversationTracker_EmptyUserID(t *testing.T) {
 	ct := NewConversationTracker(1*time.Hour, 2*time.Hour)
 	defer ct.Stop()
@@ -360,4 +460,16 @@ func TestConversationTracker_MaskUserID(t *testing.T) {
 	if result != "a_very_l...7890" {
 		t.Errorf("expected a_very_l...7890, got %s", result)
 	}
+}
+
+func requireConversationByRawUserID(t *testing.T, ct *ConversationTracker, rawUserID string) *Conversation {
+	t.Helper()
+
+	for _, conv := range ct.GetActiveConversations("") {
+		if conv.RawUserID == rawUserID {
+			return conv
+		}
+	}
+	t.Fatalf("expected conversation with rawUserId=%s", rawUserID)
+	return nil
 }

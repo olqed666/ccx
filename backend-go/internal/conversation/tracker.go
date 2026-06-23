@@ -8,28 +8,33 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/BenedictKing/ccx/internal/types"
 )
 
 type Conversation struct {
-	ID               string     `json:"id"`
-	Kind             string     `json:"kind"`
-	UserID           string     `json:"userId"`
-	RawUserID        string     `json:"rawUserId,omitempty"`
-	Title            string     `json:"title,omitempty"`
-	GeneratedTitle   string     `json:"-"`
-	FallbackTitle    string     `json:"-"`
-	SessionID        string     `json:"-"`
-	CreatedAt        time.Time  `json:"createdAt"`
-	LastActiveAt     time.Time  `json:"lastActiveAt"`
-	RequestCount     int        `json:"requestCount"`
-	Models           []string   `json:"models"`
-	CurrentChannel   int        `json:"currentChannel"`
-	ChannelName      string     `json:"channelName"`
-	Status           string     `json:"status"`
-	LastModel        string     `json:"lastModel"`
-	LastRequestID    string     `json:"lastRequestId"`
-	LatestFeedback   string     `json:"latestFeedback,omitempty"`
-	LatestFeedbackAt *time.Time `json:"latestFeedbackAt,omitempty"`
+	ID                   string     `json:"id"`
+	Kind                 string     `json:"kind"`
+	UserID               string     `json:"userId"`
+	RawUserID            string     `json:"rawUserId,omitempty"`
+	Title                string     `json:"title,omitempty"`
+	GeneratedTitle       string     `json:"-"`
+	FallbackTitle        string     `json:"-"`
+	SessionID            string     `json:"-"`
+	ParentThreadID       string     `json:"parentThreadId,omitempty"`
+	ParentConversationID string     `json:"parentConversationId,omitempty"`
+	ChildConversationIDs []string   `json:"childConversationIds,omitempty"`
+	CreatedAt            time.Time  `json:"createdAt"`
+	LastActiveAt         time.Time  `json:"lastActiveAt"`
+	RequestCount         int        `json:"requestCount"`
+	Models               []string   `json:"models"`
+	CurrentChannel       int        `json:"currentChannel"`
+	ChannelName          string     `json:"channelName"`
+	Status               string     `json:"status"`
+	LastModel            string     `json:"lastModel"`
+	LastRequestID        string     `json:"lastRequestId"`
+	LatestFeedback       string     `json:"latestFeedback,omitempty"`
+	LatestFeedbackAt     *time.Time `json:"latestFeedbackAt,omitempty"`
 
 	// subagent 观测（仅展示，不影响路由）
 	HasSubagents    bool `json:"hasSubagents,omitempty"`
@@ -100,13 +105,18 @@ func NewConversationTracker(idleTTL, expireTTL time.Duration, persistPath ...str
 	return ct
 }
 
-func (ct *ConversationTracker) Track(kind, userID, model string, channelIndex int, channelName, sessionID, lastUserMessage string, userMessageCount int, agentRole string) {
+func (ct *ConversationTracker) Track(kind, userID, model string, channelIndex int, channelName, sessionID, lastUserMessage string, userMessageCount int, agentRole string, agentCtx ...*types.AgentContext) {
 	if userID == "" {
 		return
 	}
 
 	ct.mu.Lock()
 	defer ct.mu.Unlock()
+
+	var ctx *types.AgentContext
+	if len(agentCtx) > 0 {
+		ctx = agentCtx[0]
+	}
 
 	convID := ct.resolveConversationID(kind, userID, sessionID)
 	now := time.Now()
@@ -167,6 +177,15 @@ func (ct *ConversationTracker) Track(kind, userID, model string, channelIndex in
 		conv.FallbackTitle = fallback
 		conv.recomputeTitle()
 	}
+
+	if ctx != nil {
+		parentThreadID := strings.TrimSpace(ctx.ParentThreadID)
+		if parentThreadID != "" {
+			conv.ParentThreadID = parentThreadID
+		}
+	}
+
+	ct.reconcileConversationRelationshipsLocked(conv)
 	ct.dirty = true
 }
 
@@ -342,25 +361,32 @@ func (ct *ConversationTracker) loadFromDisk() {
 		}
 
 		conv := &Conversation{
-			ID:               item.ID,
-			Kind:             item.Kind,
-			UserID:           item.UserID,
-			RawUserID:        item.RawUserID,
-			Title:            item.Title,
-			GeneratedTitle:   item.GeneratedTitle,
-			FallbackTitle:    item.FallbackTitle,
-			SessionID:        item.SessionID,
-			RequestCount:     item.RequestCount,
-			Models:           models,
-			CurrentChannel:   item.CurrentChannel,
-			ChannelName:      item.ChannelName,
-			LastModel:        item.LastModel,
-			LastRequestID:    item.LastRequestID,
-			LatestFeedback:   item.LatestFeedback,
-			LatestFeedbackAt: item.LatestFeedbackAt,
-			CreatedAt:        item.CreatedAt,
-			LastActiveAt:     item.LastActiveAt,
-			Status:           "idle",
+			ID:                   item.ID,
+			Kind:                 item.Kind,
+			UserID:               item.UserID,
+			RawUserID:            item.RawUserID,
+			Title:                item.Title,
+			GeneratedTitle:       item.GeneratedTitle,
+			FallbackTitle:        item.FallbackTitle,
+			SessionID:            item.SessionID,
+			ParentThreadID:       item.ParentThreadID,
+			ParentConversationID: item.ParentConversationID,
+			ChildConversationIDs: append([]string(nil), item.ChildConversationIDs...),
+			RequestCount:         item.RequestCount,
+			Models:               models,
+			CurrentChannel:       item.CurrentChannel,
+			ChannelName:          item.ChannelName,
+			LastModel:            item.LastModel,
+			LastRequestID:        item.LastRequestID,
+			LatestFeedback:       item.LatestFeedback,
+			LatestFeedbackAt:     item.LatestFeedbackAt,
+			HasSubagents:         item.HasSubagents,
+			SubagentCount:        item.SubagentCount,
+			MainChannel:          item.MainChannel,
+			SubagentChannel:      item.SubagentChannel,
+			CreatedAt:            item.CreatedAt,
+			LastActiveAt:         item.LastActiveAt,
+			Status:               "idle",
 		}
 		ct.conversations[item.ID] = conv
 
@@ -370,6 +396,7 @@ func (ct *ConversationTracker) loadFromDisk() {
 			ct.sessionMapping[item.SessionID] = item.ID
 		}
 	}
+	ct.reconcileAllConversationRelationshipsLocked()
 	log.Printf("[ConversationTracker-Load] 恢复 %d 个对话, 跳过 %d 个过期条目", len(items), skipped)
 }
 
@@ -400,6 +427,10 @@ func (ct *ConversationTracker) flushToDisk() {
 		if len(conv.Models) > 0 {
 			c.Models = make([]string, len(conv.Models))
 			copy(c.Models, conv.Models)
+		}
+		if len(conv.ChildConversationIDs) > 0 {
+			c.ChildConversationIDs = make([]string, len(conv.ChildConversationIDs))
+			copy(c.ChildConversationIDs, conv.ChildConversationIDs)
 		}
 		snapshot[id] = &c
 	}
@@ -491,7 +522,109 @@ func (ct *ConversationTracker) removeConversation(id string, conv *Conversation)
 			delete(ct.sessionMapping, sessID)
 		}
 	}
+
+	for _, other := range ct.conversations {
+		if other == nil {
+			continue
+		}
+		if other.ParentConversationID == id {
+			other.ParentConversationID = ""
+		}
+		other.ChildConversationIDs = removeString(other.ChildConversationIDs, id)
+	}
 	ct.dirty = true
+}
+
+func (ct *ConversationTracker) reconcileAllConversationRelationshipsLocked() {
+	for _, conv := range ct.conversations {
+		conv.ParentConversationID = ""
+		conv.ChildConversationIDs = nil
+	}
+	for _, conv := range ct.conversations {
+		ct.reconcileConversationRelationshipsLocked(conv)
+	}
+}
+
+func (ct *ConversationTracker) reconcileConversationRelationshipsLocked(conv *Conversation) {
+	if conv == nil {
+		return
+	}
+
+	if parentID, ok := ct.findConversationIDByThreadLocked(conv.ParentThreadID); ok && parentID != conv.ID {
+		if parent, exists := ct.conversations[parentID]; exists {
+			ct.linkParentChildLocked(parent, conv)
+		}
+	}
+
+	for _, other := range ct.conversations {
+		if other == nil || other.ID == conv.ID {
+			continue
+		}
+		if other.ParentConversationID == conv.ID || other.ParentThreadID == conv.ID || other.ParentThreadID == conv.RawUserID || (conv.SessionID != "" && other.ParentThreadID == conv.SessionID) {
+			ct.linkParentChildLocked(conv, other)
+		}
+	}
+}
+
+func (ct *ConversationTracker) findConversationIDByThreadLocked(threadID string) (string, bool) {
+	threadID = strings.TrimSpace(threadID)
+	if threadID == "" {
+		return "", false
+	}
+
+	for id, conv := range ct.conversations {
+		if id == threadID || conv.SessionID == threadID || conv.RawUserID == threadID {
+			return id, true
+		}
+	}
+	return "", false
+}
+
+func (ct *ConversationTracker) linkParentChildLocked(parent, child *Conversation) {
+	if parent == nil || child == nil || parent.ID == "" || child.ID == "" || parent.ID == child.ID {
+		return
+	}
+
+	ct.removeChildReferenceFromOtherParentsLocked(parent.ID, child.ID)
+	if child.ParentConversationID != "" && child.ParentConversationID != parent.ID {
+		child.ParentConversationID = ""
+	}
+	child.ParentConversationID = parent.ID
+	if !containsString(parent.ChildConversationIDs, child.ID) {
+		parent.ChildConversationIDs = append(parent.ChildConversationIDs, child.ID)
+	}
+	parent.HasSubagents = true
+	if parent.SubagentCount < len(parent.ChildConversationIDs) {
+		parent.SubagentCount = len(parent.ChildConversationIDs)
+	}
+}
+
+func (ct *ConversationTracker) removeChildReferenceFromOtherParentsLocked(parentID, childID string) {
+	if parentID == "" || childID == "" {
+		return
+	}
+	for id, conv := range ct.conversations {
+		if id == parentID || conv == nil {
+			continue
+		}
+		conv.ChildConversationIDs = removeString(conv.ChildConversationIDs, childID)
+	}
+}
+
+func removeString(slice []string, target string) []string {
+	if len(slice) == 0 || target == "" {
+		return slice
+	}
+	result := slice[:0]
+	for _, item := range slice {
+		if item != target {
+			result = append(result, item)
+		}
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 func maskUserID(userID string) string {

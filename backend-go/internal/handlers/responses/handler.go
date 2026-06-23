@@ -344,8 +344,9 @@ func handleSingleChannel(
 				channelName = upstream.Name
 			}
 			agentRole := ""
-			if ac := common.AgentContextFromGin(c); ac != nil {
-				agentRole = ac.AgentRole
+			agentCtx := common.AgentContextFromGin(c)
+			if agentCtx != nil {
+				agentRole = agentCtx.AgentRole
 			}
 			channelScheduler.TrackConversation(
 				scheduler.ChannelKindResponses,
@@ -357,6 +358,7 @@ func handleSingleChannel(
 				lastUserMsgStr,
 				userMsgCountInt,
 				agentRole,
+				agentCtx,
 			)
 		}
 	}

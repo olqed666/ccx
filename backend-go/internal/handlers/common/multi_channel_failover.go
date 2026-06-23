@@ -141,7 +141,7 @@ func HandleMultiChannelFailoverWithContextRequirement(
 				if upstream != nil {
 					channelName = upstream.Name
 				}
-				channelScheduler.TrackConversation(kind, userID, model, channelIndex, channelName, "", lastUserMsgStr, userMsgCountInt, agentRole)
+				channelScheduler.TrackConversation(kind, userID, model, channelIndex, channelName, "", lastUserMsgStr, userMsgCountInt, agentRole, AgentContextFromGin(c))
 				if envCfg.ShouldLog("debug") {
 					RequestLogf(c, "[%s-Conversation-Debug] 已追踪对话: kind=%s, user=%s, model=%s, channel=%d, userMessages=%d, hasFallbackTitle=%t",
 						apiType, kind, scheduler.MaskUserIDForLog(userID), model, channelIndex, userMsgCountInt, lastUserMsgStr != "")

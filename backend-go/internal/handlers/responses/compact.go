@@ -201,7 +201,7 @@ func handleMultiChannelCompact(
 				if upstream != nil {
 					channelName = upstream.Name
 				}
-				channelScheduler.TrackConversation(scheduler.ChannelKindResponses, userID, requestModel, channelIndex, channelName, "", "", 0, "")
+				channelScheduler.TrackConversation(scheduler.ChannelKindResponses, userID, requestModel, channelIndex, channelName, "", "", 0, "", common.AgentContextFromGin(c))
 			}
 			return
 		}
