@@ -38,7 +38,7 @@
       <div v-if="conversation.hasSubagents" class="subagent-summary" @click.stop="$emit('toggleExpand')">
         <div class="subagent-summary-main">
           <v-icon size="16">mdi-source-branch</v-icon>
-          <span>Subagents</span>
+          <span>{{ t('cockpit.subagents') }}</span>
           <strong>{{ conversation.subagentCount || 1 }}</strong>
         </div>
         <div class="subagent-summary-route">

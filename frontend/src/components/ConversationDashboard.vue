@@ -141,11 +141,11 @@ const overrideDuration = ref(1800)
 const nowMs = ref(Date.now())
 const expandedCards = ref(new Set<string>())
 
-const boardColumnMeta: Array<{ key: BoardColumnKey; label: string; color: string }> = [
-  { key: 'streaming', label: 'Streaming', color: '#ef4444' },
-  { key: 'subagents', label: 'Subagents', color: '#f59e0b' },
-  { key: 'active', label: 'Active', color: '#6366f1' },
-  { key: 'idle', label: 'Idle', color: '#10b981' },
+const boardColumnMeta: Array<{ key: BoardColumnKey; color: string }> = [
+  { key: 'streaming', color: '#ef4444' },
+  { key: 'subagents', color: '#f59e0b' },
+  { key: 'active', color: '#6366f1' },
+  { key: 'idle', color: '#10b981' },
 ]
 
 const kindFilterOptions = [
@@ -195,6 +195,7 @@ const boardStats = computed(() => {
   const counts = buildColumnBuckets(visibleConversations.value)
   return boardColumnMeta.map(column => ({
     ...column,
+    label: t(`cockpit.column.${column.key}`),
     count: counts[column.key].length,
   }))
 })
@@ -203,6 +204,7 @@ const boardColumns = computed(() => {
   const buckets = buildColumnBuckets(visibleConversations.value)
   return boardColumnMeta.map(column => ({
     ...column,
+    label: t(`cockpit.column.${column.key}`),
     items: buckets[column.key],
   }))
 })
