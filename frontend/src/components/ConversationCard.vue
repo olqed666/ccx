@@ -35,17 +35,40 @@
         </v-chip>
       </div>
 
-      <div v-if="conversation.hasSubagents" class="subagent-summary" @click.stop="$emit('toggleExpand')">
+      <div v-if="hasSubagentActivity" class="subagent-summary" @click.stop="$emit('toggleExpand')">
         <div class="subagent-summary-main">
           <v-icon size="16">mdi-source-branch</v-icon>
           <span>{{ t('cockpit.subagents') }}</span>
-          <strong>{{ conversation.subagentCount || 1 }}</strong>
+          <strong>{{ displaySubagentCount }}</strong>
         </div>
         <div class="subagent-summary-route">
+          <span v-if="subagentSummary.total > 0">{{ subagentSummary.streaming }} streaming / {{ subagentSummary.active }} active</span>
+          <template v-else>
           <span>{{ mainChannelLabel }}</span>
           <v-icon size="13">mdi-arrow-right</v-icon>
           <span>{{ subagentChannelLabel }}</span>
+          </template>
         </div>
+      </div>
+
+      <div v-if="subagents.length > 0" class="subagent-list" @click.stop>
+        <div class="subagent-list-head">
+          <span>Subagents</span>
+          <span>{{ subagentSummary.streaming }} streaming · {{ subagentSummary.active }} active · {{ subagentSummary.idle }} idle</span>
+        </div>
+        <div v-for="agent in visibleSubagents" :key="agent.id" class="subagent-row">
+          <span :class="['subagent-dot', `subagent-dot--${agent.status}`]"></span>
+          <div class="subagent-row-main">
+            <span class="subagent-row-title">{{ agent.title || agent.userId }}</span>
+            <span class="subagent-row-meta">{{ agent.lastModel }} · {{ agent.channelName || `Channel ${agent.currentChannel}` }}</span>
+          </div>
+          <v-chip size="x-small" variant="tonal" :color="subagentStatusColor(agent.status)">
+            {{ agent.status }}
+          </v-chip>
+        </div>
+        <button v-if="subagents.length > visibleSubagents.length" type="button" class="subagent-more" @click.stop="$emit('toggleExpand')">
+          +{{ subagents.length - visibleSubagents.length }} more
+        </button>
       </div>
 
       <div class="task-card-notes">
@@ -183,6 +206,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { ConversationInfo, SequenceOverrideInfo, ChannelSequenceEntry } from '@/services/api'
+import type { SubagentSummary } from '@/utils/conversationDashboard'
 import { useI18n } from '@/i18n'
 
 const { t } = useI18n()
@@ -196,6 +220,8 @@ interface ChannelInfo {
 
 const props = defineProps<{
   conversation: ConversationInfo
+  subagents?: ConversationInfo[]
+  subagentSummary?: SubagentSummary
   override?: SequenceOverrideInfo
   availableChannels: ChannelInfo[]
   expanded: boolean
@@ -215,6 +241,12 @@ const MAX_VISIBLE = 6
 const feedbackText = ref('')
 
 const conversation = computed(() => props.conversation)
+const emptySubagentSummary: SubagentSummary = { total: 0, streaming: 0, active: 0, idle: 0 }
+const subagents = computed(() => props.subagents ?? [])
+const subagentSummary = computed(() => props.subagentSummary ?? emptySubagentSummary)
+const hasSubagentActivity = computed(() => props.conversation.hasSubagents || subagents.value.length > 0)
+const displaySubagentCount = computed(() => subagentSummary.value.total || props.conversation.subagentCount || subagents.value.length || 1)
+const visibleSubagents = computed(() => subagents.value.slice(0, props.expanded ? 12 : 4))
 const hasOverride = computed(() => !!props.override)
 const kindLabel = computed(() => `[ ${props.conversation.kind.toUpperCase()} ]`)
 
@@ -237,6 +269,15 @@ const statusColor = computed(() => {
     default: return 'grey'
   }
 })
+
+function subagentStatusColor(status: ConversationInfo['status']): string {
+  switch (status) {
+    case 'streaming': return 'error'
+    case 'active': return 'primary'
+    case 'idle': return 'success'
+    default: return 'grey'
+  }
+}
 
 const kindCssColor = computed(() => {
   const map: Record<string, string> = {
@@ -312,7 +353,7 @@ const subagentSequence = computed((): ChannelInfo[] => {
 })
 
 const hasSubagentOverride = computed(() => !!props.override?.subagentSequence && props.override.subagentSequence.length > 0)
-const showSubagentSection = computed(() => props.conversation.hasSubagents || hasSubagentOverride.value)
+const showSubagentSection = computed(() => hasSubagentActivity.value || hasSubagentOverride.value)
 const subagentCurrentChannel = computed(() => props.conversation.subagentChannel ?? -1)
 
 const mainChannelLabel = computed(() => {
@@ -636,6 +677,87 @@ function sendFeedback() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.subagent-list {
+  margin-top: 8px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: rgb(var(--v-theme-surface) / 72%);
+}
+
+.subagent-list-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  color: rgb(var(--v-theme-on-surface) / 62%);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.subagent-row {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(var(--v-border-color), 0.5);
+}
+
+.subagent-row:last-of-type {
+  border-bottom: 0;
+}
+
+.subagent-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+}
+
+.subagent-dot--streaming {
+  background: var(--ccx-led-streaming-color);
+  animation: ccx-led-pulse 1.4s ease-in-out infinite;
+}
+
+.subagent-dot--active {
+  background: var(--ccx-status-breaker-half-open-dot-bg);
+}
+
+.subagent-dot--idle {
+  background: var(--ccx-status-disabled-dot-bg);
+}
+
+.subagent-row-main {
+  min-width: 0;
+}
+
+.subagent-row-title,
+.subagent-row-meta {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subagent-row-title {
+  color: rgb(var(--v-theme-on-surface) / 86%);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.subagent-row-meta {
+  color: rgb(var(--v-theme-on-surface) / 48%);
+  font-size: 11px;
+}
+
+.subagent-more {
+  width: 100%;
+  padding: 6px 10px;
+  color: rgb(var(--v-theme-on-surface) / 58%);
+  font-size: 11px;
+  text-align: left;
 }
 
 /* Next label */
