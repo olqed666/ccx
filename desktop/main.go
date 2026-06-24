@@ -335,7 +335,7 @@ func run() error {
 
 		autostartItem := menu.AddCheckbox("开机自启", autostartEnabled)
 		autostartItem.OnClick(func(ctx *application.Context) {
-			newState := !autostartItem.Checked()
+			newState := ctx.IsChecked()
 			if err := desktopService.SetAutostart(newState); err != nil {
 				log.Printf("[Desktop-Tray] 切换开机自启失败: %v", err)
 				app.Event.Emit("desktop:tray-error", fmt.Sprintf("切换开机自启失败: %v", err))
