@@ -11,7 +11,7 @@ import { useDesktopActivity } from '@/composables/useDesktopActivity'
 import { useLanguage } from '@/composables/useLanguage'
 import { useStatus } from '@/composables/useStatus'
 import ConversationCard from './ConversationCard.vue'
-import type { ChannelSequenceEntry } from '@/services/admin-api'
+import type { ChannelSequenceEntry, ConversationInfo } from '@/services/admin-api'
 import { getChannelTypeApi, type ManagedChannelType } from '@/utils/channel-type-api'
 import { buildConversationBoardItems, filterConversationBoardItems, type BoardColumnKey, type ConversationBoardItem } from '@/utils/conversation-dashboard'
 
@@ -35,6 +35,7 @@ const searchQuery = ref('')
 const overrideDuration = ref('1800')
 const nowMs = ref(Date.now())
 const expandedCards = ref(new Set<string>())
+const pinnedConversationOrder = ref<string[]>([])
 const notice = ref<{ variant: 'success' | 'destructive'; message: string } | null>(null)
 const settingsReady = ref(false)
 let noticeTimer: ReturnType<typeof setTimeout> | undefined
@@ -69,9 +70,12 @@ const durationOptions = computed(() => [
   { label: t('cockpit.durationNever'), value: '-1' },
 ])
 
-const sortedConversations = computed(() =>
-  [...conversations.value].sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()),
-)
+const sortedConversations = computed(() => {
+  if (expandedCards.value.size > 0) {
+    return getPinnedOrderedConversations(conversations.value)
+  }
+  return sortConversationsByLastActive(conversations.value)
+})
 
 const boardItems = computed(() => buildConversationBoardItems(sortedConversations.value))
 
@@ -116,6 +120,42 @@ function buildColumnBuckets(items: ConversationBoardItem[]): Record<BoardColumnK
   }, { working: [], idle: [] })
 }
 
+function getConversationTime(conversation: ConversationInfo) {
+  return new Date(conversation.lastActiveAt).getTime()
+}
+
+function sortConversationsByLastActive(items: ConversationInfo[]) {
+  return [...items].sort((a, b) => getConversationTime(b) - getConversationTime(a))
+}
+
+function getPinnedOrderedConversations(items: ConversationInfo[]) {
+  const byID = new Map(items.map(item => [item.id, item]))
+  const ordered = pinnedConversationOrder.value
+    .filter(id => byID.has(id))
+    .map(id => byID.get(id)!)
+  const seen = new Set(ordered.map(item => item.id))
+  const fresh = sortConversationsByLastActive(items.filter(item => !seen.has(item.id)))
+  return [...ordered, ...fresh]
+}
+
+function applyConversationOrder(items: ConversationInfo[]) {
+  const itemIDs = new Set(items.map(item => item.id))
+  const expanded = [...expandedCards.value].filter(id => itemIDs.has(id))
+  if (expanded.length !== expandedCards.value.size) {
+    expandedCards.value = new Set(expanded)
+  }
+
+  if (expanded.length === 0) {
+    const sorted = sortConversationsByLastActive(items)
+    pinnedConversationOrder.value = sorted.map(item => item.id)
+    return sorted
+  }
+
+  const ordered = getPinnedOrderedConversations(items)
+  pinnedConversationOrder.value = ordered.map(item => item.id)
+  return ordered
+}
+
 function getChannelsForKind(kind: string) {
   return channelsByKind.value[kind] || []
 }
@@ -129,6 +169,12 @@ function getConversationTitle(id?: string) {
 function overrideDurationAsNumber(): number {
   return Number(overrideDuration.value)
 }
+
+watch(expandedCards, expanded => {
+  if (expanded.size === 0) {
+    conversations.value = applyConversationOrder(conversations.value)
+  }
+})
 
 async function loadSettings() {
   try {
@@ -152,6 +198,7 @@ function showNotice(variant: 'success' | 'destructive', message: string) {
 async function refreshConversations() {
   if (!shouldRefresh.value || !isConsoleConversationsActive.value) return
   await fetchConversations()
+  conversations.value = applyConversationOrder(conversations.value)
 }
 
 async function handleSetOverride(conversationId: string, sequence: ChannelSequenceEntry[], subagentSequence?: ChannelSequenceEntry[]) {
@@ -172,6 +219,7 @@ async function handleSetOverride(conversationId: string, sequence: ChannelSequen
       }
     }
     await setOverride(conversationId, sequence, overrideDurationAsNumber(), subagentSequence)
+    conversations.value = applyConversationOrder(conversations.value)
   } catch (e) {
     showNotice('destructive', e instanceof Error ? e.message : String(e))
   }
@@ -180,6 +228,7 @@ async function handleSetOverride(conversationId: string, sequence: ChannelSequen
 async function handleRemoveOverride(conversationId: string) {
   try {
     await removeOverride(conversationId)
+    conversations.value = applyConversationOrder(conversations.value)
   } catch (e) {
     showNotice('destructive', e instanceof Error ? e.message : String(e))
   }
@@ -195,8 +244,14 @@ function handleError(message: string) {
 
 function toggleExpand(id: string) {
   const next = new Set(expandedCards.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    if (expandedCards.value.size === 0) {
+      conversations.value = applyConversationOrder(conversations.value)
+    }
+    next.add(id)
+  }
   expandedCards.value = next
 }
 
@@ -216,6 +271,11 @@ async function handleNavigateConversation(id: string) {
     showNotice('destructive', `未找到关联对话 ${id.slice(0, 8)}`)
     return
   }
+  pinnedConversationOrder.value = [
+    id,
+    ...pinnedConversationOrder.value.filter(itemID => itemID !== id),
+  ]
+  conversations.value = applyConversationOrder(conversations.value)
 
   kindFilter.value = ''
   searchQuery.value = ''

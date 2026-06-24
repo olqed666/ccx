@@ -139,7 +139,7 @@ vi.mock('./ConversationCard.vue', () => ({
       nowMs: { type: Number, required: true },
       relatedParentTitle: { type: String, default: '' },
     },
-    emits: ['navigateConversation'],
+    emits: ['toggleExpand', 'navigateConversation'],
     setup(props, { emit }) {
       return () => {
         const conversation = props.conversation as ConversationInfo
@@ -165,6 +165,7 @@ vi.mock('./ConversationCard.vue', () => ({
             'data-id': conversation.id,
             'data-kind': conversation.kind,
             'data-expanded': String(props.expanded),
+            onClick: () => emit('toggleExpand'),
           },
           children,
         )
@@ -361,6 +362,53 @@ describe('ConversationDashboard', () => {
     await nextTick()
     expect(root.textContent).toContain('cockpit.noMatches')
     expect(root.querySelectorAll('[data-testid^="cockpit-column-"]').length).toBe(0)
+    expect(vueErrors).toEqual([])
+    expect(errors).toEqual([])
+  })
+
+
+  it('keeps card order stable while a card is expanded', async () => {
+    conversations.value = [
+      createConversation({
+        id: 'older',
+        title: 'Older Conversation',
+        lastActiveAt: '2026-06-23T09:00:00.000Z',
+      }),
+      createConversation({
+        id: 'newer',
+        title: 'Newer Conversation',
+        lastActiveAt: '2026-06-23T10:00:00.000Z',
+      }),
+    ]
+
+    const { vueErrors } = mountDashboard()
+    await nextTick()
+    expect(getAllColumnCards()).toEqual(['Newer Conversation', 'Older Conversation'])
+
+    const newer = root.querySelector('[data-testid="conversation-card"][data-id="newer"]') as HTMLElement
+    newer.click()
+    await nextTick()
+    expect(newer.dataset.expanded).toBe('true')
+
+    conversations.value = [
+      createConversation({
+        id: 'older',
+        title: 'Older Conversation',
+        lastActiveAt: '2026-06-23T11:00:00.000Z',
+      }),
+      createConversation({
+        id: 'newer',
+        title: 'Newer Conversation',
+        lastActiveAt: '2026-06-23T10:00:00.000Z',
+      }),
+    ]
+    await nextTick()
+    expect(getAllColumnCards()).toEqual(['Newer Conversation', 'Older Conversation'])
+
+    const expandedNewer = root.querySelector('[data-testid="conversation-card"][data-id="newer"]') as HTMLElement
+    expandedNewer.click()
+    await nextTick()
+    expect(getAllColumnCards()).toEqual(['Older Conversation', 'Newer Conversation'])
     expect(vueErrors).toEqual([])
     expect(errors).toEqual([])
   })

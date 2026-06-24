@@ -2,6 +2,7 @@
 
 ### 修复
 
+- **驾驶舱展开卡片排序稳定** - Web 与桌面端会话驾驶舱在存在展开卡片时固定当前卡片顺序，避免轮询刷新或最新消息更新时间导致卡片跳动；全部收起后恢复按最新消息排序，并补充桌面端排序稳定性测试
 - **Compshare 月度额度耗尽自动拉黑** - `extractErrorInfo`/`extractErrorCode` 兼容大写字段名 (`RetCode`/`Message`) 和数字类型错误码；`isInsufficientBalanceMessage` 增加 `monthly limit exceeded` 等精确短语，使 429 + 月度额度耗尽错误能正确触发 key 拉黑
 
 ## [v2.9.17] - 2026-06-23

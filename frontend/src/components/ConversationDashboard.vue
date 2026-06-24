@@ -115,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useDisplay } from 'vuetify'
 import { api, type ConversationInfo, type SequenceOverrideInfo, type ChannelSequenceEntry } from '@/services/api'
 import { useGlobalTick } from '@/composables/useGlobalTick'
@@ -142,6 +142,7 @@ const searchQuery = ref('')
 const overrideDuration = ref(1800)
 const nowMs = ref(Date.now())
 const expandedCards = ref(new Set<string>())
+const pinnedConversationOrder = ref<string[]>([])
 
 const boardColumnMeta: Array<{ key: BoardColumnKey; label: string; color: string }> = [
   { key: 'working', label: 'Working', color: '#6366f1' },
@@ -170,7 +171,10 @@ const durationOptions = computed(() => [
 ])
 
 const sortedConversations = computed(() => {
-  return [...conversations.value].sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime())
+  if (expandedCards.value.size > 0) {
+    return getPinnedOrderedConversations(conversations.value)
+  }
+  return sortConversationsByLastActive(conversations.value)
 })
 
 const boardItems = computed(() => buildConversationBoardItems(sortedConversations.value))
@@ -236,6 +240,48 @@ function getChannelsForKind(kind: string): DashboardChannel[] {
   return channelsByKind.value[kind] || []
 }
 
+function getConversationTime(conversation: ConversationInfo) {
+  return new Date(conversation.lastActiveAt).getTime()
+}
+
+function sortConversationsByLastActive(items: ConversationInfo[]) {
+  return [...items].sort((a, b) => getConversationTime(b) - getConversationTime(a))
+}
+
+function getPinnedOrderedConversations(items: ConversationInfo[]) {
+  const byID = new Map(items.map(item => [item.id, item]))
+  const ordered = pinnedConversationOrder.value
+    .filter(id => byID.has(id))
+    .map(id => byID.get(id)!)
+  const seen = new Set(ordered.map(item => item.id))
+  const fresh = sortConversationsByLastActive(items.filter(item => !seen.has(item.id)))
+  return [...ordered, ...fresh]
+}
+
+function applyConversationOrder(items: ConversationInfo[]) {
+  const itemIDs = new Set(items.map(item => item.id))
+  const expanded = [...expandedCards.value].filter(id => itemIDs.has(id))
+  if (expanded.length !== expandedCards.value.size) {
+    expandedCards.value = new Set(expanded)
+  }
+
+  if (expanded.length === 0) {
+    const sorted = sortConversationsByLastActive(items)
+    pinnedConversationOrder.value = sorted.map(item => item.id)
+    return sorted
+  }
+
+  const ordered = getPinnedOrderedConversations(items)
+  pinnedConversationOrder.value = ordered.map(item => item.id)
+  return ordered
+}
+
+watch(expandedCards, expanded => {
+  if (expanded.size === 0) {
+    conversations.value = applyConversationOrder(conversations.value)
+  }
+})
+
 async function fetchAllChannels() {
   const kinds = ['messages', 'chat', 'responses', 'gemini', 'images'] as const
   for (const kind of kinds) {
@@ -255,7 +301,7 @@ async function fetchAllChannels() {
 async function fetchConversations() {
   try {
     const resp = await api.getConversations(undefined)
-    conversations.value = resp.conversations || []
+    conversations.value = applyConversationOrder(resp.conversations || [])
     overrides.value = resp.overrides || {}
     if (resp.channelsByKind) channelsByKind.value = normalizeChannelsByKind(resp.channelsByKind)
   } catch (e) {
@@ -267,8 +313,14 @@ async function fetchConversations() {
 
 function toggleExpand(id: string) {
   const next = new Set(expandedCards.value)
-  if (next.has(id)) next.delete(id)
-  else next.add(id)
+  if (next.has(id)) {
+    next.delete(id)
+  } else {
+    if (expandedCards.value.size === 0) {
+      conversations.value = applyConversationOrder(conversations.value)
+    }
+    next.add(id)
+  }
   expandedCards.value = next
 }
 
