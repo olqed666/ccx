@@ -139,6 +139,16 @@
                     </div>
                   </v-col>
                 </v-row>
+
+                <v-alert
+                  v-if="quickServiceType === 'copilot'"
+                  class="mt-3"
+                  color="info"
+                  variant="tonal"
+                  density="comfortable"
+                >
+                  {{ t('copilotOAuth.quickAddHint') }}
+                </v-alert>
               </div>
             </v-card-text>
           </v-card>
@@ -308,6 +318,9 @@ const upstreamTypeCardStyle = computed(() => {
 
 const generatedChannelName = computed(() => {
   if (!detectedBaseUrl.value) {
+    if (quickServiceType.value === 'copilot') {
+      return `github-copilot-${randomSuffix.value}`
+    }
     return `channel-${randomSuffix.value}`
   }
   const prefix = extractChannelNamePrefix(detectedBaseUrl.value)
@@ -315,6 +328,9 @@ const generatedChannelName = computed(() => {
 })
 
 const isQuickFormValid = computed(() => {
+  if (quickServiceType.value === 'copilot') {
+    return detectedBaseUrls.value.length > 0
+  }
   return detectedBaseUrls.value.length > 0 && detectedApiKeys.value.length > 0
 })
 
@@ -349,6 +365,10 @@ function parseQuickInput() {
 
   if (!quickServiceTypeTouched.value && detectedServiceType.value) {
     quickServiceType.value = detectedServiceType.value
+  }
+  if (quickServiceType.value === 'copilot' && !detectedBaseUrl.value) {
+    detectedBaseUrl.value = 'https://api.githubcopilot.com'
+    detectedBaseUrls.value = [detectedBaseUrl.value]
   }
 }
 

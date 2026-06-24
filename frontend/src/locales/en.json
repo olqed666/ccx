@@ -231,6 +231,7 @@
   "copilotDiagnose.loading": "Diagnosing Copilot channel...",
   "copilotDiagnose.success": "Diagnosis complete",
   "copilotDiagnose.failed": "Diagnosis failed",
+  "copilotOAuth.quickAddHint": "A GitHub Copilot channel does not need a pasted API key. After creating it, open Edit channel → Authentication and click \"Sign in with GitHub Copilot\" to authorize. The Base URL defaults to https://api.githubcopilot.com.",
   "addChannel.count": "{count}",
   "addChannel.customHeadersTitle": "Custom Headers",
   "addChannel.headerKeyLabel": "Header name",

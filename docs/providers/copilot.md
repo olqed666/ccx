@@ -36,6 +36,36 @@
 
 说明：`serviceType: "copilot"` 会跳过默认 `/v1` 前缀，最终请求地址为 `https://api.githubcopilot.com/responses`。
 
+## 模型映射建议
+
+GitHub Copilot 的可用模型取决于你的订阅与组织策略，请以诊断结果中 `/models` 返回为准。常见做法是把 Codex 客户端常用别名映射到 Copilot 模型名：
+
+| 源别名 | 目标模型（示例） |
+|--------|------------------|
+| `codex` | `gpt-5-codex` |
+| `gpt` | `gpt-5` |
+| `mini` | `gpt-5-mini` |
+
+实际可用模型名以「诊断 Copilot」结果中的 `Models` 返回为准，不要照抄示例。
+
+## 渠道诊断
+
+编辑 Copilot 渠道后，在「身份认证」区域点击「诊断 Copilot」，会一次性检查三层：
+
+1. `GitHub`：GitHub OAuth token 是否能验证用户
+2. `Token`：GitHub OAuth token 能否换取短期 Copilot token
+3. `Models`：短期 Copilot token 能否访问 `/models`
+
+哪一层失败就能快速定位问题。
+
+## 常见问题
+
+- **token exchange 返回 401/403**：GitHub OAuth token 失效或没有 Copilot 订阅，需重新授权。
+- **token exchange 返回 429/5xx**：GitHub 侧临时不可用，稍后重试。
+- **/models 返回 401/403**：通常是 `Copilot-Integration-Id` / Editor 版本头不匹配，或账号无对应权限。
+- **请求误加 `/v1`**：确认服务类型选择的是 `copilot`，该类型不会自动补 `/v1`。
+
+
 ## 注意事项
 
 - 渠道中保存的 `API Key` 是 **GitHub OAuth token**，不是短期 Copilot API token

@@ -231,6 +231,7 @@
   "copilotDiagnose.loading": "正在诊断 Copilot 渠道...",
   "copilotDiagnose.success": "诊断完成",
   "copilotDiagnose.failed": "诊断失败",
+  "copilotOAuth.quickAddHint": "GitHub Copilot 渠道无需粘贴 API Key，创建后在「编辑渠道 → 身份认证」中点击「使用 GitHub Copilot 登录」完成授权即可。Base URL 默认为 https://api.githubcopilot.com。",
   "addChannel.count": "{count} 个",
   "addChannel.customHeadersTitle": "自定义请求头",
   "addChannel.headerKeyLabel": "请求头名称",
