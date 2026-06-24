@@ -70,7 +70,7 @@ function isDemoted(index: number): boolean {
   border-radius: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  max-height: calc(8 * 36px);
+  max-height: calc(5 * 36px);
   overscroll-behavior: auto;
 }
 

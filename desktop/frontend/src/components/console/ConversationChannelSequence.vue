@@ -98,7 +98,7 @@ function badgeClass(channel: ChannelInfo): string {
 
 <style scoped>
 .channel-sequence {
-  max-height: calc(8 * 36px);
+  max-height: calc(5 * 36px);
   overflow-x: hidden;
   overflow-y: auto;
   border: 1px solid var(--color-border);

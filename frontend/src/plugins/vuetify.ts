@@ -135,6 +135,7 @@ import {
   mdiRobot,
   mdiRobotOutline,
   mdiMessageProcessing,
+  mdiMessageReplyText,
   mdiDiamondStone,
   mdiApi,
   mdiLightningBolt,
@@ -199,6 +200,7 @@ import {
   mdiCashMultiple,
   mdiAccountSwitch,
   mdiChatOutline,
+  mdiSourceBranch,
   mdiDragHorizontalVariant,
   mdiFilterRemove,
   mdiFilter,
@@ -346,6 +348,7 @@ const iconMap: Record<string, string> = {
   'robot': mdiRobot,
   'robot-outline': mdiRobotOutline,
   'message-processing': mdiMessageProcessing,
+  'message-reply-text': mdiMessageReplyText,
   'diamond-stone': mdiDiamondStone,
   'api': mdiApi,
 
@@ -417,6 +420,7 @@ const iconMap: Record<string, string> = {
   // 渠道配置
   'account-switch': mdiAccountSwitch,
   'chat-outline': mdiChatOutline,
+  'source-branch': mdiSourceBranch,
   'drag-horizontal-variant': mdiDragHorizontalVariant,
   'filter-remove': mdiFilterRemove,
   'filter': mdiFilter,
