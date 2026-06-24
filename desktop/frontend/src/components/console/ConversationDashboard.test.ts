@@ -133,6 +133,8 @@ vi.mock('./ConversationCard.vue', () => ({
   default: defineComponent({
     props: {
       conversation: { type: Object, required: true },
+      subagents: { type: Array, default: () => [] },
+      subagentSummary: { type: Object, default: undefined },
       override: { type: Object, default: undefined },
       availableChannels: { type: Array, default: () => [] },
       expanded: { type: Boolean, default: false },
@@ -144,8 +146,11 @@ vi.mock('./ConversationCard.vue', () => ({
       return () => {
         const conversation = props.conversation as ConversationInfo
         const children: any[] = [
-          conversation.title || conversation.userId,
+          h('span', { 'data-testid': 'conversation-card-title' }, conversation.title || conversation.userId),
         ]
+        for (const subagent of props.subagents as ConversationInfo[]) {
+          children.push(h('span', { 'data-testid': `subagent-${subagent.id}` }, subagent.title || subagent.userId))
+        }
         if (conversation.parentConversationId) {
           children.push(
             h('button', {
@@ -243,16 +248,16 @@ describe('ConversationDashboard', () => {
     }
   }
 
-  function getVisibleTitles(columnKey: 'streaming' | 'subagents' | 'active' | 'idle') {
+  function getVisibleTitles(columnKey: 'working' | 'idle') {
     const column = root.querySelector(`[data-testid="cockpit-column-${columnKey}"]`)
     expect(column).toBeTruthy()
     return [...column!.querySelectorAll('[data-testid="conversation-card"]')]
-      .map(node => node.textContent?.trim() || '')
+      .map(node => node.querySelector('[data-testid="conversation-card-title"]')?.textContent?.trim() || '')
   }
 
   function getAllColumnCards() {
     return [...root.querySelectorAll('[data-testid^="cockpit-column-"] [data-testid="conversation-card"]')]
-      .map(node => node.textContent?.trim() || '')
+      .map(node => node.querySelector('[data-testid="conversation-card-title"]')?.textContent?.trim() || '')
   }
 
   function clickButton(text: string) {
@@ -272,10 +277,11 @@ describe('ConversationDashboard', () => {
   it('groups conversations into task-board columns', async () => {
     conversations.value = [
       createConversation({
-        id: 'stream',
-        title: 'Streaming One',
+        id: 'root',
+        title: 'Root Conversation',
         kind: 'messages',
-        status: 'streaming',
+        status: 'idle',
+        childConversationIds: ['subagents', 'streaming-subagent'],
         lastActiveAt: '2026-06-23T10:00:00.000Z',
       }),
       createConversation({
@@ -284,6 +290,7 @@ describe('ConversationDashboard', () => {
         kind: 'chat',
         status: 'active',
         hasSubagents: true,
+        parentConversationId: 'root',
         lastActiveAt: '2026-06-23T09:00:00.000Z',
       }),
       createConversation({
@@ -292,6 +299,7 @@ describe('ConversationDashboard', () => {
         kind: 'responses',
         status: 'streaming',
         hasSubagents: true,
+        parentConversationId: 'root',
         lastActiveAt: '2026-06-23T08:30:00.000Z',
       }),
       createConversation({
@@ -313,10 +321,10 @@ describe('ConversationDashboard', () => {
     const { vueErrors } = mountDashboard()
     await nextTick()
 
-    expect(getVisibleTitles('streaming')).toEqual(['Streaming One'])
-    expect(getVisibleTitles('subagents')).toEqual(['Subagent One', 'Streaming Subagent'])
-    expect(getVisibleTitles('active')).toEqual(['Active One'])
+    expect(getVisibleTitles('working')).toEqual(['Root Conversation', 'Active One'])
     expect(getVisibleTitles('idle')).toEqual(['Idle One'])
+    expect(root.textContent).toContain('Subagent One')
+    expect(root.textContent).toContain('Streaming Subagent')
     expect(vueErrors).toEqual([])
     expect(errors).toEqual([])
   })
@@ -374,7 +382,7 @@ describe('ConversationDashboard', () => {
     expect(errors).toEqual([])
   })
 
-  it('navigates from a subagent card back to its parent conversation', async () => {
+  it('keeps parent conversation visible when filtering by a subagent kind', async () => {
     const scrollIntoView = vi.fn()
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
@@ -403,17 +411,12 @@ describe('ConversationDashboard', () => {
 
     clickButton('RESPONSES')
     await nextTick()
-    expect(getAllColumnCards()).toEqual(['Child Agent主对话'])
-
-    const button = root.querySelector('[data-testid="navigate-parent-child"]') as HTMLButtonElement | null
-    expect(button).toBeTruthy()
-    button!.click()
-    await nextTick()
+    expect(getAllColumnCards()).toEqual(['Parent Conversation'])
+    expect(root.textContent).toContain('Child Agent')
 
     const parent = root.querySelector('[data-testid="conversation-card"][data-id="parent"]')
-    expect(parent?.getAttribute('data-expanded')).toBe('true')
-    expect(getAllColumnCards()).toContain('Parent Conversation')
-    expect(scrollIntoView).toHaveBeenCalled()
+    expect(parent).toBeTruthy()
+    expect(scrollIntoView).not.toHaveBeenCalled()
     expect(vueErrors).toEqual([])
     expect(errors).toEqual([])
   })

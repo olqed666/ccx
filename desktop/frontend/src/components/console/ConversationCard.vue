@@ -10,6 +10,7 @@ import type {
   ConversationInfo,
   SequenceOverrideInfo,
 } from '@/services/admin-api'
+import type { SubagentSummary } from '@/utils/conversation-dashboard'
 
 interface ChannelInfo {
   index: number
@@ -21,6 +22,8 @@ interface ChannelInfo {
 
 const props = defineProps<{
   conversation: ConversationInfo
+  subagents?: ConversationInfo[]
+  subagentSummary?: SubagentSummary
   override?: SequenceOverrideInfo
   availableChannels: ConversationChannelInfo[]
   expanded: boolean
@@ -41,8 +44,14 @@ const emit = defineEmits<{
 const { t } = useLanguage()
 const MAX_VISIBLE = 6
 const feedbackText = ref('')
+const emptySubagentSummary: SubagentSummary = { total: 0, streaming: 0, active: 0, idle: 0 }
 
 const conversation = computed(() => props.conversation)
+const subagents = computed(() => props.subagents ?? [])
+const subagentSummary = computed(() => props.subagentSummary ?? emptySubagentSummary)
+const hasSubagentActivity = computed(() => props.conversation.hasSubagents || subagents.value.length > 0)
+const displaySubagentCount = computed(() => subagentSummary.value.total || props.conversation.subagentCount || subagents.value.length || 1)
+const visibleSubagents = computed(() => subagents.value.slice(0, props.expanded ? 12 : 4))
 const hasOverride = computed(() => !!props.override)
 const kindLabel = computed(() => `[ ${props.conversation.kind.toUpperCase()} ]`)
 
@@ -213,8 +222,17 @@ const subagentSequence = computed((): ChannelInfo[] => {
   return channelSequence.value
 })
 const hasSubagentOverride = computed(() => !!props.override?.subagentSequence?.length)
-const showSubagentSection = computed(() => props.conversation.hasSubagents || hasSubagentOverride.value)
+const showSubagentSection = computed(() => hasSubagentActivity.value || hasSubagentOverride.value)
 const subagentCurrentChannel = computed(() => props.conversation.subagentChannel ?? -1)
+
+function subagentStatusClass(status: ConversationInfo['status']): string {
+  switch (status) {
+    case 'streaming': return 'bg-rose-500'
+    case 'active': return 'bg-blue-500'
+    case 'idle': return 'bg-muted-foreground'
+    default: return 'bg-muted-foreground'
+  }
+}
 
 function isDemoted(index: number): boolean {
   if (!props.override) return false
@@ -338,11 +356,38 @@ function shortId(value: string): string {
       <span class="shrink-0 text-xs text-muted-foreground">{{ conversation.requestCount }}x</span>
       <span class="shrink-0 text-xs text-muted-foreground">{{ duration }}</span>
       <span
-        v-if="conversation.hasSubagents"
+        v-if="hasSubagentActivity"
         class="inline-flex items-center rounded border border-amber-500/50 bg-amber-500/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-500"
       >
-        SA{{ conversation.subagentCount ? ` ${conversation.subagentCount}` : '' }}
+        SA {{ displaySubagentCount }}
       </span>
+    </div>
+
+    <div v-if="subagents.length > 0" class="subagent-list mb-3 border border-border bg-background/60" @click.stop>
+      <div class="flex items-center justify-between border-b border-border px-2 py-1.5 text-[10px] font-semibold text-muted-foreground">
+        <span>Subagents</span>
+        <span>{{ subagentSummary.streaming }} streaming · {{ subagentSummary.active }} active · {{ subagentSummary.idle }} idle</span>
+      </div>
+      <div
+        v-for="agent in visibleSubagents"
+        :key="agent.id"
+        class="grid grid-cols-[8px_minmax(0,1fr)_auto] items-center gap-2 border-b border-border/60 px-2 py-1.5 last:border-b-0"
+      >
+        <span class="h-2 w-2 rounded-full" :class="subagentStatusClass(agent.status)" />
+        <div class="min-w-0">
+          <div class="truncate text-xs font-semibold text-foreground">{{ agent.title || agent.userId }}</div>
+          <div class="truncate text-[10px] text-muted-foreground">{{ agent.lastModel }} · {{ agent.channelName || `Channel ${agent.currentChannel}` }}</div>
+        </div>
+        <span class="border border-border bg-muted/30 px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">{{ agent.status }}</span>
+      </div>
+      <button
+        v-if="subagents.length > visibleSubagents.length"
+        type="button"
+        class="w-full px-2 py-1 text-left text-[10px] text-muted-foreground hover:text-foreground"
+        @click.stop="emit('toggleExpand')"
+      >
+        +{{ subagents.length - visibleSubagents.length }} more
+      </button>
     </div>
 
     <div

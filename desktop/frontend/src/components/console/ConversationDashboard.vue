@@ -11,10 +11,9 @@ import { useDesktopActivity } from '@/composables/useDesktopActivity'
 import { useLanguage } from '@/composables/useLanguage'
 import { useStatus } from '@/composables/useStatus'
 import ConversationCard from './ConversationCard.vue'
-import type { ChannelSequenceEntry, ConversationInfo } from '@/services/admin-api'
+import type { ChannelSequenceEntry } from '@/services/admin-api'
 import { getChannelTypeApi, type ManagedChannelType } from '@/utils/channel-type-api'
-
-type BoardColumnKey = 'streaming' | 'subagents' | 'active' | 'idle'
+import { buildConversationBoardItems, filterConversationBoardItems, type BoardColumnKey, type ConversationBoardItem } from '@/utils/conversation-dashboard'
 
 const api = useAdminApi()
 const { status } = useStatus()
@@ -43,11 +42,10 @@ let noticeTimer: ReturnType<typeof setTimeout> | undefined
 let refreshTimer: ReturnType<typeof setInterval> | undefined
 let conversationTimer: ReturnType<typeof setInterval> | undefined
 const cardElements = new Map<string, HTMLElement>()
+type CockpitStat = { key: string; label: string; hint: string; color: string; count: number }
 
 const boardMeta = computed<Array<{ key: BoardColumnKey; label: string; hint: string; color: string }>>(() => [
-  { key: 'streaming', label: tf('cockpit.board.streaming', 'Streaming'), hint: tf('cockpit.board.streamingHint', 'Live streaming conversations'), color: '#ef4444' },
-  { key: 'subagents', label: tf('cockpit.board.subagents', 'Subagents'), hint: tf('cockpit.board.subagentsHint', 'Conversations with subagents'), color: '#f59e0b' },
-  { key: 'active', label: tf('cockpit.board.active', 'Active'), hint: tf('cockpit.board.activeHint', 'Active but not streaming'), color: '#6366f1' },
+  { key: 'working', label: 'Working', hint: 'Root conversations with active work', color: '#6366f1' },
   { key: 'idle', label: tf('cockpit.board.idle', 'Idle'), hint: tf('cockpit.board.idleHint', 'Idle conversations'), color: '#10b981' },
 ])
 
@@ -76,22 +74,10 @@ const sortedConversations = computed(() =>
   [...conversations.value].sort((a, b) => new Date(b.lastActiveAt).getTime() - new Date(a.lastActiveAt).getTime()),
 )
 
-const visibleConversations = computed(() => {
-  let list = sortedConversations.value
-  if (kindFilter.value) {
-    list = list.filter(conversation => conversation.kind === kindFilter.value)
-  }
+const boardItems = computed(() => buildConversationBoardItems(sortedConversations.value))
 
-  const query = searchQuery.value.trim().toLowerCase()
-  if (!query) return list
-
-  return list.filter(conversation =>
-    (conversation.title || '').toLowerCase().includes(query)
-    || (conversation.userId || '').toLowerCase().includes(query)
-    || (conversation.rawUserId || '').toLowerCase().includes(query)
-    || (conversation.lastModel || '').toLowerCase().includes(query)
-    || (conversation.channelName || '').toLowerCase().includes(query)
-  )
+const visibleBoardItems = computed(() => {
+  return filterConversationBoardItems(boardItems.value, kindFilter.value, searchQuery.value)
 })
 
 const overrideCount = computed(() => Object.keys(overrides.value).length)
@@ -102,42 +88,33 @@ const refreshState = computed(() => {
   return 'offline'
 })
 
-const boardStats = computed(() => {
-  const buckets = buildColumnBuckets(visibleConversations.value)
-  return boardMeta.value.map(item => ({
+const boardStats = computed<CockpitStat[]>(() => {
+  const buckets = buildColumnBuckets(visibleBoardItems.value)
+  const subagentTotal = visibleBoardItems.value.reduce((total, item) => total + item.subagentSummary.total, 0)
+  const streamingTotal = visibleBoardItems.value.reduce((total, item) => total + (item.conversation.status === 'streaming' ? 1 : 0) + item.subagentSummary.streaming, 0)
+  return [
+    ...boardMeta.value.map(item => ({
     ...item,
     count: buckets[item.key].length,
-  }))
+    })),
+    { key: 'subagents', label: tf('cockpit.board.subagents', 'Subagents'), hint: tf('cockpit.board.subagentsHint', 'Conversations with subagents'), color: '#f59e0b', count: subagentTotal },
+    { key: 'streaming', label: tf('cockpit.board.streaming', 'Streaming'), hint: tf('cockpit.board.streamingHint', 'Live streaming conversations'), color: '#ef4444', count: streamingTotal },
+  ]
 })
 
 const boardData = computed(() => {
-  const buckets = buildColumnBuckets(visibleConversations.value)
+  const buckets = buildColumnBuckets(visibleBoardItems.value)
   return boardMeta.value.map(item => ({
     ...item,
     items: buckets[item.key],
   }))
 })
 
-function buildColumnBuckets(items: ConversationInfo[]): Record<BoardColumnKey, ConversationInfo[]> {
-  const buckets: Record<BoardColumnKey, ConversationInfo[]> = {
-    streaming: [],
-    subagents: [],
-    active: [],
-    idle: [],
-  }
-
-  for (const item of items) {
-    buckets[getBoardColumnKey(item)].push(item)
-  }
-
-  return buckets
-}
-
-function getBoardColumnKey(conversation: ConversationInfo): BoardColumnKey {
-  if (conversation.hasSubagents) return 'subagents'
-  if (conversation.status === 'streaming') return 'streaming'
-  if (conversation.status === 'idle') return 'idle'
-  return 'active'
+function buildColumnBuckets(items: ConversationBoardItem[]): Record<BoardColumnKey, ConversationBoardItem[]> {
+  return items.reduce<Record<BoardColumnKey, ConversationBoardItem[]>>((buckets, item) => {
+    buckets[item.aggregateStatus].push(item)
+    return buckets
+  }, { working: [], idle: [] })
 }
 
 function getChannelsForKind(kind: string) {
@@ -409,7 +386,7 @@ onBeforeUnmount(() => {
       </Select>
 
       <span class="text-xs text-muted-foreground">
-        {{ t('cockpit.active', { count: String(visibleConversations.length) }) }}
+        {{ t('cockpit.active', { count: String(visibleBoardItems.length) }) }}
         <span v-if="overrideCount > 0" class="ml-2 text-amber-500">
           {{ t('cockpit.override', { count: String(overrideCount) }) }}
         </span>
@@ -428,11 +405,11 @@ onBeforeUnmount(() => {
     </div>
 
     <template v-else>
-      <div v-if="!visibleConversations.length" class="border border-border bg-card/60 px-6 py-8 text-center text-sm text-muted-foreground">
+      <div v-if="!visibleBoardItems.length" class="border border-border bg-card/60 px-6 py-8 text-center text-sm text-muted-foreground">
         {{ t('cockpit.noMatches') }}
       </div>
 
-      <div v-else class="grid gap-3 xl:grid-cols-4">
+      <div v-else class="grid gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,1fr)]">
         <section
           v-for="column in boardData"
           :key="column.key"
@@ -456,18 +433,20 @@ onBeforeUnmount(() => {
             </div>
 
             <div
-              v-for="conversation in column.items"
-              :key="conversation.id"
-              :ref="el => setConversationCardRef(conversation.id, el as Element | null)"
+              v-for="item in column.items"
+              :key="item.conversation.id"
+              :ref="el => setConversationCardRef(item.conversation.id, el as Element | null)"
             >
               <ConversationCard
-                :conversation="conversation"
-                :override="overrides[conversation.id]"
-                :available-channels="getChannelsForKind(conversation.kind)"
-                :expanded="expandedCards.has(conversation.id)"
+                :conversation="item.conversation"
+                :subagents="item.subagents"
+                :subagent-summary="item.subagentSummary"
+                :override="overrides[item.conversation.id]"
+                :available-channels="getChannelsForKind(item.conversation.kind)"
+                :expanded="expandedCards.has(item.conversation.id)"
                 :now-ms="nowMs"
-                :related-parent-title="getConversationTitle(conversation.parentConversationId)"
-                @toggle-expand="toggleExpand(conversation.id)"
+                :related-parent-title="getConversationTitle(item.conversation.parentConversationId)"
+                @toggle-expand="toggleExpand(item.conversation.id)"
                 @set-override="handleSetOverride"
                 @remove-override="handleRemoveOverride"
                 @feedback="handleFeedback"
