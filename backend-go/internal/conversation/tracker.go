@@ -381,8 +381,6 @@ func (ct *ConversationTracker) loadFromDisk() {
 			ChannelName:          item.ChannelName,
 			LastModel:            item.LastModel,
 			LastRequestID:        item.LastRequestID,
-			LatestFeedback:       item.LatestFeedback,
-			LatestFeedbackAt:     item.LatestFeedbackAt,
 			HasSubagents:         item.HasSubagents,
 			SubagentCount:        item.SubagentCount,
 			MainChannel:          item.MainChannel,

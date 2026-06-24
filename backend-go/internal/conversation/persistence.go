@@ -94,8 +94,6 @@ func savePersistedState(path string, conversations map[string]*Conversation) err
 			Models:               conv.Models,
 			LastModel:            conv.LastModel,
 			LastRequestID:        conv.LastRequestID,
-			LatestFeedback:       conv.LatestFeedback,
-			LatestFeedbackAt:     conv.LatestFeedbackAt,
 			HasSubagents:         conv.HasSubagents,
 			SubagentCount:        conv.SubagentCount,
 			MainChannel:          conv.MainChannel,
