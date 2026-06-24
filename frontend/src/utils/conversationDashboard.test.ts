@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { ConversationInfo } from '@/services/api'
-import { buildConversationColumnBuckets, getConversationBoardColumnKey } from './conversationDashboard'
+import { buildConversationBoardItems, buildConversationColumnBuckets, getConversationBoardColumnKey } from './conversationDashboard'
 
 function conversation(overrides: Partial<ConversationInfo>): ConversationInfo {
   return {
@@ -21,23 +21,34 @@ function conversation(overrides: Partial<ConversationInfo>): ConversationInfo {
 }
 
 describe('conversation dashboard columns', () => {
-  it('prioritizes subagent conversations over streaming status', () => {
+  it('marks a streaming conversation as working', () => {
     const item = conversation({ status: 'streaming', hasSubagents: true })
 
-    expect(getConversationBoardColumnKey(item)).toBe('subagents')
+    expect(getConversationBoardColumnKey(item)).toBe('working')
   })
 
-  it('buckets conversations into mutually exclusive columns', () => {
-    const buckets = buildConversationColumnBuckets([
-      conversation({ id: 'streaming', status: 'streaming' }),
-      conversation({ id: 'subagents', hasSubagents: true }),
-      conversation({ id: 'idle', status: 'idle' }),
-      conversation({ id: 'active', status: 'active' }),
+  it('groups child subagents under one root conversation', () => {
+    const items = buildConversationBoardItems([
+      conversation({ id: 'root', title: 'Root', status: 'idle', childConversationIds: ['sub-1', 'sub-2'] }),
+      conversation({ id: 'sub-1', title: 'Sub One', parentConversationId: 'root', status: 'streaming' }),
+      conversation({ id: 'sub-2', title: 'Sub Two', parentConversationId: 'root', status: 'active' }),
     ])
 
-    expect(buckets.streaming.map(c => c.id)).toEqual(['streaming'])
-    expect(buckets.subagents.map(c => c.id)).toEqual(['subagents'])
-    expect(buckets.idle.map(c => c.id)).toEqual(['idle'])
-    expect(buckets.active.map(c => c.id)).toEqual(['active'])
+    expect(items).toHaveLength(1)
+    expect(items[0].conversation.id).toBe('root')
+    expect(items[0].aggregateStatus).toBe('working')
+    expect(items[0].subagents.map(item => item.id)).toEqual(['sub-1', 'sub-2'])
+    expect(items[0].subagentSummary).toEqual({ total: 2, streaming: 1, active: 1, idle: 0 })
+  })
+
+  it('buckets root conversations into working and idle columns', () => {
+    const buckets = buildConversationColumnBuckets([
+      conversation({ id: 'streaming', status: 'streaming' }),
+      conversation({ id: 'subagents', hasSubagents: true, status: 'active' }),
+      conversation({ id: 'idle', status: 'idle' }),
+    ])
+
+    expect(buckets.working.map(item => item.conversation.id)).toEqual(['streaming', 'subagents'])
+    expect(buckets.idle.map(item => item.conversation.id)).toEqual(['idle'])
   })
 })
