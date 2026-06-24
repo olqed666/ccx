@@ -497,10 +497,11 @@ function shortId(value: string): string {
       <div v-if="showSubagentSection" class="subagent-routing mt-3 border-t border-dashed border-border pt-2" @click.stop>
         <div class="mb-1 flex items-center">
           <span class="text-xs text-muted-foreground">Subagent 渠道</span>
-          <span v-if="hasSubagentOverride" class="ml-2 text-xs text-amber-500">[已指定]</span>
+          <span v-if="hasSubagentOverride" class="ml-2 text-xs text-amber-500">[{{ t('cockpit.subagentOverride') }}]</span>
+          <span v-else class="ml-2 text-xs text-muted-foreground">[{{ t('cockpit.subagentFollowMain') }}]</span>
           <span class="flex-1" />
           <Button v-if="hasSubagentOverride" variant="ghost" size="sm" class="h-6 px-2 text-xs" @click.stop="handleClearSubagentOverride">
-            清除
+            {{ t('cockpit.subagentClearOverride') }}
           </Button>
         </div>
         <ConversationChannelSequence

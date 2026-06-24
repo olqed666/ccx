@@ -27,8 +27,6 @@ type persistedConversation struct {
 	Models               []string   `json:"models,omitempty"`
 	LastModel            string     `json:"lastModel,omitempty"`
 	LastRequestID        string     `json:"lastRequestId,omitempty"`
-	LatestFeedback       string     `json:"latestFeedback,omitempty"`
-	LatestFeedbackAt     *time.Time `json:"latestFeedbackAt,omitempty"`
 	HasSubagents         bool       `json:"hasSubagents,omitempty"`
 	SubagentCount        int        `json:"subagentCount,omitempty"`
 	MainChannel          int        `json:"mainChannel,omitempty"`
