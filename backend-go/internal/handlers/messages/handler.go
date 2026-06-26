@@ -662,6 +662,7 @@ func isInjectedContextTitleText(text string) bool {
 	injectedPrefixes := []string{
 		"# agents.md instructions",
 		"# claude.md instructions",
+		"# claude command:",
 		"# codebase and user instructions",
 		"<instructions>",
 	}

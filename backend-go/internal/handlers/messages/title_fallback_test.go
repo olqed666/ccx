@@ -44,6 +44,48 @@ func TestExtractLastUserMessageSkipsInjectedAgentsInstructions(t *testing.T) {
 	}
 }
 
+func TestExtractLastUserMessageSkipsClaudeCommandDocs(t *testing.T) {
+	messages := []types.ClaudeMessage{
+		{
+			Role: "user",
+			Content: []interface{}{
+				map[string]interface{}{
+					"type": "text",
+					"text": "<system-reminder>\ncontext\n</system-reminder>\n",
+				},
+				map[string]interface{}{
+					"type": "text",
+					"text": "提交",
+				},
+			},
+		},
+		{
+			Role: "user",
+			Content: []interface{}{
+				map[string]interface{}{
+					"type": "text",
+					"text": "# Claude Command: Commit (Git-only)\n\n## Usage\n\n/git-commit\n\n### Options\n\n- --no-verify",
+				},
+			},
+		},
+		{
+			Role: "user",
+			Content: []interface{}{
+				map[string]interface{}{
+					"type": "text",
+					"text": "继续",
+				},
+			},
+		},
+	}
+
+	got := extractLastUserMessage(messages)
+	want := "提交 / 继续"
+	if got != want {
+		t.Fatalf("extractLastUserMessage() = %q, want %q", got, want)
+	}
+}
+
 func TestExtractLastUserMessageIgnoresOnlyTaggedContent(t *testing.T) {
 	messages := []types.ClaudeMessage{{
 		Role:    "user",
