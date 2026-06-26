@@ -17,6 +17,7 @@
   "common.settings": "Settings",
   "common.save": "Save",
   "common.cancel": "Cancel",
+  "common.clearSearch": "Clear search",
   "common.retry": "Retry",
   "adminApi.error.serviceNotRunning": "Service is not running, so the request cannot be sent",
   "adminApi.error.networkUnavailable": "Service is not running or the network is unreachable. Check whether the backend has started.",

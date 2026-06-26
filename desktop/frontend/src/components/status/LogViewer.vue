@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onMounted } from 'vue'
-import { Terminal, Copy, Trash2, Search, ArrowDown } from 'lucide-vue-next'
+import { Terminal, Copy, Trash2, Search, ArrowDown, X } from 'lucide-vue-next'
 import { useStatus } from '@/composables/useStatus'
 import { useLanguage } from '@/composables/useLanguage'
 
@@ -136,8 +136,18 @@ const clearLocalLogs = () => {
             v-model="searchQuery"
             type="text"
             :placeholder="t('logs.searchPlaceholder')"
-            class="bg-background/80 border border-border rounded-md pl-7 pr-2.5 py-1 text-[11px] font-mono text-foreground w-36 focus:w-48 focus:border-primary/30 focus:outline-none transition-all duration-300"
+            class="bg-background/80 border border-border rounded-md pl-7 pr-7 py-1 text-[11px] font-mono text-foreground w-36 focus:w-48 focus:border-primary/30 focus:outline-none transition-all duration-300"
           />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="absolute right-1.5 inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            :aria-label="t('common.clearSearch')"
+            :title="t('common.clearSearch')"
+            @click="searchQuery = ''"
+          >
+            <X class="h-3 w-3" />
+          </button>
         </div>
 
         <!-- 自动滚动开关 -->

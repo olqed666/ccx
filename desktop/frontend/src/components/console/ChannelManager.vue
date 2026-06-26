@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Alert } from '@/components/ui/alert'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Plus, Search, Layers, Archive, Loader2, ShieldCheck, ShieldOff, Zap, ChevronDown, BarChart3 } from 'lucide-vue-next'
+import { Plus, Search, Layers, Archive, Loader2, ShieldCheck, ShieldOff, Zap, ChevronDown, BarChart3, X } from 'lucide-vue-next'
 import { useConsoleChannels } from '@/composables/useConsoleChannels'
 import { useAdminApi } from '@/composables/useAdminApi'
 import { useDesktopActivity } from '@/composables/useDesktopActivity'
@@ -587,8 +587,18 @@ onBeforeUnmount(() => {
           <Input
             v-model="searchQuery"
             :placeholder="t('orchestration.searchPlaceholder')"
-            class="pl-9"
+            class="pl-9 pr-8"
           />
+          <button
+            v-if="searchQuery"
+            type="button"
+            class="absolute right-2 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            :aria-label="t('common.clearSearch')"
+            :title="t('common.clearSearch')"
+            @click="searchQuery = ''"
+          >
+            <X class="h-3.5 w-3.5" />
+          </button>
         </div>
         <!-- 批量测速按钮：桌面端暂不展示，放不下 -->
         <Button size="sm" @click="handleAdd">

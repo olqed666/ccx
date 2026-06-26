@@ -4,7 +4,7 @@ import { Alert } from '@/components/ui/alert'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { MessageSquare, Search } from 'lucide-vue-next'
+import { MessageSquare, Search, X } from 'lucide-vue-next'
 import { useAdminApi } from '@/composables/useAdminApi'
 import { useConversations } from '@/composables/useConversations'
 import { useDesktopActivity } from '@/composables/useDesktopActivity'
@@ -358,17 +358,27 @@ onBeforeUnmount(() => {
 
       <div class="min-w-4 flex-1" />
 
-      <div class="relative w-full min-w-[180px] sm:w-72 lg:w-80">
+      <div class="relative w-full min-w-[160px] sm:w-60 lg:w-64">
         <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
           v-model="searchQuery"
           :placeholder="t('cockpit.searchPlaceholder')"
-          class="h-9 pl-9"
+          class="h-9 pl-9 pr-8"
         />
+        <button
+          v-if="searchQuery"
+          type="button"
+          class="absolute right-2 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          :aria-label="t('common.clearSearch')"
+          :title="t('common.clearSearch')"
+          @click="searchQuery = ''"
+        >
+          <X class="h-3.5 w-3.5" />
+        </button>
       </div>
 
       <Select v-model="overrideDuration">
-        <SelectTrigger class="h-9 w-[180px] shrink-0">
+        <SelectTrigger class="h-9 w-[160px] shrink-0">
           <SelectValue :placeholder="t('cockpit.overrideDuration')" />
         </SelectTrigger>
         <SelectContent>
