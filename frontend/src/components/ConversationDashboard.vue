@@ -4,7 +4,7 @@
       <div class="cockpit-controls">
         <div class="cockpit-filter-controls">
           <v-select
-            v-if="xs"
+            v-if="isCompactFilter"
             v-model="kindFilter"
             :items="kindFilterOptions"
             density="compact"
@@ -120,7 +120,7 @@ import { buildConversationBoardItems, filterConversationBoardItems, type BoardCo
 import ConversationCard from './ConversationCard.vue'
 
 const { t } = useI18n()
-const { xs } = useDisplay()
+const { width } = useDisplay()
 const emit = defineEmits<{
   success: [message: string]
   error: [message: string]
@@ -139,6 +139,8 @@ const nowMs = ref(Date.now())
 const expandedCards = ref(new Set<string>())
 const pinnedConversationOrder = ref<string[]>([])
 const cardElements = new Map<string, HTMLElement>()
+
+const isCompactFilter = computed(() => width.value < 400)
 
 const boardColumnMeta = computed<Array<{ key: BoardColumnKey; label: string; color: string }>>(() => [
   { key: 'working', label: t('cockpit.column.working'), color: '#6366f1' },
@@ -571,29 +573,83 @@ fetchAllChannels()
   box-shadow: 0 0 0 2px rgb(var(--v-theme-primary) / 24%);
 }
 
-@media (min-width: 900px) and (max-width: 1280px) {
-  .cockpit-board {
-    grid-template-columns: repeat(2, minmax(260px, 1fr));
-  }
-}
-
-@media (max-width: 899px) {
+@media (max-width: 959px) {
   .cockpit-board {
     grid-template-columns: 1fr;
   }
+
+  .cockpit-controls,
+  .cockpit-tool-controls {
+    gap: 8px;
+  }
+
+  .cockpit-tool-controls {
+    flex: 1 1 320px;
+  }
+
+  .conversation-search-field {
+    max-width: 260px;
+    min-width: 150px;
+    flex-basis: 190px;
+  }
+
+  .override-duration-select {
+    max-width: 164px;
+  }
+
+  .filter-chip {
+    padding-inline: 8px !important;
+  }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 600px) {
+  .cockpit-toolbar {
+    gap: 8px;
+  }
+
+  .cockpit-controls,
+  .cockpit-tool-controls {
+    gap: 6px;
+  }
+
+  .filter-chip {
+    padding-inline: 7px !important;
+  }
+}
+
+@media (max-width: 400px) {
   .cockpit-tool-controls {
     margin-left: 0;
     width: 100%;
     flex-basis: 100%;
+    flex-wrap: nowrap;
+  }
+
+  .kind-filter-select {
+    max-width: 170px;
+    width: 170px;
+    flex-basis: 170px;
+  }
+
+  .conversation-search-field {
+    min-width: 0;
+    max-width: none;
+    flex: 1 1 0;
+  }
+
+  .override-duration-select {
+    max-width: 154px;
+    flex: 0 0 154px;
+  }
+}
+
+@media (max-width: 340px) {
+  .cockpit-tool-controls {
     flex-wrap: wrap;
   }
 
   .conversation-search-field,
-  .override-duration-select,
-  .kind-filter-select {
+  .override-duration-select {
     max-width: none;
     width: 100%;
     flex-basis: 100%;
