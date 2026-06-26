@@ -141,6 +141,83 @@ func runCompatDiagnose(channel *config.UpstreamConfig, channelKind, apiKey, base
 	return CompatDiagnoseResult{Recommendations: recs, URLRecommendations: urlRec, Evidence: evid}
 }
 
+var strictClaudeThinkingKeywords = []string{
+	"deepseek", "glm", "zhipu", "bigmodel",
+	"volc", "volces", "ark.cn-beijing",
+	"compshare", "modelscope", "dashscope", "aliyun", "aliyuncs",
+	"opencode",
+}
+
+var domesticClaudeProviderKeywords = []string{
+	"deepseek", "mimo", "xiaomimimo",
+	"compshare",
+	"kimi", "moonshot",
+	"glm", "zhipu", "bigmodel",
+	"minimax",
+	"dashscope", "aliyun", "aliyuncs",
+	"modelscope",
+	"volc", "volces", "ark.cn-beijing",
+	"qianfan", "baidu", "baidubce",
+	"xfyun", "xf-yun", "iflytek",
+	"tencent", "lkeap", "hunyuan",
+	"opencode",
+}
+
+var compatDiagnoseAggregateProviderKeywords = []string{
+	"anthropic.com",
+	"openrouter",
+	"runapi",
+	"unity2",
+	"originrouter",
+}
+
+func shouldPassbackThinkingBlocksByDefault(channel *config.UpstreamConfig, baseURL string) bool {
+	return channelMatchesCompatKeywords(channel, baseURL, strictClaudeThinkingKeywords)
+}
+
+func shouldNormalizeSystemRoleToTopLevelByDefault(channel *config.UpstreamConfig, baseURL string) bool {
+	return channelMatchesCompatKeywords(channel, baseURL, domesticClaudeProviderKeywords)
+}
+
+func channelMatchesCompatKeywords(channel *config.UpstreamConfig, baseURL string, keywords []string) bool {
+	signal := buildCompatDiagnoseChannelSignal(channel, baseURL)
+	if containsAnyCompatKeyword(signal, compatDiagnoseAggregateProviderKeywords) {
+		return false
+	}
+	return containsAnyCompatKeyword(signal, keywords)
+}
+
+func buildCompatDiagnoseChannelSignal(channel *config.UpstreamConfig, baseURL string) string {
+	parts := []string{
+		baseURL,
+		channel.BaseURL,
+		channel.Name,
+		channel.Description,
+		channel.Website,
+		channel.ServiceType,
+		channel.RoutePrefix,
+	}
+	for key, value := range channel.ModelMapping {
+		parts = append(parts, key, value)
+	}
+	for key, value := range channel.ReasoningMapping {
+		parts = append(parts, key, value)
+	}
+	for key, value := range channel.CustomHeaders {
+		parts = append(parts, key, value)
+	}
+	return strings.ToLower(strings.Join(parts, " "))
+}
+
+func containsAnyCompatKeyword(signal string, keywords []string) bool {
+	for _, keyword := range keywords {
+		if strings.Contains(signal, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
 // diagnoseBaseURLHash 检测 BaseURL 末尾 # 是否导致版本前缀拼接错误。
 // # 是 CCX 的高级语义：显式禁止自动追加 /v1、/v1beta 等。
 // 当前 URL 探测失败而反向 # 形态探测成功时，才给出覆盖建议。
@@ -209,6 +286,8 @@ func probeBaseURLCandidate(channel *config.UpstreamConfig, channelKind, apiKey, 
 // 检测：passbackReasoningContent、passbackThinkingBlocks、stripEmptyTextBlocks、normalizeSystemRoleToTopLevel
 func diagnoseClaudeChannel(channel *config.UpstreamConfig, apiKey, baseURL string, recs map[string]bool, evid map[string]string) {
 	probeModel := capabilityProbeModelClaudeFable5
+	shouldPassbackThinkingBlocks := shouldPassbackThinkingBlocksByDefault(channel, baseURL)
+	shouldNormalizeSystemRole := shouldNormalizeSystemRoleToTopLevelByDefault(channel, baseURL)
 
 	// 探测 1：带 thinking 的流式请求
 	ctx1, cancel1 := context.WithTimeout(context.Background(), 20*time.Second)
@@ -227,8 +306,10 @@ func diagnoseClaudeChannel(channel *config.UpstreamConfig, apiKey, baseURL strin
 			if hasThinking {
 				recs["passbackReasoningContent"] = true
 				evid["passbackReasoningContent"] = "upstream returned thinking block in stream"
-				recs["passbackThinkingBlocks"] = false
-				evid["passbackThinkingBlocks"] = "use passbackReasoningContent instead for this provider"
+				if shouldPassbackThinkingBlocks {
+					recs["passbackThinkingBlocks"] = true
+					evid["passbackThinkingBlocks"] = "domestic/strict Claude-compatible upstream should receive prior thinking as content thinking blocks"
+				}
 			} else {
 				recs["passbackReasoningContent"] = false
 				evid["passbackReasoningContent"] = "no thinking block detected"
@@ -254,6 +335,9 @@ func diagnoseClaudeChannel(channel *config.UpstreamConfig, apiKey, baseURL strin
 		if status2 == 400 || status2 == 422 {
 			recs["normalizeSystemRoleToTopLevel"] = true
 			evid["normalizeSystemRoleToTopLevel"] = fmt.Sprintf("upstream rejected system role in messages array (HTTP %d)", status2)
+		} else if shouldNormalizeSystemRole {
+			recs["normalizeSystemRoleToTopLevel"] = true
+			evid["normalizeSystemRoleToTopLevel"] = "domestic Claude-compatible upstreams default to top-level system normalization"
 		} else {
 			recs["normalizeSystemRoleToTopLevel"] = false
 			evid["normalizeSystemRoleToTopLevel"] = "upstream accepted system role in messages array"
