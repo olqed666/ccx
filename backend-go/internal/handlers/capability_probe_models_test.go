@@ -28,6 +28,27 @@ func TestGetCapabilityProbeModels_ContainsCodexAutoReview(t *testing.T) {
 	}
 }
 
+func TestGetCapabilityProbeModels_ContainsGPT56Models(t *testing.T) {
+	for _, protocol := range []string{"chat", "responses"} {
+		models, err := getCapabilityProbeModels(protocol)
+		if err != nil {
+			t.Fatalf("protocol=%s unexpected error: %v", protocol, err)
+		}
+		for _, want := range []string{"gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"} {
+			found := false
+			for _, model := range models {
+				if model == want {
+					found = true
+					break
+				}
+			}
+			if !found {
+				t.Fatalf("protocol=%s probe models should contain %s, got %v", protocol, want, models)
+			}
+		}
+	}
+}
+
 func TestGetCapabilityProbeModels_CodexAutoReviewRedirect(t *testing.T) {
 	channel := &config.UpstreamConfig{
 		ServiceType: "openai",
