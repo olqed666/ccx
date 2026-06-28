@@ -654,6 +654,101 @@ func TestResponsesProvider_BuildProviderRequestBody_PassbackReasoningContentForC
 	}
 }
 
+func TestResponsesProvider_BuildProviderRequestBody_PassbackReasoningContentStripsThinkingBlocksForClaudeUpstream(t *testing.T) {
+	provider := &ResponsesProvider{}
+	upstream := &config.UpstreamConfig{
+		ServiceType:              "claude",
+		PassbackReasoningContent: true,
+		PassbackThinkingBlocks:   false,
+	}
+
+	body := []byte(`{
+		"model":"gpt-5",
+		"input":[
+			{"type":"message","role":"user","content":[{"type":"input_text","text":"hello"}]},
+			{"type":"reasoning","summary":[{"type":"summary_text","text":"real reasoning"}]},
+			{"type":"message","role":"assistant","content":[{"type":"output_text","text":"gpt answer"}]}
+		]
+	}`)
+
+	reqBody, _, err := provider.buildProviderRequestBody(nil, "/v1/responses", body, upstream)
+	if err != nil {
+		t.Fatalf("buildProviderRequestBody() err = %v", err)
+	}
+
+	reqMap, ok := reqBody.(map[string]interface{})
+	if !ok {
+		t.Fatalf("provider request type = %T, want map[string]interface{}", reqBody)
+	}
+
+	messages, ok := reqMap["messages"].([]interface{})
+	if !ok || len(messages) != 2 {
+		t.Fatalf("reqMap[messages] = %#v, want 2 messages", reqMap["messages"])
+	}
+	assistant, ok := messages[1].(map[string]interface{})
+	if !ok {
+		t.Fatalf("assistant message type = %T, want map[string]interface{}", messages[1])
+	}
+	if got := assistant["reasoning_content"]; got != "real reasoning" {
+		t.Fatalf("assistant.reasoning_content = %v, want real reasoning; assistant=%#v", got, assistant)
+	}
+	content, ok := assistant["content"].([]interface{})
+	if !ok || len(content) == 0 {
+		t.Fatalf("assistant.content = %#v, want non-empty array", assistant["content"])
+	}
+	for _, block := range content {
+		blockMap, _ := block.(map[string]interface{})
+		if blockMap["type"] == "thinking" {
+			t.Fatalf("thinking block should be stripped when passbackThinkingBlocks=false: %#v", assistant)
+		}
+	}
+}
+
+func TestResponsesProvider_BuildProviderRequestBody_StripsThinkingBlocksUnlessPassbackEnabled(t *testing.T) {
+	provider := &ResponsesProvider{}
+	upstream := &config.UpstreamConfig{
+		ServiceType: "claude",
+	}
+
+	body := []byte(`{
+		"model":"gpt-5",
+		"input":[
+			{"type":"message","role":"user","content":[{"type":"input_text","text":"hello"}]},
+			{"type":"reasoning","summary":[{"type":"summary_text","text":"real reasoning"}]},
+			{"type":"message","role":"assistant","content":[{"type":"output_text","text":"gpt answer"}]}
+		]
+	}`)
+
+	reqBody, _, err := provider.buildProviderRequestBody(nil, "/v1/responses", body, upstream)
+	if err != nil {
+		t.Fatalf("buildProviderRequestBody() err = %v", err)
+	}
+
+	reqMap, ok := reqBody.(map[string]interface{})
+	if !ok {
+		t.Fatalf("provider request type = %T, want map[string]interface{}", reqBody)
+	}
+	messages, ok := reqMap["messages"].([]interface{})
+	if !ok || len(messages) != 2 {
+		t.Fatalf("reqMap[messages] = %#v, want 2 messages", reqMap["messages"])
+	}
+	assistant, ok := messages[1].(map[string]interface{})
+	if !ok {
+		t.Fatalf("assistant message type = %T, want map[string]interface{}", messages[1])
+	}
+	content, ok := assistant["content"].([]interface{})
+	if !ok || len(content) != 1 {
+		t.Fatalf("assistant.content = %#v, want one text block", assistant["content"])
+	}
+	block, ok := content[0].(map[string]interface{})
+	if !ok || block["type"] != "text" {
+		t.Fatalf("assistant.content[0] = %#v, want text block", content[0])
+	}
+	if _, exists := assistant["reasoning_content"]; exists {
+		t.Fatalf("assistant.reasoning_content should not be added without passbackReasoningContent: %#v", assistant)
+	}
+}
+
 func TestResponsesProvider_BuildProviderRequestBody_PassbackThinkingBlocksForClaudeUpstream(t *testing.T) {
 	provider := &ResponsesProvider{}
 	upstream := &config.UpstreamConfig{

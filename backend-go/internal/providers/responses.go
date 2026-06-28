@@ -278,6 +278,18 @@ func (p *ResponsesProvider) buildProviderRequestBody(c *gin.Context, requestPath
 					}
 				}
 			}
+			if upstream.StripEmptyTextBlocks {
+				if normalized := stripEmptyTextBlocksFromRequestMap(reqMap); normalized != nil {
+					reqMap = normalized
+					convertedReq = reqMap
+				}
+			}
+			if !upstream.PassbackThinkingBlocks {
+				if normalized := stripThinkingBlocksFromRequestMap(reqMap); normalized != nil {
+					reqMap = normalized
+					convertedReq = reqMap
+				}
+			}
 			if upstream.PassbackThinkingBlocks {
 				if marshaledReq, err := utils.MarshalJSONNoEscape(reqMap); err == nil {
 					var normalized map[string]interface{}

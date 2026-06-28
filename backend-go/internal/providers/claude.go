@@ -496,6 +496,27 @@ func stripThinkingBlocksFromBody(bodyBytes []byte) []byte {
 	return newBytes
 }
 
+func transformRequestMap(reqMap map[string]interface{}, transform func([]byte) []byte) map[string]interface{} {
+	marshaledReq, err := utils.MarshalJSONNoEscape(reqMap)
+	if err != nil {
+		return nil
+	}
+	normalizedBytes := transform(marshaledReq)
+	var normalized map[string]interface{}
+	if json.Unmarshal(normalizedBytes, &normalized) != nil {
+		return nil
+	}
+	return normalized
+}
+
+func stripThinkingBlocksFromRequestMap(reqMap map[string]interface{}) map[string]interface{} {
+	return transformRequestMap(reqMap, stripThinkingBlocksFromBody)
+}
+
+func stripEmptyTextBlocksFromRequestMap(reqMap map[string]interface{}) map[string]interface{} {
+	return transformRequestMap(reqMap, stripEmptyTextBlocksFromBody)
+}
+
 func extractClaudeSystemText(content interface{}) string {
 	switch v := content.(type) {
 	case string:
