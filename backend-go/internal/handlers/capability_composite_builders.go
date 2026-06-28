@@ -48,7 +48,7 @@ func providerServiceTypeForProtocol(protocol CapabilityBaseProtocol) string {
 }
 
 // buildMessagesProbeBody 构造 messages 协议最小探测请求体。
-func buildMessagesProbeBody(probeModel string) []byte {
+func buildMessagesProbeBody(probeModel string, global map[string]config.UpstreamModelCapability, channel ...*config.UpstreamConfig) []byte {
 	body := map[string]interface{}{
 		"model": probeModel,
 		"system": []map[string]interface{}{
@@ -63,6 +63,10 @@ func buildMessagesProbeBody(probeModel string) []byte {
 		"thinking": map[string]interface{}{
 			"type": "disabled",
 		},
+	}
+
+	if effort := capabilityProbeRequiredThinkingEffort(probeModel, firstCapabilityProbeChannel(channel), global); effort != "" {
+		body["thinking"] = map[string]interface{}{"type": "enabled", "effort": effort}
 	}
 
 	if probeModel == capabilityProbeModelClaudeOpus48 || probeModel == capabilityProbeModelClaudeFable5 {
@@ -87,7 +91,7 @@ func buildMessagesProbeBody(probeModel string) []byte {
 }
 
 // buildChatProbeBody 构造 chat 协议最小探测请求体。
-func buildChatProbeBody(probeModel string) []byte {
+func buildChatProbeBody(probeModel string, global map[string]config.UpstreamModelCapability, channel ...*config.UpstreamConfig) []byte {
 	body, _ := json.Marshal(map[string]interface{}{
 		"model": probeModel,
 		"messages": []map[string]string{
@@ -96,13 +100,13 @@ func buildChatProbeBody(probeModel string) []byte {
 		},
 		"max_tokens":       100,
 		"stream":           true,
-		"reasoning_effort": "low",
+		"reasoning_effort": capabilityProbeReasoningEffort(probeModel, firstCapabilityProbeChannel(channel), global),
 	})
 	return body
 }
 
 // buildResponsesProbeBody 构造 responses 协议最小探测请求体。
-func buildResponsesProbeBody(probeModel string) []byte {
+func buildResponsesProbeBody(probeModel string, global map[string]config.UpstreamModelCapability, channel ...*config.UpstreamConfig) []byte {
 	body, _ := json.Marshal(map[string]interface{}{
 		"model": probeModel,
 		"input": []map[string]interface{}{
@@ -115,12 +119,15 @@ func buildResponsesProbeBody(probeModel string) []byte {
 		},
 		"max_output_tokens": 100,
 		"stream":            true,
+		"reasoning": map[string]interface{}{
+			"effort": capabilityProbeReasoningEffort(probeModel, firstCapabilityProbeChannel(channel), global),
+		},
 	})
 	return body
 }
 
 // buildGeminiProbeBody 构造 gemini 协议最小探测请求体。
-func buildGeminiProbeBody(probeModel string) []byte {
+func buildGeminiProbeBody(probeModel string, global map[string]config.UpstreamModelCapability, channel ...*config.UpstreamConfig) []byte {
 	body, _ := json.Marshal(map[string]interface{}{
 		"contents": []map[string]interface{}{
 			{
@@ -132,9 +139,19 @@ func buildGeminiProbeBody(probeModel string) []byte {
 		},
 		"generationConfig": map[string]interface{}{
 			"maxOutputTokens": 100,
+			"thinkingConfig": map[string]interface{}{
+				"thinkingLevel": capabilityProbeReasoningEffort(probeModel, firstCapabilityProbeChannel(channel), global),
+			},
 		},
 	})
 	return body
+}
+
+func firstCapabilityProbeChannel(channels []*config.UpstreamConfig) *config.UpstreamConfig {
+	if len(channels) == 0 {
+		return nil
+	}
+	return channels[0]
 }
 
 // buildCompositeRequestViaProvider 复用现有 provider 转换链路，将 fromProtocol 入口请求体

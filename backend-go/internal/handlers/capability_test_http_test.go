@@ -967,6 +967,27 @@ func TestBuildTestRequestWithModel_ChatReasoningEffortUsesProviderCompatibleValu
 	}
 }
 
+func TestBuildTestRequestWithModel_KimiK27CodeChatUsesRequiredReasoningEffort(t *testing.T) {
+	channel := &config.UpstreamConfig{
+		BaseURL: "https://example.com",
+		APIKeys: []string{"test-key"},
+	}
+
+	req, err := buildTestRequestWithModel("chat", channel, "kimi-k2.7-code")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer req.Body.Close()
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		t.Fatalf("decode request body failed: %v", err)
+	}
+	if body["reasoning_effort"] != "high" {
+		t.Fatalf("reasoning_effort=%v, want high", body["reasoning_effort"])
+	}
+}
+
 func TestBuildTestRequestWithModel_NoAPIKey(t *testing.T) {
 	channel := &config.UpstreamConfig{
 		BaseURL: "https://example.com",
@@ -1035,6 +1056,133 @@ func TestBuildTestRequestWithModel_ClaudeOpus48KeepsSystemMessageByDefault(t *te
 	}
 	if middle["role"] != "system" {
 		t.Fatalf("middle role=%v, want system", middle["role"])
+	}
+}
+
+func TestBuildTestRequestWithModel_KimiK27CodeEnablesRequiredThinking(t *testing.T) {
+	channel := &config.UpstreamConfig{
+		BaseURL: "https://example.com",
+		APIKeys: []string{"test-key"},
+	}
+
+	req, err := buildTestRequestWithModel("messages", channel, "kimi-k2.7-code")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer req.Body.Close()
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		t.Fatalf("decode request body failed: %v", err)
+	}
+	thinking, ok := body["thinking"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("thinking=%T, want map[string]interface{}", body["thinking"])
+	}
+	if thinking["type"] != "enabled" {
+		t.Fatalf("thinking.type=%v, want enabled", thinking["type"])
+	}
+	if thinking["effort"] != "high" {
+		t.Fatalf("thinking.effort=%v, want high", thinking["effort"])
+	}
+}
+
+func TestBuildTestRequestWithModel_GlobalThinkingCapabilityEnablesThinking(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.json")
+	cfg := config.Config{
+		UpstreamModelCapabilities: map[string]config.UpstreamModelCapability{
+			"custom-thinking-model": {
+				ThinkingMode:     "thinking",
+				ReasoningEfforts: []string{"high"},
+			},
+		},
+	}
+	configBytes, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if err := os.WriteFile(configPath, configBytes, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	cfgManager, err := config.NewConfigManager(configPath, "")
+	if err != nil {
+		t.Fatalf("NewConfigManager() error = %v", err)
+	}
+	channel := &config.UpstreamConfig{
+		BaseURL: "https://example.com",
+		APIKeys: []string{"test-key"},
+	}
+
+	req, err := buildTestRequestWithModel("messages", channel, "custom-thinking-model", cfgManager)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer req.Body.Close()
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		t.Fatalf("decode request body failed: %v", err)
+	}
+	thinking, ok := body["thinking"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("thinking=%T, want map[string]interface{}", body["thinking"])
+	}
+	if thinking["type"] != "enabled" {
+		t.Fatalf("thinking.type=%v, want enabled", thinking["type"])
+	}
+	if thinking["effort"] != "high" {
+		t.Fatalf("thinking.effort=%v, want high", thinking["effort"])
+	}
+}
+
+func TestBuildTestRequestWithModel_CompositeUsesGlobalThinkingCapability(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "config.json")
+	cfg := config.Config{
+		UpstreamModelCapabilities: map[string]config.UpstreamModelCapability{
+			"custom-thinking-model": {
+				ThinkingMode:     "thinking",
+				ReasoningEfforts: []string{"high"},
+			},
+		},
+	}
+	configBytes, err := json.Marshal(cfg)
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if err := os.WriteFile(configPath, configBytes, 0o644); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+	cfgManager, err := config.NewConfigManager(configPath, "")
+	if err != nil {
+		t.Fatalf("NewConfigManager() error = %v", err)
+	}
+	channel := &config.UpstreamConfig{
+		BaseURL:     "https://example.com",
+		APIKeys:     []string{"test-key"},
+		ServiceType: "claude",
+	}
+
+	req, err := buildTestRequestWithModel("messages->messages", channel, "custom-thinking-model", cfgManager)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer req.Body.Close()
+
+	var body map[string]interface{}
+	if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+		t.Fatalf("decode request body failed: %v", err)
+	}
+	thinking, ok := body["thinking"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("thinking=%T, want map[string]interface{}", body["thinking"])
+	}
+	if thinking["type"] != "enabled" {
+		t.Fatalf("thinking.type=%v, want enabled", thinking["type"])
+	}
+	if thinking["effort"] != "high" {
+		t.Fatalf("thinking.effort=%v, want high", thinking["effort"])
 	}
 }
 

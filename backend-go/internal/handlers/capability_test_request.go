@@ -186,7 +186,9 @@ func capabilityTestBaseURL(channel *config.UpstreamConfig) string {
 	return urls[0]
 }
 
-func buildTestRequestWithModel(protocol string, channel *config.UpstreamConfig, model string) (*http.Request, error) {
+func buildTestRequestWithModel(protocol string, channel *config.UpstreamConfig, model string, cfgManagers ...*config.ConfigManager) (*http.Request, error) {
+	cfgManager := firstCapabilityProbeConfigManager(cfgManagers)
+	globalCapabilities := capabilityProbeGlobalCapabilities(cfgManager)
 	baseURL := capabilityTestBaseURL(channel)
 	if baseURL == "" {
 		return nil, fmt.Errorf("no base URL configured")
@@ -202,71 +204,85 @@ func buildTestRequestWithModel(protocol string, channel *config.UpstreamConfig, 
 	}
 
 	var (
-		requestURL string
-		body       []byte
-		err        error
-		isGemini   bool
+		requestURL     string
+		body           []byte
+		err            error
+		isGemini       bool
+		headerProtocol = protocol
 	)
 
-	switch protocol {
-	case "messages":
-		requestURL = buildCapabilityTestURL(baseURL, "/v1", "/messages")
-		body = buildMessagesProbeBody(model)
-		if channel.NormalizeSystemRoleToTopLevel {
-			body = providers.NormalizeSystemRoleToTopLevel(body)
+	if from, to, ok := parseCompositeProtocol(protocol); ok {
+		builder, exists := getCompositePathBuilder(from, to)
+		if !exists {
+			return nil, unsupportedCompositePathErr(from, to)
 		}
+		requestURL, body, headerProtocol, err = builder(channel, apiKey, model, globalCapabilities)
+		if err != nil {
+			return nil, fmt.Errorf("build composite request failed: %w", err)
+		}
+		isGemini = headerProtocol == "gemini"
+	} else {
+		switch protocol {
+		case "messages":
+			requestURL = buildCapabilityTestURL(baseURL, "/v1", "/messages")
+			body = buildMessagesProbeBody(model, globalCapabilities, channel)
+			body = applyRequiredThinkingToCapabilityProbeBody(body, model, channel, globalCapabilities)
+			if channel.NormalizeSystemRoleToTopLevel {
+				body = providers.NormalizeSystemRoleToTopLevel(body)
+			}
 
-	case "chat":
-		requestURL = buildCapabilityTestURL(baseURL, "/v1", "/chat/completions")
-		body, err = json.Marshal(map[string]interface{}{
-			"model": model,
-			"messages": []map[string]string{
-				{"role": "system", "content": "You are a helpful assistant."},
-				{"role": "user", "content": "What are you best at: code generation, creative writing, or math problem solving?"},
-			},
-			"max_tokens":       100,
-			"stream":           true,
-			"reasoning_effort": "low",
-		})
-
-		// PLACEHOLDER_REQUEST_BUILD_2
-
-	case "gemini":
-		requestURL = buildCapabilityTestURL(baseURL, "/v1beta", "/models/"+model+":streamGenerateContent?alt=sse")
-		body, err = json.Marshal(map[string]interface{}{
-			"contents": []map[string]interface{}{
-				{
-					"role":  "user",
-					"parts": []map[string]string{{"text": "What are you best at: code generation, creative writing, or math problem solving?"}},
+		case "chat":
+			requestURL = buildCapabilityTestURL(baseURL, "/v1", "/chat/completions")
+			body, err = json.Marshal(map[string]interface{}{
+				"model": model,
+				"messages": []map[string]string{
+					{"role": "system", "content": "You are a helpful assistant."},
+					{"role": "user", "content": "What are you best at: code generation, creative writing, or math problem solving?"},
 				},
-			},
-			"systemInstruction": map[string]interface{}{
-				"parts": []map[string]string{{"text": "You are Gemini CLI, an interactive CLI agent specializing in software engineering tasks."}},
-			},
-			"generationConfig": map[string]interface{}{
-				"maxOutputTokens": 100,
-				"thinkingConfig": map[string]interface{}{
-					"thinkingLevel": "low",
+				"max_tokens":       100,
+				"stream":           true,
+				"reasoning_effort": capabilityProbeReasoningEffort(model, channel, globalCapabilities),
+			})
+
+			// PLACEHOLDER_REQUEST_BUILD_2
+
+		case "gemini":
+			requestURL = buildCapabilityTestURL(baseURL, "/v1beta", "/models/"+model+":streamGenerateContent?alt=sse")
+			body, err = json.Marshal(map[string]interface{}{
+				"contents": []map[string]interface{}{
+					{
+						"role":  "user",
+						"parts": []map[string]string{{"text": "What are you best at: code generation, creative writing, or math problem solving?"}},
+					},
 				},
-			},
-		})
-		isGemini = true
+				"systemInstruction": map[string]interface{}{
+					"parts": []map[string]string{{"text": "You are Gemini CLI, an interactive CLI agent specializing in software engineering tasks."}},
+				},
+				"generationConfig": map[string]interface{}{
+					"maxOutputTokens": 100,
+					"thinkingConfig": map[string]interface{}{
+						"thinkingLevel": capabilityProbeReasoningEffort(model, channel, globalCapabilities),
+					},
+				},
+			})
+			isGemini = true
 
-	case "responses":
-		requestURL = buildCapabilityTestURL(baseURL, "/v1", "/responses")
-		body, err = json.Marshal(map[string]interface{}{
-			"model":             model,
-			"input":             "What are you best at: code generation, creative writing, or math problem solving?",
-			"instructions":      "You are Codex, a coding agent based on GPT-5.",
-			"max_output_tokens": 100,
-			"stream":            true,
-			"reasoning": map[string]interface{}{
-				"effort": "low",
-			},
-		})
+		case "responses":
+			requestURL = buildCapabilityTestURL(baseURL, "/v1", "/responses")
+			body, err = json.Marshal(map[string]interface{}{
+				"model":             model,
+				"input":             "What are you best at: code generation, creative writing, or math problem solving?",
+				"instructions":      "You are Codex, a coding agent based on GPT-5.",
+				"max_output_tokens": 100,
+				"stream":            true,
+				"reasoning": map[string]interface{}{
+					"effort": capabilityProbeReasoningEffort(model, channel, globalCapabilities),
+				},
+			})
 
-	default:
-		return nil, fmt.Errorf("unsupported protocol: %s", protocol)
+		default:
+			return nil, fmt.Errorf("unsupported protocol: %s", protocol)
+		}
 	}
 
 	if err != nil {
@@ -284,13 +300,13 @@ func buildTestRequestWithModel(protocol string, channel *config.UpstreamConfig, 
 		utils.SetGeminiAuthenticationHeader(req.Header, apiKey)
 	} else {
 		utils.SetAuthenticationHeaderWithOverride(req.Header, apiKey, channel.AuthHeader)
-		if protocol == "messages" {
+		if headerProtocol == "messages" {
 			req.Header.Set("anthropic-version", "2023-06-01")
 			req.Header.Set("anthropic-beta", "claude-code-20250219,adaptive-thinking-2026-01-28,prompt-caching-scope-2026-01-05,effort-2025-11-24")
 			req.Header.Set("User-Agent", "claude-cli/2.1.71 (external, cli)")
 			req.Header.Set("X-App", "cli")
 		}
-		if protocol == "responses" {
+		if headerProtocol == "responses" {
 			req.Header.Set("Originator", "codex_cli_rs")
 			req.Header.Set("User-Agent", "codex_cli_rs/0.111.0 (Mac OS 26.3.0; arm64) iTerm.app/3.6.6")
 		}
@@ -303,6 +319,61 @@ func buildTestRequestWithModel(protocol string, channel *config.UpstreamConfig, 
 	}
 
 	return req, nil
+}
+
+func firstCapabilityProbeConfigManager(cfgManagers []*config.ConfigManager) *config.ConfigManager {
+	if len(cfgManagers) == 0 {
+		return nil
+	}
+	return cfgManagers[0]
+}
+
+func capabilityProbeGlobalCapabilities(cfgManager *config.ConfigManager) map[string]config.UpstreamModelCapability {
+	if cfgManager == nil {
+		return nil
+	}
+	cfg := cfgManager.GetConfig()
+	return cfg.UpstreamModelCapabilities
+}
+
+func capabilityProbeRequiredThinkingEffort(model string, channel *config.UpstreamConfig, global map[string]config.UpstreamModelCapability) string {
+	resolved := config.ResolveUpstreamCapability(model, channel, global)
+	if resolved.Capability.ThinkingMode != "thinking" {
+		return ""
+	}
+	for _, effort := range resolved.Capability.ReasoningEfforts {
+		if effort == "high" {
+			return "high"
+		}
+	}
+	if len(resolved.Capability.ReasoningEfforts) > 0 {
+		return resolved.Capability.ReasoningEfforts[0]
+	}
+	return "high"
+}
+
+func capabilityProbeReasoningEffort(model string, channel *config.UpstreamConfig, global map[string]config.UpstreamModelCapability) string {
+	if effort := capabilityProbeRequiredThinkingEffort(model, channel, global); effort != "" {
+		return effort
+	}
+	return "low"
+}
+
+func applyRequiredThinkingToCapabilityProbeBody(body []byte, model string, channel *config.UpstreamConfig, global map[string]config.UpstreamModelCapability) []byte {
+	effort := capabilityProbeRequiredThinkingEffort(model, channel, global)
+	if effort == "" {
+		return body
+	}
+	var req map[string]interface{}
+	if err := json.Unmarshal(body, &req); err != nil {
+		return body
+	}
+	req["thinking"] = map[string]interface{}{"type": "enabled", "effort": effort}
+	updated, err := json.Marshal(req)
+	if err != nil {
+		return body
+	}
+	return updated
 }
 
 func buildTestRequest(protocol string, channel *config.UpstreamConfig) (*http.Request, error) {
@@ -334,7 +405,8 @@ func getCapabilityStreamProvider(protocol string) providers.Provider {
 
 func sendAndCheckStream(ctx context.Context, channel *config.UpstreamConfig, req *http.Request, protocol string) (bool, bool, int, []byte, error) {
 	envCfg := config.NewEnvConfig()
-	apiType := channelKindToApiType(protocol)
+	targetProtocol := targetProtocolForCapabilityProtocol(protocol)
+	apiType := channelKindToApiType(targetProtocol)
 	resp, err := common.SendRequest(req, channel, envCfg, true, apiType)
 	if err != nil {
 		return false, false, 0, nil, err
@@ -349,7 +421,7 @@ func sendAndCheckStream(ctx context.Context, channel *config.UpstreamConfig, req
 
 	common.LogUpstreamResponseHeaders(nil, resp, envCfg, apiType)
 
-	provider := getCapabilityStreamProvider(protocol)
+	provider := getCapabilityStreamProvider(targetProtocol)
 	if provider == nil {
 		return false, false, resp.StatusCode, nil, fmt.Errorf("unsupported protocol provider: %s", protocol)
 	}

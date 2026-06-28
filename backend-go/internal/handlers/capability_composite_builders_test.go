@@ -3,10 +3,12 @@ package handlers
 import (
 	"encoding/json"
 	"testing"
+
+	"github.com/BenedictKing/ccx/internal/config"
 )
 
 func TestBuildChatProbeBody_ReasoningEffortUsesProviderCompatibleValue(t *testing.T) {
-	bodyBytes := buildChatProbeBody("test-model")
+	bodyBytes := buildChatProbeBody("test-model", nil)
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
@@ -17,8 +19,37 @@ func TestBuildChatProbeBody_ReasoningEffortUsesProviderCompatibleValue(t *testin
 	}
 }
 
+func TestBuildChatProbeBody_KimiK27CodeUsesRequiredReasoningEffort(t *testing.T) {
+	bodyBytes := buildChatProbeBody("kimi-k2.7-code", nil)
+
+	var body map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		t.Fatalf("unmarshal body failed: %v", err)
+	}
+	if body["reasoning_effort"] != "high" {
+		t.Fatalf("reasoning_effort=%v, want high", body["reasoning_effort"])
+	}
+}
+
+func TestBuildChatProbeBody_KimiK27CodeMappingUsesRequiredReasoningEffort(t *testing.T) {
+	channel := &config.UpstreamConfig{
+		ModelMapping: map[string]string{
+			"agent": "kimi-k2.7-code",
+		},
+	}
+	bodyBytes := buildChatProbeBody("agent", nil, channel)
+
+	var body map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		t.Fatalf("unmarshal body failed: %v", err)
+	}
+	if body["reasoning_effort"] != "high" {
+		t.Fatalf("reasoning_effort=%v, want high", body["reasoning_effort"])
+	}
+}
+
 func TestBuildMessagesProbeBody_ClaudeOpus48UsesSystemMessage(t *testing.T) {
-	bodyBytes := buildMessagesProbeBody(capabilityProbeModelClaudeOpus48)
+	bodyBytes := buildMessagesProbeBody(capabilityProbeModelClaudeOpus48, nil)
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
@@ -44,7 +75,7 @@ func TestBuildMessagesProbeBody_ClaudeOpus48UsesSystemMessage(t *testing.T) {
 }
 
 func TestBuildMessagesProbeBody_LegacyModelsKeepTopLevelSystem(t *testing.T) {
-	bodyBytes := buildMessagesProbeBody("claude-opus-4-7")
+	bodyBytes := buildMessagesProbeBody("claude-opus-4-7", nil)
 
 	var body map[string]interface{}
 	if err := json.Unmarshal(bodyBytes, &body); err != nil {
@@ -69,5 +100,24 @@ func TestBuildMessagesProbeBody_LegacyModelsKeepTopLevelSystem(t *testing.T) {
 	}
 	if len(system) != 2 {
 		t.Fatalf("system len=%d, want 2", len(system))
+	}
+}
+
+func TestBuildMessagesProbeBody_KimiK27CodeEnablesRequiredThinking(t *testing.T) {
+	bodyBytes := buildMessagesProbeBody("kimi-k2.7-code", nil)
+
+	var body map[string]interface{}
+	if err := json.Unmarshal(bodyBytes, &body); err != nil {
+		t.Fatalf("unmarshal body failed: %v", err)
+	}
+	thinking, ok := body["thinking"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("thinking=%T, want map[string]interface{}", body["thinking"])
+	}
+	if thinking["type"] != "enabled" {
+		t.Fatalf("thinking.type=%v, want enabled", thinking["type"])
+	}
+	if thinking["effort"] != "high" {
+		t.Fatalf("thinking.effort=%v, want high", thinking["effort"])
 	}
 }

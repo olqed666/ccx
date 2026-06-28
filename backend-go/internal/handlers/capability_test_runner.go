@@ -322,7 +322,7 @@ func runRoundRobinTests(ctx context.Context, channel *config.UpstreamConfig, pro
 			// 用户指定模型列表，所有协议共用
 			models = userModels
 		} else {
-			models, err = getCapabilityProbeModels(protocol)
+			models, err = getProbeModelsForCapabilityProtocol(protocol)
 		}
 		if err != nil {
 			errMsg := "no_models_configured"
@@ -628,7 +628,7 @@ func executeModelTest(ctx context.Context, channel *config.UpstreamConfig, proto
 		StartedAt: startedAt.Format(time.RFC3339Nano),
 	}
 
-	req, err := buildTestRequestWithModel(protocol, channel, model)
+	req, err := buildTestRequestWithModel(protocol, channel, model, cfgManager)
 	if err != nil {
 		errMsg := fmt.Sprintf("build_request_failed: %v", err)
 		modelResult.Error = &errMsg

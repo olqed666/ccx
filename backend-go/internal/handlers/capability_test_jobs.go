@@ -269,7 +269,7 @@ func capabilityJobInitialModels(protocol string, requestedModels []string) []str
 	if len(requestedModels) > 0 {
 		return append([]string(nil), requestedModels...)
 	}
-	models, err := getCapabilityProbeModels(protocol)
+	models, err := getProbeModelsForCapabilityProtocol(protocol)
 	if err != nil {
 		return nil
 	}
