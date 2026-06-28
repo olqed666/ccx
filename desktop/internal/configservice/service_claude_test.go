@@ -152,6 +152,7 @@ func TestGetStatusClaude_RunAPIProvider(t *testing.T) {
 func TestApplyAndRestoreClaude(t *testing.T) {
 	svc := newTestService(t)
 	settingsPath := filepath.Join(svc.homeDir, ".claude", "settings.json")
+	configPath := filepath.Join(svc.homeDir, ".claude", "config.json")
 	os.MkdirAll(filepath.Dir(settingsPath), 0o755)
 	original := map[string]any{
 		"env": map[string]any{
@@ -159,6 +160,7 @@ func TestApplyAndRestoreClaude(t *testing.T) {
 		},
 	}
 	writeJSON(settingsPath, original)
+	writeJSON(configPath, map[string]any{"primaryApiKey": "sk-original"})
 
 	err := svc.Apply(ApplyAgentConfigRequest{Platform: PlatformClaude}, 3688, "test-key")
 	if err != nil {
@@ -175,6 +177,11 @@ func TestApplyAndRestoreClaude(t *testing.T) {
 	if env["ANTHROPIC_AUTH_TOKEN"] != "test-key" {
 		t.Errorf("auth_token = %v", env["ANTHROPIC_AUTH_TOKEN"])
 	}
+	var configAfter map[string]any
+	readJSON(configPath, &configAfter)
+	if configAfter["primaryApiKey"] != "sk-original" {
+		t.Errorf("primaryApiKey should be preserved, got %v", configAfter["primaryApiKey"])
+	}
 
 	// Restore
 	err = svc.Restore(PlatformClaude)
@@ -186,6 +193,24 @@ func TestApplyAndRestoreClaude(t *testing.T) {
 	env = restored["env"].(map[string]any)
 	if env["ANTHROPIC_BASE_URL"] != "https://original.example.com" {
 		t.Errorf("restored base_url = %v", env["ANTHROPIC_BASE_URL"])
+	}
+}
+
+func TestPreviewApplyClaudeDoesNotTouchPrimaryAPIKey(t *testing.T) {
+	svc := newTestService(t)
+	settingsPath := filepath.Join(svc.homeDir, ".claude", "settings.json")
+	configPath := filepath.Join(svc.homeDir, ".claude", "config.json")
+	writeJSON(settingsPath, map[string]any{"env": map[string]any{}})
+	writeJSON(configPath, map[string]any{"primaryApiKey": "sk-original"})
+
+	diff, err := svc.PreviewApply(ApplyAgentConfigRequest{Platform: PlatformClaude}, 3688, "test-key")
+	if err != nil {
+		t.Fatalf("PreviewApply failed: %v", err)
+	}
+	for _, file := range diff.Files {
+		if file.Path == configPath {
+			t.Fatalf("preview should not include config.json diff: %+v", file)
+		}
 	}
 }
 

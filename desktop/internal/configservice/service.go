@@ -652,9 +652,6 @@ func (s *Service) applyClaude(req ApplyAgentConfigRequest, port int, accessKey s
 	if provider != ProviderCCX {
 		return nil
 	}
-	if err := mergeJSONFile(s.claudeConfigPath(), map[string]any{"primaryApiKey": "ccx"}); err != nil {
-		return err
-	}
 	return mergeJSONFile(s.claudeRootConfigPath(), map[string]any{"hasCompletedOnboarding": true})
 }
 
@@ -2172,12 +2169,6 @@ func (s *Service) previewApplyClaude(req ApplyAgentConfigRequest, port int, acce
 	files := []FileDiff{computeJSONDiffWithMask(path, oldData, newData, sensitiveFieldKeys...)}
 
 	if provider == ProviderCCX {
-		configPath := s.claudeConfigPath()
-		oldConfig, _, _ := readJSONMap(configPath)
-		newConfig := copyJSONMap(oldConfig)
-		newConfig["primaryApiKey"] = "ccx"
-		files = append(files, computeJSONDiff(configPath, oldConfig, newConfig))
-
 		rootPath := s.claudeRootConfigPath()
 		oldRoot, _, _ := readJSONMap(rootPath)
 		newRoot := copyJSONMap(oldRoot)
