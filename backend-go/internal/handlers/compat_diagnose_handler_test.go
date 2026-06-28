@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/BenedictKing/ccx/internal/config"
@@ -130,6 +132,158 @@ func TestCompatDiagnoseSystemRoleNormalizeDefaults(t *testing.T) {
 			got := shouldNormalizeSystemRoleToTopLevelByDefault(tt.channel, tt.baseURL)
 			if got != tt.want {
 				t.Fatalf("shouldNormalizeSystemRoleToTopLevelByDefault() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestDiagnoseBaseURLHashRequiresFailedOriginalAndWorkingCandidate(t *testing.T) {
+	var originalHits, candidateHits int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/messages":
+			originalHits++
+			http.Error(w, "not found", http.StatusNotFound)
+		case "/messages":
+			candidateHits++
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = w.Write([]byte(`data:{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ok"}}` + "\n\n"))
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	channel := &config.UpstreamConfig{BaseURL: server.URL, ServiceType: "claude"}
+	rec := diagnoseBaseURLHash(channel, "messages", "sk-test", server.URL)
+	if rec == nil {
+		t.Fatal("diagnoseBaseURLHash() = nil, want recommendation")
+	}
+	if rec.Current != server.URL || rec.Recommended != server.URL+"#" {
+		t.Fatalf("recommendation = %#v, want current %q and recommended %q", rec, server.URL, server.URL+"#")
+	}
+	if originalHits != 1 || candidateHits != 1 {
+		t.Fatalf("probe hits original=%d candidate=%d, want 1/1", originalHits, candidateHits)
+	}
+}
+
+func TestDiagnoseBaseURLHashSkipsCandidateWhenOriginalWorks(t *testing.T) {
+	var candidateHits int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/messages":
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = w.Write([]byte(`data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ok"}}` + "\n\n"))
+		case "/messages":
+			candidateHits++
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = w.Write([]byte(`data: {"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"ok"}}` + "\n\n"))
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	channel := &config.UpstreamConfig{BaseURL: server.URL, ServiceType: "claude"}
+	if rec := diagnoseBaseURLHash(channel, "messages", "sk-test", server.URL); rec != nil {
+		t.Fatalf("diagnoseBaseURLHash() = %#v, want nil", rec)
+	}
+	if candidateHits != 0 {
+		t.Fatalf("candidate probe hits = %d, want 0", candidateHits)
+	}
+}
+
+func TestDiagnoseBaseURLHashRejectsCandidateEmptyStream(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/v1/messages":
+			http.Error(w, "not found", http.StatusNotFound)
+		case "/messages":
+			w.Header().Set("Content-Type", "text/event-stream")
+			_, _ = w.Write([]byte("data: [DONE]\n\n"))
+		default:
+			t.Errorf("unexpected path: %s", r.URL.Path)
+			http.NotFound(w, r)
+		}
+	}))
+	defer server.Close()
+
+	channel := &config.UpstreamConfig{BaseURL: server.URL, ServiceType: "claude"}
+	if rec := diagnoseBaseURLHash(channel, "messages", "sk-test", server.URL); rec != nil {
+		t.Fatalf("diagnoseBaseURLHash() = %#v, want nil", rec)
+	}
+}
+
+func TestHasMeaningfulCompatSSE(t *testing.T) {
+	tests := []struct {
+		name        string
+		channelKind string
+		lines       []string
+		want        bool
+	}{
+		{
+			name:        "empty stream",
+			channelKind: "messages",
+			lines:       nil,
+			want:        false,
+		},
+		{
+			name:        "done only",
+			channelKind: "messages",
+			lines:       []string{"[DONE]"},
+			want:        false,
+		},
+		{
+			name:        "claude message start only",
+			channelKind: "messages",
+			lines:       []string{`{"type":"message_start","message":{"id":"msg_1"}}`},
+			want:        false,
+		},
+		{
+			name:        "claude text delta",
+			channelKind: "messages",
+			lines:       []string{`{"type":"content_block_delta","delta":{"type":"text_delta","text":"ok"}}`},
+			want:        true,
+		},
+		{
+			name:        "openai role only",
+			channelKind: "chat",
+			lines:       []string{`{"choices":[{"delta":{"role":"assistant"}}]}`},
+			want:        false,
+		},
+		{
+			name:        "openai content delta",
+			channelKind: "chat",
+			lines:       []string{`{"choices":[{"delta":{"content":"ok"}}]}`},
+			want:        true,
+		},
+		{
+			name:        "responses output delta",
+			channelKind: "responses",
+			lines:       []string{`{"type":"response.output_text.delta","delta":"ok"}`},
+			want:        true,
+		},
+		{
+			name:        "responses failed",
+			channelKind: "responses",
+			lines:       []string{`{"type":"response.failed","response":{"status":"failed"}}`},
+			want:        false,
+		},
+		{
+			name:        "gemini text part",
+			channelKind: "gemini",
+			lines:       []string{`{"candidates":[{"content":{"parts":[{"text":"ok"}]}}]}`},
+			want:        true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := hasMeaningfulCompatSSE(tt.lines, tt.channelKind)
+			if got != tt.want {
+				t.Fatalf("hasMeaningfulCompatSSE() = %v, want %v", got, tt.want)
 			}
 		})
 	}

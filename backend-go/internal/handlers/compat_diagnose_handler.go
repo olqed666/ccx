@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -237,10 +238,10 @@ func diagnoseBaseURLHash(channel *config.UpstreamConfig, channelKind, apiKey, ba
 		return nil
 	}
 
-	if probeBaseURLCandidate(channel, channelKind, apiKey, trimmed) {
+	if probeBaseURLCandidate(channel, channelKind, apiKey, trimmed) != compatBaseURLProbeFailed {
 		return nil
 	}
-	if !probeBaseURLCandidate(channel, channelKind, apiKey, candidate) {
+	if probeBaseURLCandidate(channel, channelKind, apiKey, candidate) != compatBaseURLProbeSucceeded {
 		return nil
 	}
 
@@ -253,7 +254,15 @@ func diagnoseBaseURLHash(channel *config.UpstreamConfig, channelKind, apiKey, ba
 	return &URLRecommendation{Current: trimmed, Recommended: candidate, Reason: reason}
 }
 
-func probeBaseURLCandidate(channel *config.UpstreamConfig, channelKind, apiKey, baseURL string) bool {
+type compatBaseURLProbeStatus int
+
+const (
+	compatBaseURLProbeFailed compatBaseURLProbeStatus = iota
+	compatBaseURLProbeSucceeded
+	compatBaseURLProbeInconclusive
+)
+
+func probeBaseURLCandidate(channel *config.UpstreamConfig, channelKind, apiKey, baseURL string) compatBaseURLProbeStatus {
 	candidate := *channel
 	candidate.BaseURL = baseURL
 	candidate.BaseURLs = nil
@@ -276,10 +285,19 @@ func probeBaseURLCandidate(channel *config.UpstreamConfig, channelKind, apiKey, 
 		req, err = buildClaudeCompatRequest(baseURL, buildSystemRoleInMessagesProbeBody(capabilityProbeModelClaudeFable5), &candidate, apiKey)
 	}
 	if err != nil {
-		return false
+		return compatBaseURLProbeFailed
 	}
-	_, statusCode, sendErr := sendAndReadSSE(ctx, req, &candidate)
-	return sendErr == nil && statusCode >= 200 && statusCode < 300
+	events, statusCode, sendErr := sendAndReadSSE(ctx, req, &candidate)
+	if isCompatProbeTimeout(sendErr, ctx) {
+		return compatBaseURLProbeInconclusive
+	}
+	if sendErr != nil || statusCode < 200 || statusCode >= 300 {
+		return compatBaseURLProbeFailed
+	}
+	if !hasMeaningfulCompatSSE(events, channelKind) {
+		return compatBaseURLProbeFailed
+	}
+	return compatBaseURLProbeSucceeded
 }
 
 // diagnoseClaudeChannel 探测 Claude 兼容渠道
@@ -516,6 +534,7 @@ func buildResponsesCompatProbeBody() []byte {
 // sendAndReadSSE 发送请求并读取完整 SSE 流，返回所有 data: 行内容
 func sendAndReadSSE(ctx context.Context, req *http.Request, channel *config.UpstreamConfig) ([]string, int, error) {
 	envCfg := config.NewEnvConfig()
+	req = req.WithContext(ctx)
 	resp, err := common.SendRequest(req, channel, envCfg, true, "Messages")
 	if err != nil {
 		return nil, 0, err
@@ -528,22 +547,185 @@ func sendAndReadSSE(ctx context.Context, req *http.Request, channel *config.Upst
 	}
 
 	var lines []string
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
-		scanner := bufio.NewScanner(resp.Body)
-		for scanner.Scan() {
-			if l := scanner.Text(); strings.HasPrefix(l, "data: ") {
-				lines = append(lines, strings.TrimPrefix(l, "data: "))
-			}
+	scanner := bufio.NewScanner(resp.Body)
+	for scanner.Scan() {
+		if l := scanner.Text(); strings.HasPrefix(l, "data:") {
+			lines = append(lines, strings.TrimSpace(strings.TrimPrefix(l, "data:")))
 		}
-	}()
-
-	select {
-	case <-done:
-	case <-ctx.Done():
+	}
+	if err := scanner.Err(); err != nil {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return lines, resp.StatusCode, ctxErr
+		}
+		return lines, resp.StatusCode, err
 	}
 	return lines, resp.StatusCode, nil
+}
+
+func isCompatProbeTimeout(sendErr error, ctx context.Context) bool {
+	if sendErr == nil {
+		return false
+	}
+	if ctx.Err() != nil || errors.Is(sendErr, context.DeadlineExceeded) {
+		return true
+	}
+	var timeoutErr interface{ Timeout() bool }
+	return errors.As(sendErr, &timeoutErr) && timeoutErr.Timeout()
+}
+
+func hasMeaningfulCompatSSE(lines []string, channelKind string) bool {
+	for _, line := range lines {
+		if line == "" || line == "[DONE]" {
+			continue
+		}
+		var ev map[string]interface{}
+		if json.Unmarshal([]byte(line), &ev) != nil {
+			continue
+		}
+		switch channelKind {
+		case "gemini":
+			if hasMeaningfulGeminiCompatEvent(ev) {
+				return true
+			}
+		case "chat":
+			if hasMeaningfulOpenAIChatCompatEvent(ev) {
+				return true
+			}
+		case "responses":
+			if hasMeaningfulResponsesCompatEvent(ev) {
+				return true
+			}
+		default:
+			if hasMeaningfulClaudeCompatEvent(ev) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasMeaningfulClaudeCompatEvent(ev map[string]interface{}) bool {
+	if stringField(ev, "type") != "content_block_delta" {
+		return false
+	}
+	delta, ok := ev["delta"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	return hasAnyNonEmptyStringField(delta, "text", "thinking", "reasoning_content", "partial_json")
+}
+
+func hasMeaningfulOpenAIChatCompatEvent(ev map[string]interface{}) bool {
+	choices, ok := ev["choices"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, choiceValue := range choices {
+		choice, ok := choiceValue.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		delta, ok := choice["delta"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if hasAnyNonEmptyStringField(delta, "content", "reasoning_content", "reasoning") {
+			return true
+		}
+		if toolCalls, ok := delta["tool_calls"].([]interface{}); ok && len(toolCalls) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func hasMeaningfulResponsesCompatEvent(ev map[string]interface{}) bool {
+	eventType := stringField(ev, "type")
+	switch eventType {
+	case "response.output_text.delta", "response.reasoning_summary_text.delta":
+		return hasAnyNonEmptyStringField(ev, "delta", "text")
+	case "response.completed":
+		return responseCompletedHasOutputText(ev)
+	default:
+		return false
+	}
+}
+
+func responseCompletedHasOutputText(ev map[string]interface{}) bool {
+	response, ok := ev["response"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	output, ok := response["output"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, itemValue := range output {
+		item, ok := itemValue.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		content, ok := item["content"].([]interface{})
+		if !ok {
+			continue
+		}
+		for _, contentValue := range content {
+			contentItem, ok := contentValue.(map[string]interface{})
+			if ok && hasAnyNonEmptyStringField(contentItem, "text", "output_text") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasMeaningfulGeminiCompatEvent(ev map[string]interface{}) bool {
+	candidates, ok := ev["candidates"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, candidateValue := range candidates {
+		candidate, ok := candidateValue.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		content, ok := candidate["content"].(map[string]interface{})
+		if !ok {
+			continue
+		}
+		parts, ok := content["parts"].([]interface{})
+		if !ok {
+			continue
+		}
+		for _, partValue := range parts {
+			part, ok := partValue.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			if hasAnyNonEmptyStringField(part, "text") {
+				return true
+			}
+			functionCall, ok := part["functionCall"].(map[string]interface{})
+			if ok && hasAnyNonEmptyStringField(functionCall, "name") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func hasAnyNonEmptyStringField(m map[string]interface{}, keys ...string) bool {
+	for _, key := range keys {
+		if strings.TrimSpace(stringField(m, key)) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func stringField(m map[string]interface{}, key string) string {
+	value, _ := m[key].(string)
+	return value
 }
 
 // analyzeClaudeSSE 分析 Claude SSE 流，返回 (hasThinking, hasEmptyText)
