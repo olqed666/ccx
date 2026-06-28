@@ -511,16 +511,24 @@ func (s *ChannelScheduler) filterChannelsByContext(activeChannels []ChannelInfo,
 	if !cfg.ContextRouting.IsContextRoutingEnabled() {
 		return activeChannels, nil
 	}
-	requiredWindow := requirement.effectiveWindowTokens()
-	if requiredWindow <= 0 && !requirement.needsOutputValidation() {
+	channelRequiredWindow := requirement.effectiveWindowTokens()
+	if channelRequiredWindow <= 0 && !requirement.needsOutputValidation() {
 		return activeChannels, nil
 	}
 
 	unknownSafeWindow := cfg.ContextRouting.EffectiveUnknownSafeWindowTokens()
 	prefix := kindSchedulerLogPrefix(kind)
 	filtered := make([]ChannelInfo, 0, len(activeChannels))
+	outputFallback := make([]ChannelInfo, 0)
 	skipped := make([]string, 0)
 	maxKnownWindow := 0
+	appendCandidate := func(ch ChannelInfo, outputOverflow bool) {
+		if outputOverflow {
+			outputFallback = append(outputFallback, ch)
+			return
+		}
+		filtered = append(filtered, ch)
+	}
 
 	for _, ch := range activeChannels {
 		upstream := s.getUpstreamByIndex(ch.Index, kind)
@@ -534,53 +542,59 @@ func (s *ChannelScheduler) filterChannelsByContext(activeChannels []ChannelInfo,
 			maxKnownWindow = capability.ContextWindowTokens
 		}
 
-		if requirement.ExplicitOutputMax && capability.MaxOutputTokens > 0 && requirement.OutputTokens > capability.MaxOutputTokens {
-			reason := fmt.Sprintf("[%d]%s actual=%s output=%d>%d", ch.Index, ch.Name, resolved.ActualModel, requirement.OutputTokens, capability.MaxOutputTokens)
-			skipped = append(skipped, reason)
-			log.Printf("[%s-ContextFilter] 跳过渠道 [%d] %s: 显式输出上限 %d 超过实际模型 %q 最大输出 %d",
+		outputOverflow := requirement.ExplicitOutputMax && capability.MaxOutputTokens > 0 && requirement.OutputTokens > capability.MaxOutputTokens
+		if outputOverflow {
+			log.Printf("[%s-ContextFilter] 渠道 [%d] %s: 显式输出上限 %d 超过实际模型 %q 最大输出 %d，将作为可 clamp 的低优先级候选",
 				prefix, ch.Index, ch.Name, requirement.OutputTokens, resolved.ActualModel, capability.MaxOutputTokens)
-			continue
 		}
 
 		if requirement.SkipWindowValidation {
-			filtered = append(filtered, ch)
+			appendCandidate(ch, outputOverflow)
 			continue
 		}
 
 		if capability.ContextWindowTokens > 0 {
-			if requiredWindow > 0 && requiredWindow > capability.ContextWindowTokens {
-				reason := fmt.Sprintf("[%d]%s actual=%s input=%d>%d totalBudget=%d", ch.Index, ch.Name, resolved.ActualModel, requiredWindow, capability.ContextWindowTokens, requirement.RequiredTokens)
+			if channelRequiredWindow > 0 && channelRequiredWindow > capability.ContextWindowTokens {
+				reason := fmt.Sprintf("[%d]%s actual=%s input=%d>%d totalBudget=%d", ch.Index, ch.Name, resolved.ActualModel, channelRequiredWindow, capability.ContextWindowTokens, requirement.RequiredTokens)
 				skipped = append(skipped, reason)
 				log.Printf("[%s-ContextFilter] 跳过渠道 [%d] %s: input=%d, window=%d, totalBudget=%d, output=%d, actualModel=%q, source=%s",
-					prefix, ch.Index, ch.Name, requiredWindow, capability.ContextWindowTokens, requirement.RequiredTokens, requirement.OutputTokens, resolved.ActualModel, resolved.Source)
+					prefix, ch.Index, ch.Name, channelRequiredWindow, capability.ContextWindowTokens, requirement.RequiredTokens, requirement.OutputTokens, resolved.ActualModel, resolved.Source)
 				continue
 			}
-			filtered = append(filtered, ch)
+			appendCandidate(ch, outputOverflow)
 			continue
 		}
 
-		if requiredWindow <= 0 || upstream.AllowUnknownContext || requiredWindow <= unknownSafeWindow {
-			filtered = append(filtered, ch)
+		if channelRequiredWindow <= 0 || upstream.AllowUnknownContext || channelRequiredWindow <= unknownSafeWindow {
+			appendCandidate(ch, outputOverflow)
 			continue
 		}
 
-		reason := fmt.Sprintf("[%d]%s actual=%s unknown input=%d totalBudget=%d", ch.Index, ch.Name, resolved.ActualModel, requiredWindow, requirement.RequiredTokens)
+		reason := fmt.Sprintf("[%d]%s actual=%s unknown input=%d totalBudget=%d", ch.Index, ch.Name, resolved.ActualModel, channelRequiredWindow, requirement.RequiredTokens)
 		skipped = append(skipped, reason)
 		log.Printf("[%s-ContextFilter] 跳过未知上下文渠道 [%d] %s: input=%d 超过 unknownSafeWindow=%d, totalBudget=%d, output=%d, actualModel=%q",
-			prefix, ch.Index, ch.Name, requiredWindow, unknownSafeWindow, requirement.RequiredTokens, requirement.OutputTokens, resolved.ActualModel)
+			prefix, ch.Index, ch.Name, channelRequiredWindow, unknownSafeWindow, requirement.RequiredTokens, requirement.OutputTokens, resolved.ActualModel)
+	}
+
+	if len(filtered) == 0 && len(outputFallback) > 0 {
+		log.Printf("[%s-ContextFilter] 没有完全满足显式输出上限 %d 的渠道，回退到可 clamp 的候选渠道", prefix, requirement.OutputTokens)
+		return outputFallback, nil
+	}
+	if len(outputFallback) > 0 {
+		filtered = append(filtered, outputFallback...)
 	}
 
 	if len(filtered) == 0 {
-		if requiredWindow <= 0 && len(skipped) > 0 {
+		if channelRequiredWindow <= 0 && len(skipped) > 0 {
 			return nil, fmt.Errorf("没有 %s 渠道可满足当前显式输出预算 %d tokens（已过滤：%s）",
 				kindDisplayName(kind), requirement.OutputTokens, strings.Join(skipped, "; "))
 		}
 		if maxKnownWindow > 0 {
 			return nil, fmt.Errorf("没有 %s 渠道可承载当前上下文：输入估算 %d tokens，最大已知窗口 %d tokens（已过滤：%s）",
-				kindDisplayName(kind), requiredWindow, maxKnownWindow, strings.Join(skipped, "; "))
+				kindDisplayName(kind), channelRequiredWindow, maxKnownWindow, strings.Join(skipped, "; "))
 		}
 		return nil, fmt.Errorf("没有 %s 渠道可承载当前上下文：输入估算 %d tokens，所有候选渠道上下文能力未知或不足（已过滤：%s）",
-			kindDisplayName(kind), requiredWindow, strings.Join(skipped, "; "))
+			kindDisplayName(kind), channelRequiredWindow, strings.Join(skipped, "; "))
 	}
 
 	return filtered, nil
@@ -599,28 +613,28 @@ func (s *ChannelScheduler) ValidateUpstreamContext(kind ChannelKind, model strin
 	resolved := config.ResolveUpstreamCapability(model, upstream, cfg.UpstreamModelCapabilities)
 	capability := resolved.Capability
 	if requirement.ExplicitOutputMax && capability.MaxOutputTokens > 0 && requirement.OutputTokens > capability.MaxOutputTokens {
-		return fmt.Errorf("渠道 %q 的实际模型 %q 最大输出为 %d tokens，低于请求的 %d tokens",
-			upstream.Name, resolved.ActualModel, capability.MaxOutputTokens, requirement.OutputTokens)
+		log.Printf("[%s-ContextFilter] 渠道 %q 的实际模型 %q 最大输出为 %d tokens，低于请求的 %d tokens，后续发送前将下调到模型上限",
+			kindSchedulerLogPrefix(kind), upstream.Name, resolved.ActualModel, capability.MaxOutputTokens, requirement.OutputTokens)
 	}
 	if requirement.SkipWindowValidation {
 		return nil
 	}
-	requiredWindow := requirement.effectiveWindowTokens()
-	if requiredWindow <= 0 {
+	channelRequiredWindow := requirement.effectiveWindowTokens()
+	if channelRequiredWindow <= 0 {
 		return nil
 	}
 	if capability.ContextWindowTokens > 0 {
-		if requiredWindow > capability.ContextWindowTokens {
+		if channelRequiredWindow > capability.ContextWindowTokens {
 			return fmt.Errorf("渠道 %q 的实际模型 %q 上下文窗口为 %d tokens，低于当前请求输入估算 %d tokens",
-				upstream.Name, resolved.ActualModel, capability.ContextWindowTokens, requiredWindow)
+				upstream.Name, resolved.ActualModel, capability.ContextWindowTokens, channelRequiredWindow)
 		}
 		return nil
 	}
-	if upstream.AllowUnknownContext || requiredWindow <= cfg.ContextRouting.EffectiveUnknownSafeWindowTokens() {
+	if upstream.AllowUnknownContext || channelRequiredWindow <= cfg.ContextRouting.EffectiveUnknownSafeWindowTokens() {
 		return nil
 	}
 	return fmt.Errorf("渠道 %q 的实际模型 %q 上下文能力未知，当前请求输入估算 %d tokens 超过未知安全窗口 %d tokens",
-		upstream.Name, resolved.ActualModel, requiredWindow, cfg.ContextRouting.EffectiveUnknownSafeWindowTokens())
+		upstream.Name, resolved.ActualModel, channelRequiredWindow, cfg.ContextRouting.EffectiveUnknownSafeWindowTokens())
 }
 
 func applyManualOverrideOrder(activeChannels []ChannelInfo, sequence []conversation.ChannelEntry) []ChannelInfo {
@@ -651,11 +665,11 @@ func applyManualOverrideOrder(activeChannels []ChannelInfo, sequence []conversat
 }
 
 func traceAffinityKey(kind ChannelKind, userID string, requirement *ContextRequirement) string {
-	requiredWindow := requirement.effectiveWindowTokens()
-	if requiredWindow <= 0 {
+	channelRequiredWindow := requirement.effectiveWindowTokens()
+	if channelRequiredWindow <= 0 {
 		return string(kind) + ":" + userID
 	}
-	return string(kind) + ":" + userID + ":" + contextBucket(requiredWindow)
+	return string(kind) + ":" + userID + ":" + contextBucket(channelRequiredWindow)
 }
 
 func contextBucket(tokens int) string {

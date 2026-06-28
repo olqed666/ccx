@@ -199,6 +199,16 @@ func TryUpstreamWithAllKeys(
 			if kind == scheduler.ChannelKindMessages && upstream.NormalizeSystemRoleToTopLevel {
 				attemptBody = providers.NormalizeSystemRoleToTopLevel(attemptBody)
 			}
+			// 发往上游前按实际模型能力 clamp 最大输出 token：
+			// 客户端/上游 subagent 可能发送超过模型上限的 max_tokens（如 Claude Code 默认 64000），
+			// 而部分平台（火山方舟 kimi 系列硬限 32768）会直接 400。此处静默下调到模型上限，
+			// 使请求成功而非被调度过滤为"无可用渠道"。
+			if cap := config.ResolveUpstreamCapability(model, upstream, cfgManager.GetConfig().UpstreamModelCapabilities); cap.Capability.MaxOutputTokens > 0 {
+				if clamped, changed := clampMaxTokensInBody(attemptBody, kind, cap.Capability.MaxOutputTokens); changed {
+					attemptBody = clamped
+					RequestLogf(c, "[%s-Clamp] max_tokens 超过模型 %q 上限 %d，已下调", apiType, cap.ActualModel, cap.Capability.MaxOutputTokens)
+				}
+			}
 			RestoreRequestBody(c, attemptBody)
 			c.Set("requestBodyBytes", attemptBody)
 

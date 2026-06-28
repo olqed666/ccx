@@ -261,6 +261,57 @@ func TestSelectChannelFiltersExplicitOutputLimit(t *testing.T) {
 	}
 }
 
+func TestSelectChannelOutputLimitFallsBackToClampCandidateAfterFailure(t *testing.T) {
+	cfg := config.Config{
+		Upstream: []config.UpstreamConfig{
+			{
+				Name:     "opus-128k-output",
+				BaseURL:  "https://opus.example.com",
+				APIKeys:  []string{"sk-opus"},
+				Status:   "active",
+				Priority: 1,
+				ModelMapping: map[string]string{
+					"agent": "claude-opus-4-8",
+				},
+			},
+			{
+				Name:     "sonnet-64k-output",
+				BaseURL:  "https://sonnet.example.com",
+				APIKeys:  []string{"sk-sonnet"},
+				Status:   "active",
+				Priority: 2,
+				ModelMapping: map[string]string{
+					"agent": "claude-sonnet-4-6",
+				},
+			},
+		},
+	}
+
+	scheduler, cleanup := createTestScheduler(t, cfg)
+	defer cleanup()
+
+	result, err := scheduler.SelectChannelWithOptions(context.Background(), SelectionOptions{
+		UserID: "user-output-failover",
+		FailedChannels: map[int]bool{
+			0: true,
+		},
+		Kind:  ChannelKindMessages,
+		Model: "agent",
+		ContextRequirement: &ContextRequirement{
+			InputTokens:       1000,
+			OutputTokens:      128000,
+			RequiredTokens:    129000,
+			ExplicitOutputMax: true,
+		},
+	})
+	if err != nil {
+		t.Fatalf("SelectChannelWithOptions() error = %v", err)
+	}
+	if result.Upstream.Name != "sonnet-64k-output" {
+		t.Fatalf("selected channel = %q, want sonnet-64k-output", result.Upstream.Name)
+	}
+}
+
 func TestSelectChannelCompactionSkipsWindowButKeepsOutputLimit(t *testing.T) {
 	cfg := config.Config{
 		ResponsesUpstream: []config.UpstreamConfig{
