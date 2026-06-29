@@ -527,6 +527,7 @@
   "console.actions.deleting": "正在删除...",
   "common.refreshing": "刷新中",
   "common.copy": "复制",
+  "common.copied": "已复制",
   "common.delete": "删除",
   "common.add": "添加",
   "orchestration.searchPlaceholder": "搜索渠道...",

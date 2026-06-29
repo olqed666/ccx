@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { KeyRound, Network, Sparkles, CheckCircle2, Loader2, ExternalLink } from 'lucide-vue-next'
+import { KeyRound, Network, Sparkles, CheckCircle2, Loader2, ExternalLink, Copy } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -258,6 +258,21 @@ function clearCopilotAuthorizationCode() {
   clearCopilotCopyTimer()
 }
 
+async function copyCopilotUserCode() {
+  const userCode = copilotUserCode.value.trim()
+  if (!userCode) return
+  try {
+    await navigator.clipboard.writeText(userCode)
+    clearCopilotCopyTimer()
+    copilotUserCodeCopied.value = true
+    copilotCopyTimer = setTimeout(() => {
+      copilotUserCodeCopied.value = false
+      copilotCopyTimer = null
+    }, 1200)
+  } catch {
+    // clipboard 不可用时静默
+  }
+}
 
 async function pollCopilotToken(intervalSeconds: number) {
   if (!copilotDeviceCode.value) return
@@ -446,6 +461,16 @@ const submit = async () => {
         <div v-if="copilotUserCode" class="flex items-center gap-2 text-sm">
           <span class="text-muted-foreground">{{ t('copilotOAuth.userCode') }}</span>
           <code class="px-2 py-0.5 rounded bg-muted font-mono text-xs">{{ copilotUserCode }}</code>
+          <button
+            type="button"
+            class="inline-flex h-6 w-6 items-center justify-center rounded border border-border text-muted-foreground transition-colors hover:text-foreground"
+            :title="copilotUserCodeCopied ? t('common.copied') : t('common.copy')"
+            :aria-label="copilotUserCodeCopied ? t('common.copied') : t('common.copy')"
+            @click="copyCopilotUserCode"
+          >
+            <CheckCircle2 v-if="copilotUserCodeCopied" class="h-3.5 w-3.5 text-emerald-700 dark:text-emerald-400" />
+            <Copy v-else class="h-3.5 w-3.5" />
+          </button>
           <button type="button" class="text-primary text-xs underline" @click="openCopilotAuthorization">{{ t('copilotOAuth.openAuthorize') }}</button>
         </div>
         <p v-if="copilotOAuthSuccess" class="text-xs text-emerald-600">{{ t('copilotOAuth.success') }}</p>

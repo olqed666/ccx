@@ -527,6 +527,7 @@
   "console.actions.deleting": "Deleting...",
   "common.refreshing": "Refreshing",
   "common.copy": "Copy",
+  "common.copied": "Copied",
   "common.delete": "Delete",
   "common.add": "Add",
   "orchestration.searchPlaceholder": "Search channels...",
