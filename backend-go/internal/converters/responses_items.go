@@ -105,6 +105,11 @@ func resolveResponsesTextItem(item types.ResponsesItem) (string, string) {
 	if role == "" {
 		role = "user"
 	}
+	// Anthropic Messages API 仅支持 user/assistant/system 三种 role。
+	// Codex Responses 格式中的 developer role 需要映射为 user，避免上游拒绝。
+	if role == "developer" {
+		role = "user"
+	}
 	return role, extractTextFromContent(item.Content)
 }
 
